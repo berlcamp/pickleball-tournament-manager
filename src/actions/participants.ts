@@ -1,0 +1,99 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { ActionError, assertRole, logAudit, run } from "./helpers";
+import { participantSchema } from "@/validators";
+
+export async function addParticipant(
+  tournamentId: string,
+  categoryId: string,
+  name: string,
+) {
+  return run(async () => {
+    const parsed = participantSchema.parse({ name });
+    const { supabase } = await assertRole(tournamentId, "admin");
+
+    const { count } = await supabase
+      .from("participants")
+      .select("id", { count: "exact", head: true })
+      .eq("category_id", categoryId);
+
+    const { error } = await supabase.from("participants").insert({
+      tournament_id: tournamentId,
+      category_id: categoryId,
+      name: parsed.name,
+      seed: (count ?? 0) + 1,
+    });
+    if (error) throw new ActionError(error.message);
+    await logAudit(tournamentId, "participant.add", { name: parsed.name });
+    revalidatePath(`/dashboard/tournaments/${tournamentId}/participants`);
+  });
+}
+
+export async function bulkAddParticipants(
+  tournamentId: string,
+  categoryId: string,
+  raw: string,
+) {
+  return run(async () => {
+    const { supabase } = await assertRole(tournamentId, "admin");
+    const names = raw
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+    if (names.length === 0) throw new ActionError("No teams found.");
+
+    const { count } = await supabase
+      .from("participants")
+      .select("id", { count: "exact", head: true })
+      .eq("category_id", categoryId);
+
+    const base = count ?? 0;
+    const rows = names.map((name, i) => ({
+      tournament_id: tournamentId,
+      category_id: categoryId,
+      name,
+      seed: base + i + 1,
+    }));
+
+    const { error } = await supabase.from("participants").insert(rows);
+    if (error) throw new ActionError(error.message);
+    await logAudit(tournamentId, "participant.bulk_add", {
+      count: names.length,
+    });
+    revalidatePath(`/dashboard/tournaments/${tournamentId}/participants`);
+    return names.length;
+  });
+}
+
+export async function deleteParticipant(
+  tournamentId: string,
+  participantId: string,
+) {
+  return run(async () => {
+    const { supabase } = await assertRole(tournamentId, "admin");
+    const { error } = await supabase
+      .from("participants")
+      .delete()
+      .eq("id", participantId);
+    if (error) throw new ActionError(error.message);
+    revalidatePath(`/dashboard/tournaments/${tournamentId}/participants`);
+  });
+}
+
+export async function renameParticipant(
+  tournamentId: string,
+  participantId: string,
+  name: string,
+) {
+  return run(async () => {
+    const parsed = participantSchema.parse({ name });
+    const { supabase } = await assertRole(tournamentId, "admin");
+    const { error } = await supabase
+      .from("participants")
+      .update({ name: parsed.name })
+      .eq("id", participantId);
+    if (error) throw new ActionError(error.message);
+    revalidatePath(`/dashboard/tournaments/${tournamentId}/participants`);
+  });
+}

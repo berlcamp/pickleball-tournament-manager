@@ -1,0 +1,160 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/database";
+import { ActionError, assertRole, logAudit, run } from "./helpers";
+import { scoreSchema } from "@/validators";
+import {
+  computeGroupStandings,
+  type ScoredMatch,
+} from "@/services/standings";
+
+type DB = SupabaseClient<Database>;
+const ADVANCE_PER_GROUP = 2;
+
+function winnerFromSets(
+  sets: { participant1_score: number; participant2_score: number }[],
+) {
+  let p1 = 0;
+  let p2 = 0;
+  for (const s of sets) {
+    if (s.participant1_score > s.participant2_score) p1++;
+    else if (s.participant2_score > s.participant1_score) p2++;
+  }
+  return { p1Sets: p1, p2Sets: p2 };
+}
+
+/** Recompute and persist standings for one group. */
+async function recomputeGroup(db: DB, tournamentId: string, groupId: string) {
+  const { data: members } = await db
+    .from("group_members")
+    .select("participant_id")
+    .eq("group_id", groupId);
+  const participantIds = (members ?? []).map((m) => m.participant_id);
+
+  const { data: matches } = await db
+    .from("group_matches")
+    .select("id, participant1_id, participant2_id, status")
+    .eq("group_id", groupId);
+
+  const matchIds = (matches ?? []).map((m) => m.id);
+  const { data: scores } = matchIds.length
+    ? await db
+        .from("group_match_scores")
+        .select("match_id, set_number, participant1_score, participant2_score")
+        .in("match_id", matchIds)
+    : { data: [] };
+
+  const scoresByMatch = new Map<
+    string,
+    { participant1_score: number; participant2_score: number }[]
+  >();
+  for (const s of scores ?? []) {
+    if (!scoresByMatch.has(s.match_id)) scoresByMatch.set(s.match_id, []);
+    scoresByMatch.get(s.match_id)!.push({
+      participant1_score: s.participant1_score,
+      participant2_score: s.participant2_score,
+    });
+  }
+
+  const scored: ScoredMatch[] = (matches ?? [])
+    .filter((m) => m.participant1_id && m.participant2_id)
+    .map((m) => ({
+      participant1Id: m.participant1_id!,
+      participant2Id: m.participant2_id!,
+      sets: scoresByMatch.get(m.id) ?? [],
+      completed: m.status === "completed",
+    }));
+
+  const computed = computeGroupStandings(participantIds, scored, {
+    advanceCount: ADVANCE_PER_GROUP,
+  });
+
+  await Promise.all(
+    computed.map((c) =>
+      db
+        .from("standings")
+        .update({
+          rank: c.rank,
+          status: c.status,
+          matches_won: c.matchesWon,
+          matches_lost: c.matchesLost,
+          matches_tied: c.matchesTied,
+          tie_break: c.tieBreak,
+          set_wins: c.setWins,
+          set_ties: c.setTies,
+          points: c.points,
+          point_diff: c.pointDiff,
+          history: c.history,
+        })
+        .eq("group_id", groupId)
+        .eq("participant_id", c.participantId),
+    ),
+  );
+}
+
+export async function submitGroupScore(
+  tournamentId: string,
+  matchId: string,
+  sets: unknown,
+) {
+  return run(async () => {
+    const parsed = scoreSchema.parse({ sets });
+    const { supabase } = await assertRole(tournamentId, "scorekeeper");
+
+    const { data: match, error: mErr } = await supabase
+      .from("group_matches")
+      .select("id, group_id, participant1_id, participant2_id")
+      .eq("id", matchId)
+      .single();
+    if (mErr || !match) throw new ActionError("Match not found.");
+
+    // Replace scores.
+    await supabase.from("group_match_scores").delete().eq("match_id", matchId);
+    const rows = parsed.sets.map((s, i) => ({
+      match_id: matchId,
+      set_number: i + 1,
+      participant1_score: s.participant1_score,
+      participant2_score: s.participant2_score,
+    }));
+    const { error: sErr } = await supabase
+      .from("group_match_scores")
+      .insert(rows);
+    if (sErr) throw new ActionError(sErr.message);
+
+    const { p1Sets, p2Sets } = winnerFromSets(parsed.sets);
+    const winnerId =
+      p1Sets > p2Sets
+        ? match.participant1_id
+        : p2Sets > p1Sets
+          ? match.participant2_id
+          : null;
+
+    await supabase
+      .from("group_matches")
+      .update({ status: "completed", winner_id: winnerId })
+      .eq("id", matchId);
+
+    await recomputeGroup(supabase, tournamentId, match.group_id);
+    await logAudit(tournamentId, "group.score", { matchId });
+    revalidatePath(`/dashboard/tournaments/${tournamentId}/group-stage`);
+  });
+}
+
+export async function clearGroupScore(
+  tournamentId: string,
+  matchId: string,
+  groupId: string,
+) {
+  return run(async () => {
+    const { supabase } = await assertRole(tournamentId, "scorekeeper");
+    await supabase.from("group_match_scores").delete().eq("match_id", matchId);
+    await supabase
+      .from("group_matches")
+      .update({ status: "pending", winner_id: null })
+      .eq("id", matchId);
+    await recomputeGroup(supabase, tournamentId, groupId);
+    revalidatePath(`/dashboard/tournaments/${tournamentId}/group-stage`);
+  });
+}
