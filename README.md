@@ -1,4 +1,4 @@
-# 🏓 PicklePro — Pickleball Tournament Manager
+# 🏓 PicklePro by Sortbrite — Pickleball Tournament Manager
 
 A production-ready pickleball tournament SaaS inspired by Challonge. Run
 tournaments with collaborator roles, round-robin groups, finals brackets, a

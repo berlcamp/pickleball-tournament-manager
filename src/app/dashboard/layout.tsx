@@ -31,6 +31,9 @@ export default async function DashboardLayout({
             <Trophy className="size-4.5" />
           </span>
           <span className="text-gradient">PicklePro</span>
+          <span className="text-xs font-normal text-muted-foreground">
+            by Sortbrite
+          </span>
         </Link>
         <Sidebar />
       </aside>

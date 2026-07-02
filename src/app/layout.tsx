@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PicklePro — Tournament Manager",
+  title: "PicklePro by Sortbrite — Tournament Manager",
   description:
     "Run pickleball tournaments with round robin groups, finals brackets, smart scheduling and live public standings.",
 };

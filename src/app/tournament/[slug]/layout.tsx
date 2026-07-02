@@ -27,6 +27,9 @@ export default async function PublicTournamentLayout({
           >
             <Trophy className="size-4 text-primary" />
             <span className="text-gradient">PicklePro</span>
+            <span className="hidden font-normal text-muted-foreground sm:inline">
+              by Sortbrite
+            </span>
           </Link>
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-bold">{tournament.name}</h1>

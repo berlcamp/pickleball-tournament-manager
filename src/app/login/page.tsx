@@ -46,6 +46,9 @@ function LoginInner() {
             <Trophy className="size-5" />
           </span>
           <span className="text-gradient">PicklePro</span>
+          <span className="text-sm font-normal text-muted-foreground">
+            by Sortbrite
+          </span>
         </Link>
         <h1 className="text-2xl font-bold">Welcome back</h1>
         <p className="mt-2 text-sm text-muted-foreground">

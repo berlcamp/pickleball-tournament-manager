@@ -68,6 +68,9 @@ export default async function Home() {
             <Trophy className="size-5" />
           </span>
           <span className="text-gradient">PicklePro</span>
+          <span className="hidden text-sm font-normal text-muted-foreground sm:inline">
+            by Sortbrite
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
