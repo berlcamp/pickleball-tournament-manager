@@ -9,7 +9,9 @@ import {
   type StandingRow,
 } from "@/components/tournament/standings-table";
 import { ScoreDialog, type SetScore } from "@/components/tournament/score-dialog";
+import { GroupStageControls } from "@/components/tournament/group-stage-controls";
 import { submitGroupScore } from "@/actions/groupStage";
+import type { TournamentStatus } from "@/types";
 import { Pencil } from "lucide-react";
 
 export interface MatchVM {
@@ -38,17 +40,38 @@ function setSummary(sets: SetScore[]) {
 
 export function GroupStageView({
   tournamentId,
+  categoryId,
   groups,
+  status,
+  canManage,
   canScore,
 }: {
   tournamentId: string;
+  categoryId: string;
   groups: GroupVM[];
+  status: TournamentStatus;
+  canManage: boolean;
   canScore: boolean;
 }) {
   const [active, setActive] = useState<MatchVM | null>(null);
 
+  const allMatches = groups.flatMap((g) => g.matches);
+  const matchesTotal = allMatches.length;
+  const matchesDone = allMatches.filter(
+    (m) => m.status === "completed",
+  ).length;
+
   return (
     <>
+      <GroupStageControls
+        tournamentId={tournamentId}
+        categoryId={categoryId}
+        status={status}
+        canManage={canManage}
+        matchesDone={matchesDone}
+        matchesTotal={matchesTotal}
+      />
+
       <Tabs defaultValue={groups[0]?.id} className="space-y-4">
         <TabsList className="flex-wrap">
           {groups.map((g) => (

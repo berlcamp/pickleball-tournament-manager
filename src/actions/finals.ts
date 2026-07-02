@@ -24,10 +24,13 @@ export async function generateFinals(
 
     const { data: category } = await supabase
       .from("categories")
-      .select("final_bracket_type")
+      .select("final_bracket_type, status")
       .eq("id", categoryId)
       .single();
     if (!category) throw new ActionError("Category not found.");
+    if (category.status !== "group_stage") {
+      throw new ActionError("Start the group stage before ending it.");
+    }
 
     // Require all of this category's group matches to be complete.
     const { data: pending } = await supabase

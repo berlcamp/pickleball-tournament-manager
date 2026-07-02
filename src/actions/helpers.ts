@@ -1,9 +1,34 @@
 import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { roleAtLeast } from "@/lib/constants";
 import type { Role } from "@/types";
+import type { Database } from "@/types/database";
 
 export class ActionError extends Error {}
+
+/**
+ * Throw unless the category is still a draft. Once the group stage has started
+ * (status is `group_stage` or later), participant/seeding/group changes are
+ * locked to protect existing matches and standings.
+ */
+export async function assertCategoryDraft(
+  supabase: SupabaseClient<Database>,
+  categoryId: string,
+) {
+  const { data: category, error } = await supabase
+    .from("categories")
+    .select("status")
+    .eq("id", categoryId)
+    .single();
+  if (error) throw new ActionError(error.message);
+  if (!category) throw new ActionError("Category not found.");
+  if (category.status !== "draft") {
+    throw new ActionError(
+      "The group stage has started. Participants, seeding, and groups can no longer be changed.",
+    );
+  }
+}
 
 export async function getSessionUser() {
   const supabase = await createClient();

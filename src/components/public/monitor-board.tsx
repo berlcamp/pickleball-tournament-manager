@@ -1,18 +1,24 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { timeToMinutes, formatTime } from "@/lib/format";
 import { Maximize, Radio } from "lucide-react";
-import type { ScheduleRow } from "@/components/tournament/schedule-table";
+import { StandingsTable } from "@/components/tournament/standings-table";
+import type { GroupVM } from "@/components/tournament/group-stage-view";
+
+export interface MonitorCategory {
+  id: string;
+  name: string;
+  groups: GroupVM[];
+}
 
 export function MonitorBoard({
   tournamentName,
-  rows,
+  categories,
 }: {
   tournamentName: string;
-  rows: ScheduleRow[];
+  categories: MonitorCategory[];
 }) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -28,31 +34,11 @@ export function MonitorBoard({
     };
   }, [router]);
 
-  const nowMin = now.getHours() * 60 + now.getMinutes();
-
-  const { playing, upcoming } = useMemo(() => {
-    const pending = rows
-      .filter((r) => r.status !== "completed" && r.time)
-      .sort((a, b) => timeToMinutes(a.time!) - timeToMinutes(b.time!));
-
-    if (pending.length === 0) return { playing: [], upcoming: [] };
-
-    // Current slot = latest start time that has begun; else the first slot.
-    const started = pending.filter((r) => timeToMinutes(r.time!) <= nowMin);
-    const currentSlotTime = started.length
-      ? started[started.length - 1].time
-      : pending[0].time;
-
-    const playing = pending.filter((r) => r.time === currentSlotTime);
-    const upcoming = pending
-      .filter((r) => timeToMinutes(r.time!) > timeToMinutes(currentSlotTime!))
-      .slice(0, 8);
-    return { playing, upcoming };
-  }, [rows, nowMin]);
-
   function goFullscreen() {
     containerRef.current?.requestFullscreen?.();
   }
+
+  const hasStandings = categories.some((c) => c.groups.length > 0);
 
   return (
     <div ref={containerRef} className="bg-app-gradient min-h-screen bg-background p-6 sm:p-10">
@@ -80,71 +66,31 @@ export function MonitorBoard({
           </div>
         </div>
 
-        <section>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-            Now Playing
-          </h2>
-          {playing.length === 0 ? (
-            <p className="glass rounded-2xl p-8 text-center text-muted-foreground">
-              No matches in progress.
-            </p>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {playing.map((r) => (
-                <div
-                  key={r.id}
-                  className="glass-strong rounded-2xl border-primary/30 p-5"
-                >
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span className="font-semibold text-primary">{r.court}</span>
-                    <span>{formatTime(r.time)}</span>
+        {!hasStandings ? (
+          <p className="glass rounded-2xl p-10 text-center text-muted-foreground">
+            Standings will appear once the group stage begins.
+          </p>
+        ) : (
+          <div className="space-y-10">
+            {categories
+              .filter((c) => c.groups.length > 0)
+              .map((c) => (
+                <section key={c.id} className="space-y-4">
+                  <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+                    {c.name}
+                  </h2>
+                  <div className="grid gap-6 lg:grid-cols-2">
+                    {c.groups.map((g) => (
+                      <div key={g.id} className="space-y-2">
+                        <h3 className="text-lg font-bold">{g.name}</h3>
+                        <StandingsTable rows={g.standings} />
+                      </div>
+                    ))}
                   </div>
-                  <div className="mt-3 space-y-1 text-xl font-bold">
-                    <div className="truncate">{r.team1}</div>
-                    <div className="text-sm font-normal text-muted-foreground">
-                      vs
-                    </div>
-                    <div className="truncate">{r.team2}</div>
-                  </div>
-                  <div className="mt-3 text-xs text-muted-foreground">
-                    {r.group}
-                  </div>
-                </div>
+                </section>
               ))}
-            </div>
-          )}
-        </section>
-
-        <section>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-            Upcoming Matches
-          </h2>
-          {upcoming.length === 0 ? (
-            <p className="glass rounded-2xl p-6 text-center text-muted-foreground">
-              Nothing else scheduled.
-            </p>
-          ) : (
-            <div className="glass divide-y divide-white/5 rounded-2xl">
-              {upcoming.map((r) => (
-                <div
-                  key={r.id}
-                  className="flex items-center gap-4 px-5 py-3.5 text-lg"
-                >
-                  <span className="w-20 shrink-0 tabular-nums font-semibold text-primary">
-                    {formatTime(r.time)}
-                  </span>
-                  <span className="w-24 shrink-0 text-sm text-muted-foreground">
-                    {r.court}
-                  </span>
-                  <span className="flex-1 truncate">
-                    {r.team1}{" "}
-                    <span className="text-muted-foreground">vs</span> {r.team2}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+          </div>
+        )}
       </div>
     </div>
   );

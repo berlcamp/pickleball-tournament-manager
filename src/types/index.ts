@@ -46,6 +46,7 @@ export type TournamentSettings = {
 export type CategorySettings = {
   random_tiebreak?: boolean;
   // Each category schedules independently and remembers its own configuration.
+  venue_name?: string;
   schedule_mode?: ScheduleMode;
   start_time?: string; // "08:00"
   end_time?: string; // "17:00"

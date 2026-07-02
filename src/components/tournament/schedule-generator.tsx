@@ -30,13 +30,13 @@ export function ScheduleGenerator({
   categoryName: string;
   settings: CategorySettings;
 }) {
+  const [venue, setVenue] = useState(settings.venue_name ?? "");
   const [startTime, setStartTime] = useState(settings.start_time ?? "08:00");
-  const [endTime, setEndTime] = useState(settings.end_time ?? "17:00");
   const [interval, setIntervalV] = useState(settings.match_interval ?? 15);
   const [numCourts, setNumCourts] = useState(settings.num_courts ?? 4);
   const [rest, setRest] = useState(settings.rest_period ?? 0);
   const [mode, setMode] = useState<ScheduleMode>(
-    settings.schedule_mode ?? "distributed",
+    settings.schedule_mode ?? "sequential",
   );
   const [knockout, setKnockout] = useState<KnockoutRounds>(
     settings.knockout_rounds ?? "none",
@@ -46,8 +46,10 @@ export function ScheduleGenerator({
   function generate() {
     startTransition(async () => {
       const res = await generateSchedule(tournamentId, categoryId, {
+        venue_name: venue.trim() || undefined,
         start_time: startTime,
-        end_time: endTime,
+        // No target end time — schedule across a full-day window.
+        end_time: "23:59",
         match_interval: interval,
         num_courts: numCourts,
         rest_period: rest,
@@ -89,6 +91,17 @@ export function ScheduleGenerator({
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Field
+          label="Venue name"
+          hint="Where this category's matches are played. Shown alongside the published schedule."
+        >
+          <Input
+            type="text"
+            placeholder="e.g. City Sports Complex"
+            value={venue}
+            onChange={(e) => setVenue(e.target.value)}
+          />
+        </Field>
+        <Field
           label="Start time"
           hint="When this category's first match begins. Its matches are laid out from this time onward."
         >
@@ -99,20 +112,14 @@ export function ScheduleGenerator({
           />
         </Field>
         <Field
-          label="Target end time"
-          hint="The time you'd like all group-stage matches finished by. If they can't all fit before this, the engine warns you to add courts or extend the window."
-        >
-          <Input
-            type="time"
-            value={endTime}
-            onChange={(e) => setEndTime(e.target.value)}
-          />
-        </Field>
-        <Field
           label="Match interval"
           hint="How long each match slot lasts. A court's next match starts this many minutes after the previous one began."
         >
           <Select
+            items={MATCH_INTERVALS.map((m) => ({
+              label: `${m} minutes`,
+              value: String(m),
+            }))}
             value={String(interval)}
             onValueChange={(v) => setIntervalV(Number(v))}
           >
@@ -156,15 +163,22 @@ export function ScheduleGenerator({
           label="Scheduling mode"
           hint="Equally Distributed spreads each group's matches evenly across the day. Sequential by Group plays one group's matches through before moving to the next."
         >
-          <Select value={mode} onValueChange={(v) => setMode(v as ScheduleMode)}>
+          <Select
+            items={[
+              { label: "Sequential by Group (recommended)", value: "sequential" },
+              { label: "Equally Distributed", value: "distributed" },
+            ]}
+            value={mode}
+            onValueChange={(v) => setMode(v as ScheduleMode)}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="distributed">
-                Equally Distributed (recommended)
+              <SelectItem value="sequential">
+                Sequential by Group (recommended)
               </SelectItem>
-              <SelectItem value="sequential">Sequential by Group</SelectItem>
+              <SelectItem value="distributed">Equally Distributed</SelectItem>
             </SelectContent>
           </Select>
         </Field>
@@ -173,6 +187,11 @@ export function ScheduleGenerator({
           hint="Reserve placeholder slots after the group stage for this category's knockout bracket, so the timeline already accounts for them. Choose how far to reserve: up to semifinals, or all the way to finals."
         >
           <Select
+            items={[
+              { label: "None", value: "none" },
+              { label: "Up to semifinals", value: "semifinals" },
+              { label: "Up to finals", value: "finals" },
+            ]}
             value={knockout}
             onValueChange={(v) => setKnockout(v as KnockoutRounds)}
           >

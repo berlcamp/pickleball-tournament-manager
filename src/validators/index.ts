@@ -51,6 +51,7 @@ export const scoreSchema = z.object({
 });
 
 export const scheduleSchema = z.object({
+  venue_name: z.string().trim().max(120).optional(),
   start_time: z.string().regex(/^\d{2}:\d{2}$/),
   end_time: z.string().regex(/^\d{2}:\d{2}$/),
   match_interval: z.coerce

@@ -122,16 +122,36 @@ export function computeGroupStandings(
 
   const standings = [...table.values()];
 
+  // Tie-break (TB): head-to-head wins counted ONLY against teams sharing the
+  // same primary record (match wins). For a two-way tie it's 0 or 1 (whoever
+  // won the head-to-head); for a 3+ way tie it's how many of the other tied
+  // teams a team beat. Teams that aren't tied on match wins keep TB = 0.
+  const byWins = new Map<number, ComputedStanding[]>();
+  for (const s of standings) {
+    if (!byWins.has(s.matchesWon)) byWins.set(s.matchesWon, []);
+    byWins.get(s.matchesWon)!.push(s);
+  }
+  for (const group of byWins.values()) {
+    if (group.length < 2) continue; // not tied → TB stays 0
+    const tiedIds = new Set(group.map((s) => s.participantId));
+    for (const s of group) {
+      const wins = h2h.get(s.participantId);
+      if (!wins) continue;
+      let tb = 0;
+      for (const [oppId, count] of wins) {
+        if (tiedIds.has(oppId)) tb += count;
+      }
+      s.tieBreak = tb;
+    }
+  }
+
   // Sort applying tie-breaker rules.
   standings.sort((a, b) => {
     // 1. Most match wins
     if (b.matchesWon !== a.matchesWon) return b.matchesWon - a.matchesWon;
 
-    // 2. Head-to-head (only meaningful for exactly two tied teams; we apply it
-    //    pairwise here).
-    const aWins = h2h.get(a.participantId)?.get(b.participantId) ?? 0;
-    const bWins = h2h.get(b.participantId)?.get(a.participantId) ?? 0;
-    if (aWins !== bWins) return bWins - aWins;
+    // 2. Tie-break: head-to-head wins among the tied teams
+    if (b.tieBreak !== a.tieBreak) return b.tieBreak - a.tieBreak;
 
     // 3. Total points
     if (b.points !== a.points) return b.points - a.points;
@@ -139,7 +159,16 @@ export function computeGroupStandings(
     // 4. Point differential
     if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
 
-    // 5. Random draw (configurable fallback)
+    // 5. Direct head-to-head: the team that won the match between these two
+    //    specific teams ranks higher. This is distinct from step 2, which is a
+    //    mini-league win count across everyone sharing the same match-win total
+    //    and can stay level in a 3-way cycle even when the direct result is
+    //    decisive.
+    const aOverB = h2h.get(a.participantId)?.get(b.participantId) ?? 0;
+    const bOverA = h2h.get(b.participantId)?.get(a.participantId) ?? 0;
+    if (aOverB !== bOverA) return bOverA - aOverB;
+
+    // 6. Random draw (configurable fallback)
     if (options.randomTiebreak) return Math.random() - 0.5;
     return 0;
   });

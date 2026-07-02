@@ -1,14 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getTournamentContext } from "@/lib/data";
+import { getTournamentContext, resolveActiveCategory } from "@/lib/data";
 import { roleAtLeast } from "@/lib/constants";
 import {
   Collaboration,
   type MemberRow,
   type InviteRow,
 } from "@/components/tournament/collaboration";
-import { DangerZone } from "@/components/tournament/danger-zone";
 import { QrShare } from "@/components/qr-share";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/progress-bar";
@@ -22,42 +21,47 @@ import {
 
 async function count(
   table: "participants" | "groups" | "group_matches",
-  tournamentId: string,
+  categoryId: string,
 ) {
   const supabase = await createClient();
   const { count } = await supabase
     .from(table)
     .select("id", { count: "exact", head: true })
-    .eq("tournament_id", tournamentId);
+    .eq("category_id", categoryId);
   return count ?? 0;
 }
 
-async function countCompletedMatches(tournamentId: string) {
+async function countCompletedMatches(categoryId: string) {
   const supabase = await createClient();
   const { count } = await supabase
     .from("group_matches")
     .select("id", { count: "exact", head: true })
-    .eq("tournament_id", tournamentId)
+    .eq("category_id", categoryId)
     .eq("status", "completed");
   return count ?? 0;
 }
 
 export default async function TournamentOverviewPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ category?: string }>;
 }) {
   const { id } = await params;
+  const { category } = await searchParams;
   const ctx = await getTournamentContext(id);
   if (!ctx) notFound();
   const { tournament, role } = ctx;
+  const active = resolveActiveCategory(ctx.categories, category);
+  if (!active) notFound();
   const supabase = await createClient();
 
   const [participants, groups, matchesTotal, matchesDone] = await Promise.all([
-    count("participants", id),
-    count("groups", id),
-    count("group_matches", id),
-    countCompletedMatches(id),
+    count("participants", active.id),
+    count("groups", active.id),
+    count("group_matches", active.id),
+    countCompletedMatches(active.id),
   ]);
 
   const { data: memberDataRaw } = await supabase
@@ -152,14 +156,12 @@ export default async function TournamentOverviewPage({
           </div>
         </div>
 
-        {tournament.description && (
-          <div className="glass space-y-2 rounded-2xl p-5">
-            <h3 className="font-semibold">About</h3>
-            <p className="whitespace-pre-wrap text-sm text-muted-foreground">
-              {tournament.description}
-            </p>
-          </div>
-        )}
+        <Collaboration
+          tournamentId={id}
+          myRole={role}
+          members={members}
+          invites={invites}
+        />
 
         <div className="glass space-y-3 rounded-2xl p-5">
           <h3 className="font-semibold">Public sharing</h3>
@@ -185,13 +187,6 @@ export default async function TournamentOverviewPage({
       </div>
 
       <div className="space-y-6">
-        <Collaboration
-          tournamentId={id}
-          myRole={role}
-          members={members}
-          invites={invites}
-        />
-
         {canEdit && (
           <div className="glass space-y-3 rounded-2xl p-5">
             <h3 className="font-semibold">Settings</h3>
@@ -203,7 +198,14 @@ export default async function TournamentOverviewPage({
           </div>
         )}
 
-        {role === "owner" && <DangerZone tournamentId={id} />}
+        {tournament.description && (
+          <div className="glass space-y-2 rounded-2xl p-5">
+            <h3 className="font-semibold">About</h3>
+            <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+              {tournament.description}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

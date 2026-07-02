@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { slugify } from "@/lib/format";
 import {
@@ -117,6 +116,20 @@ export async function updateCategory(
   return run(async () => {
     const parsed = categorySchema.parse(input);
     const { supabase } = await assertRole(tournamentId, "admin");
+
+    const { data: category, error: fetchError } = await supabase
+      .from("categories")
+      .select("status")
+      .eq("id", categoryId)
+      .eq("tournament_id", tournamentId)
+      .single();
+    if (fetchError) throw new ActionError(fetchError.message);
+    if (category.status !== "draft") {
+      throw new ActionError(
+        "This category's group stage has started and can no longer be edited.",
+      );
+    }
+
     const { error } = await supabase
       .from("categories")
       .update({
@@ -135,6 +148,19 @@ export async function deleteCategory(tournamentId: string, categoryId: string) {
   return run(async () => {
     const { supabase } = await assertRole(tournamentId, "admin");
 
+    const { data: category, error: fetchError } = await supabase
+      .from("categories")
+      .select("status")
+      .eq("id", categoryId)
+      .eq("tournament_id", tournamentId)
+      .single();
+    if (fetchError) throw new ActionError(fetchError.message);
+    if (category.status !== "draft") {
+      throw new ActionError(
+        "This category's group stage has started and can no longer be deleted.",
+      );
+    }
+
     const { count } = await supabase
       .from("categories")
       .select("id", { count: "exact", head: true })
@@ -152,19 +178,6 @@ export async function deleteCategory(tournamentId: string, categoryId: string) {
     await logAudit(tournamentId, "category.delete", { categoryId });
     revalidatePath(`/dashboard/tournaments/${tournamentId}`, "layout");
   });
-}
-
-export async function deleteTournament(id: string) {
-  const result = await run(async () => {
-    const { supabase } = await assertRole(id, "owner");
-    const { error } = await supabase.from("tournaments").delete().eq("id", id);
-    if (error) throw new ActionError(error.message);
-  });
-  if (result.ok) {
-    revalidatePath("/dashboard/tournaments");
-    redirect("/dashboard/tournaments");
-  }
-  return result;
 }
 
 export async function updateProfile(input: unknown) {

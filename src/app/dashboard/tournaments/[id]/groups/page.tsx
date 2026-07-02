@@ -4,7 +4,7 @@ import { getTournamentContext, resolveActiveCategory } from "@/lib/data";
 import { roleAtLeast } from "@/lib/constants";
 import { PageHeader } from "@/components/page-header";
 import { GroupGenerator } from "@/components/tournament/group-generator";
-import { Users } from "lucide-react";
+import { Users, Lock } from "lucide-react";
 
 export default async function GroupsPage({
   params,
@@ -45,6 +45,7 @@ export default async function GroupsPage({
   }[];
 
   const canEdit = roleAtLeast(ctx.role, "admin");
+  const canGenerate = canEdit && active.status === "draft";
 
   return (
     <div className="space-y-6">
@@ -53,13 +54,20 @@ export default async function GroupsPage({
         description="Snake-seeded round robin groups."
       />
 
-      {canEdit && (
+      {canGenerate && (
         <GroupGenerator
           tournamentId={id}
           categoryId={active.id}
           participantCount={participantCount ?? 0}
           hasGroups={(groups?.length ?? 0) > 0}
         />
+      )}
+
+      {canEdit && !canGenerate && (
+        <div className="glass flex items-center gap-2 rounded-2xl p-4 text-sm text-muted-foreground">
+          <Lock className="size-4" />
+          Group stage has started — groups are locked.
+        </div>
       )}
 
       {groups && groups.length > 0 && (

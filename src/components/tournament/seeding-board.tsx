@@ -85,6 +85,12 @@ export function SeedingBoard({
 
   const sensors = useSensors(useSensor(PointerSensor));
 
+  // Re-sync the local list when the active category (and thus the
+  // participants) changes — otherwise switching category keeps the old seeds.
+  useEffect(() => {
+    setItems(participants.map((p) => ({ id: p.id, name: p.name })));
+  }, [categoryId, participants]);
+
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -105,6 +111,7 @@ export function SeedingBoard({
     startTransition(async () => {
       const res = await saveSeeding(
         tournamentId,
+        categoryId,
         items.map((i) => i.id),
       );
       if (!res.ok) { toast.error(res.error); return; }

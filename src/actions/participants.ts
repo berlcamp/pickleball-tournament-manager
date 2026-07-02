@@ -1,8 +1,31 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { ActionError, assertRole, logAudit, run } from "./helpers";
+import {
+  ActionError,
+  assertCategoryDraft,
+  assertRole,
+  logAudit,
+  run,
+} from "./helpers";
 import { participantSchema } from "@/validators";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/database";
+
+/** Resolve a participant's category and ensure it's still a draft. */
+async function assertParticipantDraft(
+  supabase: SupabaseClient<Database>,
+  participantId: string,
+) {
+  const { data: participant, error } = await supabase
+    .from("participants")
+    .select("category_id")
+    .eq("id", participantId)
+    .single();
+  if (error) throw new ActionError(error.message);
+  if (!participant) throw new ActionError("Team not found.");
+  await assertCategoryDraft(supabase, participant.category_id);
+}
 
 export async function addParticipant(
   tournamentId: string,
@@ -12,6 +35,7 @@ export async function addParticipant(
   return run(async () => {
     const parsed = participantSchema.parse({ name });
     const { supabase } = await assertRole(tournamentId, "admin");
+    await assertCategoryDraft(supabase, categoryId);
 
     const { count } = await supabase
       .from("participants")
@@ -37,6 +61,7 @@ export async function bulkAddParticipants(
 ) {
   return run(async () => {
     const { supabase } = await assertRole(tournamentId, "admin");
+    await assertCategoryDraft(supabase, categoryId);
     const names = raw
       .split("\n")
       .map((l) => l.trim())
@@ -72,6 +97,7 @@ export async function deleteParticipant(
 ) {
   return run(async () => {
     const { supabase } = await assertRole(tournamentId, "admin");
+    await assertParticipantDraft(supabase, participantId);
     const { error } = await supabase
       .from("participants")
       .delete()
@@ -89,6 +115,7 @@ export async function renameParticipant(
   return run(async () => {
     const parsed = participantSchema.parse({ name });
     const { supabase } = await assertRole(tournamentId, "admin");
+    await assertParticipantDraft(supabase, participantId);
     const { error } = await supabase
       .from("participants")
       .update({ name: parsed.name })

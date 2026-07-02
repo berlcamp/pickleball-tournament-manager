@@ -1,4 +1,5 @@
 import { StandingStatusBadge, WLBadge } from "@/components/status-badge";
+import { RankingHelpDialog } from "@/components/tournament/ranking-help-dialog";
 import type { StandingStatus } from "@/types";
 
 export interface StandingRow {
@@ -13,12 +14,101 @@ export interface StandingRow {
   setWins: number;
   setTies: number;
   points: number;
+  pointDiff: number;
   history: ("W" | "L" | "T")[];
+}
+
+const fmtDiff = (n: number) => (n > 0 ? `+${n}` : `${n}`);
+
+/**
+ * Group teams that are tied through the point-differential tie-breaker, i.e.
+ * teams sharing the same match record (wins), head-to-head (tieBreak) AND total
+ * points — the point where point differential (or a random draw) decides order.
+ * Rows are already sorted by final rank, so tied teams are always adjacent.
+ */
+function findTieClusters(rows: StandingRow[]): StandingRow[][] {
+  const clusters: StandingRow[][] = [];
+  let current: StandingRow[] = [];
+  const sameTier = (a: StandingRow, b: StandingRow) =>
+    a.matchesWon === b.matchesWon &&
+    a.tieBreak === b.tieBreak &&
+    a.points === b.points;
+
+  for (const row of rows) {
+    if (current.length === 0 || sameTier(current[current.length - 1], row)) {
+      current.push(row);
+    } else {
+      if (current.length >= 2) clusters.push(current);
+      current = [row];
+    }
+  }
+  if (current.length >= 2) clusters.push(current);
+  return clusters;
+}
+
+function TieBreakDetails({ rows }: { rows: StandingRow[] }) {
+  const clusters = findTieClusters(rows);
+  if (clusters.length === 0) return null;
+
+  return (
+    <div className="space-y-2 px-3 py-3">
+      {clusters.map((cluster) => {
+        const h2hDecided = cluster.some(
+          (r, i) => i > 0 && r.pointDiff === cluster[i - 1].pointDiff,
+        );
+        return (
+          <div
+            key={cluster[0].participantId}
+            className="rounded-xl border border-white/10 bg-white/[0.02] p-3 text-xs"
+          >
+            <p className="mb-2 font-medium text-muted-foreground">
+              {cluster.length}-way tie · same record and {cluster[0].points} pts
+              — ranked by point differential
+            </p>
+            <ol className="space-y-1">
+              {cluster.map((r) => (
+                <li
+                  key={r.participantId}
+                  className="flex items-center justify-between gap-3 tabular-nums"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="text-muted-foreground">#{r.rank}</span>
+                    <span className="font-medium">{r.name}</span>
+                  </span>
+                  <span
+                    className={
+                      r.pointDiff > 0
+                        ? "text-emerald-400"
+                        : r.pointDiff < 0
+                          ? "text-red-400"
+                          : "text-muted-foreground"
+                    }
+                  >
+                    {fmtDiff(r.pointDiff)}
+                  </span>
+                </li>
+              ))}
+            </ol>
+            {h2hDecided && (
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                Where teams share the same differential, the head-to-head result
+                decided the order — the winner of their match ranks higher.
+              </p>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 export function StandingsTable({ rows }: { rows: StandingRow[] }) {
   return (
-    <div className="glass overflow-x-auto rounded-2xl">
+    <div className="glass rounded-2xl">
+      <div className="flex justify-end px-2 pt-2">
+        <RankingHelpDialog />
+      </div>
+      <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-white/10 text-left text-xs uppercase tracking-wide text-muted-foreground">
@@ -66,6 +156,8 @@ export function StandingsTable({ rows }: { rows: StandingRow[] }) {
           ))}
         </tbody>
       </table>
+      </div>
+      <TieBreakDetails rows={rows} />
     </div>
   );
 }

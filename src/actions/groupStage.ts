@@ -94,6 +94,55 @@ async function recomputeGroup(db: DB, tournamentId: string, groupId: string) {
   );
 }
 
+/** Throw unless the category is currently in the group stage. */
+async function assertGroupStageActive(db: DB, categoryId: string) {
+  const { data: category } = await db
+    .from("categories")
+    .select("status")
+    .eq("id", categoryId)
+    .single();
+  if (!category) throw new ActionError("Category not found.");
+  if (category.status !== "group_stage") {
+    throw new ActionError("Group stage is not active.");
+  }
+}
+
+export async function startGroupStage(
+  tournamentId: string,
+  categoryId: string,
+) {
+  return run(async () => {
+    const { supabase } = await assertRole(tournamentId, "admin");
+
+    const { data: category } = await supabase
+      .from("categories")
+      .select("status")
+      .eq("id", categoryId)
+      .single();
+    if (!category) throw new ActionError("Category not found.");
+    if (category.status !== "draft") {
+      throw new ActionError("Group stage has already started.");
+    }
+
+    const { data: matches } = await supabase
+      .from("group_matches")
+      .select("id")
+      .eq("category_id", categoryId)
+      .limit(1);
+    if (!matches || matches.length === 0) {
+      throw new ActionError("Generate groups first.");
+    }
+
+    await supabase
+      .from("categories")
+      .update({ status: "group_stage" })
+      .eq("id", categoryId);
+
+    await logAudit(tournamentId, "groupStage.start", { categoryId });
+    revalidatePath(`/dashboard/tournaments/${tournamentId}`, "layout");
+  });
+}
+
 export async function submitGroupScore(
   tournamentId: string,
   matchId: string,
@@ -105,10 +154,11 @@ export async function submitGroupScore(
 
     const { data: match, error: mErr } = await supabase
       .from("group_matches")
-      .select("id, group_id, participant1_id, participant2_id")
+      .select("id, group_id, category_id, participant1_id, participant2_id")
       .eq("id", matchId)
       .single();
     if (mErr || !match) throw new ActionError("Match not found.");
+    await assertGroupStageActive(supabase, match.category_id);
 
     // Replace scores.
     await supabase.from("group_match_scores").delete().eq("match_id", matchId);
@@ -149,6 +199,15 @@ export async function clearGroupScore(
 ) {
   return run(async () => {
     const { supabase } = await assertRole(tournamentId, "scorekeeper");
+
+    const { data: match, error: mErr } = await supabase
+      .from("group_matches")
+      .select("category_id")
+      .eq("id", matchId)
+      .single();
+    if (mErr || !match) throw new ActionError("Match not found.");
+    await assertGroupStageActive(supabase, match.category_id);
+
     await supabase.from("group_match_scores").delete().eq("match_id", matchId);
     await supabase
       .from("group_matches")

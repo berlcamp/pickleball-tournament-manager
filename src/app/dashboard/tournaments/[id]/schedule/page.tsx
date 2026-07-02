@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/page-header";
 import { ScheduleGenerator } from "@/components/tournament/schedule-generator";
 import { ScheduleTable } from "@/components/tournament/schedule-table";
 import { QrShare } from "@/components/qr-share";
+import { Lock } from "lucide-react";
 
 export default async function SchedulePage({
   params,
@@ -37,13 +38,20 @@ export default async function SchedulePage({
         />
       </PageHeader>
 
-      {roleAtLeast(ctx.role, "admin") && (
+      {roleAtLeast(ctx.role, "admin") && active.status === "draft" && (
         <ScheduleGenerator
           tournamentId={id}
           categoryId={active.id}
           categoryName={active.name}
           settings={active.settings}
         />
+      )}
+
+      {roleAtLeast(ctx.role, "admin") && active.status !== "draft" && (
+        <div className="glass flex items-center gap-2 rounded-2xl p-4 text-sm text-muted-foreground">
+          <Lock className="size-4" />
+          Group stage has started — the schedule is locked.
+        </div>
       )}
 
       <ScheduleTable rows={rows} />

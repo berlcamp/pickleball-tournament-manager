@@ -34,11 +34,13 @@ export function CategorySwitcher({ categories }: { categories: Category[] }) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("category", id);
     router.push(`${pathname}?${params.toString()}`);
+    router.refresh();
   }
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Layers className="size-4 text-muted-foreground" />
+      <span className="text-sm text-muted-foreground">Switch category:</span>
       <Select
         items={categories.map((c) => ({ label: c.name, value: c.id }))}
         value={active.id}

@@ -5,11 +5,10 @@ import {
   getPublicCategories,
   aggregateStatus,
 } from "@/lib/data";
-import { loadSchedule, loadFinals } from "@/lib/tournament-data";
-import { MonitorBoard } from "@/components/public/monitor-board";
+import { loadGroupStage } from "@/lib/tournament-data";
+import { MonitorBoard, type MonitorCategory } from "@/components/public/monitor-board";
 import { TournamentStatusBadge } from "@/components/status-badge";
 import { Tv } from "lucide-react";
-import type { ScheduleRow } from "@/components/tournament/schedule-table";
 import type { Tournament, TournamentStatus } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -25,31 +24,17 @@ export default async function MonitorPage({
     const tournament = await getTournamentBySlug(t);
     if (tournament) {
       const db = await publicClient();
-      let rows: ScheduleRow[] = await loadSchedule(db, tournament.id);
-      // Fall back to finals matches across categories if no group schedule exists.
-      if (rows.length === 0) {
-        const categories = await getPublicCategories(tournament.id);
-        const perCategory = await Promise.all(
-          categories.map(async (c) => {
-            const finals = await loadFinals(db, c.id);
-            return finals.rounds
-              .flatMap((r) => r.matches)
-              .map((m) => ({
-                id: m.id,
-                time: null,
-                court: m.label,
-                category: c.name,
-                team1: m.team1.name,
-                team2: m.team2.name,
-                group: "Finals",
-                status: m.status,
-                kind: "knockout" as const,
-              }));
-          }),
-        );
-        rows = perCategory.flat();
-      }
-      return <MonitorBoard tournamentName={tournament.name} rows={rows} />;
+      const publicCategories = await getPublicCategories(tournament.id);
+      const categories: MonitorCategory[] = await Promise.all(
+        publicCategories.map(async (c) => ({
+          id: c.id,
+          name: c.name,
+          groups: await loadGroupStage(db, c.id),
+        })),
+      );
+      return (
+        <MonitorBoard tournamentName={tournament.name} categories={categories} />
+      );
     }
   }
 

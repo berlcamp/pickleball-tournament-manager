@@ -1,16 +1,24 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { ActionError, assertRole, logAudit, run } from "./helpers";
+import {
+  ActionError,
+  assertCategoryDraft,
+  assertRole,
+  logAudit,
+  run,
+} from "./helpers";
 import { shuffle } from "@/services/seeding";
 
 /** Persist a manual seed order (array of participant ids, best first). */
 export async function saveSeeding(
   tournamentId: string,
+  categoryId: string,
   orderedIds: string[],
 ) {
   return run(async () => {
     const { supabase } = await assertRole(tournamentId, "admin");
+    await assertCategoryDraft(supabase, categoryId);
     await Promise.all(
       orderedIds.map((id, i) =>
         supabase
@@ -31,6 +39,7 @@ export async function randomizeSeeding(
 ) {
   return run(async () => {
     const { supabase } = await assertRole(tournamentId, "admin");
+    await assertCategoryDraft(supabase, categoryId);
     const { data, error } = await supabase
       .from("participants")
       .select("id")

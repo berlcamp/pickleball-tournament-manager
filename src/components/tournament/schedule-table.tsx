@@ -16,6 +16,8 @@ export interface ScheduleRow {
   group: string;
   /** Owning category name, when the schedule spans multiple categories. */
   category?: string | null;
+  /** Venue where this category's matches are played, if configured. */
+  venue?: string | null;
   status: "pending" | "in_progress" | "completed";
   /** "group" stage match or a reserved "knockout" bracket slot. */
   kind: "group" | "knockout";
@@ -44,12 +46,13 @@ export function ScheduleTable({ rows }: { rows: ScheduleRow[] }) {
     [rows],
   );
   const showCategory = categories.length > 1;
+  const showVenue = rows.some((r) => r.venue);
 
   const filtered = useMemo(() => {
     return rows
       .filter((r) => {
         const text =
-          `${r.team1} ${r.team2} ${r.group} ${r.court} ${r.category ?? ""}`.toLowerCase();
+          `${r.team1} ${r.team2} ${r.group} ${r.court} ${r.category ?? ""} ${r.venue ?? ""}`.toLowerCase();
         if (q && !text.includes(q.toLowerCase())) return false;
         if (group !== "all" && r.group !== group) return false;
         if (court !== "all" && r.court !== court) return false;
@@ -118,6 +121,7 @@ export function ScheduleTable({ rows }: { rows: ScheduleRow[] }) {
             <tr className="border-b border-white/10 text-left text-xs uppercase tracking-wide text-muted-foreground">
               <th className="px-3 py-3">Time</th>
               <th className="px-3 py-3">Court</th>
+              {showVenue && <th className="px-3 py-3">Venue</th>}
               {showCategory && <th className="px-3 py-3">Category</th>}
               <th className="px-3 py-3">Match</th>
               <th className="px-3 py-3">Group</th>
@@ -128,7 +132,7 @@ export function ScheduleTable({ rows }: { rows: ScheduleRow[] }) {
             {filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={showCategory ? 6 : 5}
+                  colSpan={5 + (showVenue ? 1 : 0) + (showCategory ? 1 : 0)}
                   className="px-3 py-10 text-center text-muted-foreground"
                 >
                   No matches found.
@@ -144,6 +148,11 @@ export function ScheduleTable({ rows }: { rows: ScheduleRow[] }) {
                     {formatTime(r.time)}
                   </td>
                   <td className="whitespace-nowrap px-3 py-3">{r.court}</td>
+                  {showVenue && (
+                    <td className="whitespace-nowrap px-3 py-3 text-muted-foreground">
+                      {r.venue ?? "—"}
+                    </td>
+                  )}
                   {showCategory && (
                     <td className="whitespace-nowrap px-3 py-3 text-muted-foreground">
                       {r.category ?? "—"}

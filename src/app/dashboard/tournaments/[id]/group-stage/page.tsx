@@ -46,9 +46,16 @@ export default async function GroupStagePage({
         </EmptyState>
       ) : (
         <GroupStageView
+          key={active.id}
           tournamentId={id}
+          categoryId={active.id}
           groups={groups}
-          canScore={roleAtLeast(ctx.role, "scorekeeper")}
+          status={active.status}
+          canManage={roleAtLeast(ctx.role, "admin")}
+          canScore={
+            roleAtLeast(ctx.role, "scorekeeper") &&
+            active.status === "group_stage"
+          }
         />
       )}
     </div>

@@ -39,6 +39,7 @@ export async function generateSchedule(
     // Persist schedule settings on the category (it remembers its own config).
     const settings = {
       ...(category.settings ?? {}),
+      venue_name: cfg.venue_name,
       start_time: cfg.start_time,
       end_time: cfg.end_time,
       match_interval: cfg.match_interval,

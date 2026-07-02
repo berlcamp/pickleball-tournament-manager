@@ -46,7 +46,7 @@ export default async function SeedingPage({
           tournamentId={id}
           categoryId={active.id}
           participants={participants}
-          canEdit={roleAtLeast(ctx.role, "admin")}
+          canEdit={roleAtLeast(ctx.role, "admin") && active.status === "draft"}
         />
       )}
     </div>

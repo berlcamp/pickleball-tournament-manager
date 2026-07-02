@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const TABS = [
@@ -17,14 +17,18 @@ const TABS = [
 
 export function TabNav({ id }: { id: string }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const base = `/dashboard/tournaments/${id}`;
+  const category = searchParams.get("category");
+  const query = category ? `?category=${category}` : "";
 
   return (
     <div className="no-scrollbar -mx-1 flex gap-1 overflow-x-auto border-b border-white/5 pb-px">
       {TABS.map((tab) => {
-        const href = tab.seg ? `${base}/${tab.seg}` : base;
+        const path = tab.seg ? `${base}/${tab.seg}` : base;
+        const href = `${path}${query}`;
         const active = tab.seg
-          ? pathname.startsWith(href)
+          ? pathname.startsWith(path)
           : pathname === base;
         return (
           <Link

@@ -46,6 +46,7 @@ export default async function PublicStandingsPage({
       <CategoryFilter categories={categories} activeId={active.id} />
       <Podium placements={finals.placements} />
       <PublicStandings
+        key={active.id}
         groups={groups.map((g) => ({
           id: g.id,
           name: g.name,

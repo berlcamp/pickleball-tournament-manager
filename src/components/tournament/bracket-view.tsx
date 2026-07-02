@@ -11,8 +11,8 @@ export interface FinalMatchVM {
   round: number;
   slot: number;
   label: string;
-  team1: { id: string | null; name: string };
-  team2: { id: string | null; name: string };
+  team1: { id: string | null; name: string; seed: string | null };
+  team2: { id: string | null; name: string; seed: string | null };
   status: "pending" | "in_progress" | "completed";
   winnerId: string | null;
   sets: SetScore[];
@@ -41,9 +41,24 @@ function MatchCard({
   onScore: () => void;
 }) {
   const ready = m.team1.id && m.team2.id;
-  const rows: { id: string | null; name: string; pts: number }[] = [
-    { id: m.team1.id, name: m.team1.name, pts: score(m.sets, 1) },
-    { id: m.team2.id, name: m.team2.name, pts: score(m.sets, 2) },
+  const rows: {
+    id: string | null;
+    name: string;
+    seed: string | null;
+    pts: number;
+  }[] = [
+    {
+      id: m.team1.id,
+      name: m.team1.name,
+      seed: m.team1.seed,
+      pts: score(m.sets, 1),
+    },
+    {
+      id: m.team2.id,
+      name: m.team2.name,
+      seed: m.team2.seed,
+      pts: score(m.sets, 2),
+    },
   ];
   return (
     <div className="glass w-60 rounded-xl p-3 transition-all hover:ring-1 hover:ring-primary/40">
@@ -72,7 +87,14 @@ function MatchCard({
                 : "bg-card/40",
             )}
           >
-            <span className="truncate">{r.name}</span>
+            <span className="flex min-w-0 items-center gap-1.5">
+              {r.seed && (
+                <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-muted-foreground">
+                  {r.seed}
+                </span>
+              )}
+              <span className="truncate">{r.name}</span>
+            </span>
             <span className="tabular-nums text-muted-foreground">
               {m.sets.length ? r.pts : "–"}
             </span>

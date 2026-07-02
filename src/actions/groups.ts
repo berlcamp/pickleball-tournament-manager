@@ -1,7 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { ActionError, assertRole, logAudit, run } from "./helpers";
+import {
+  ActionError,
+  assertCategoryDraft,
+  assertRole,
+  logAudit,
+  run,
+} from "./helpers";
 import { snakeAssignGroups, groupLabel } from "@/services/seeding";
 import { generateRoundRobin } from "@/services/roundRobin";
 
@@ -16,6 +22,7 @@ export async function generateGroups(
 ) {
   return run(async () => {
     const { supabase } = await assertRole(tournamentId, "admin");
+    await assertCategoryDraft(supabase, categoryId);
 
     const { data: participants, error: pErr } = await supabase
       .from("participants")
@@ -116,11 +123,6 @@ export async function generateGroups(
       const { error } = await supabase.from("group_matches").insert(matchRows);
       if (error) throw new ActionError(error.message);
     }
-
-    await supabase
-      .from("categories")
-      .update({ status: "group_stage" })
-      .eq("id", categoryId);
 
     await logAudit(tournamentId, "groups.generate", { categoryId, numGroups });
     revalidatePath(`/dashboard/tournaments/${tournamentId}`, "layout");

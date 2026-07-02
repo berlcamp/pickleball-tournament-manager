@@ -1,12 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
-import type { StandingStatus } from "@/types";
+import type { CategorySettings, StandingStatus } from "@/types";
 import type { GroupVM } from "@/components/tournament/group-stage-view";
 import type { ScheduleRow } from "@/components/tournament/schedule-table";
 import type {
   BracketRound,
   FinalMatchVM,
 } from "@/components/tournament/bracket-view";
+import { groupLabel } from "@/services/seeding";
 
 type DB = SupabaseClient<Database>;
 
@@ -27,6 +28,24 @@ export async function loadFinals(
   const nameById = new Map<string, string>();
   (participants ?? []).forEach((p) => nameById.set(p.id, p.name));
   const nm = (id: string | null) => (id ? (nameById.get(id) ?? "TBD") : "TBD");
+
+  // Seed label per participant from group standings, e.g. "A2" (Group A, rank 2).
+  const [{ data: groups }, { data: seedStandings }] = await Promise.all([
+    db.from("groups").select("id, position").eq("category_id", categoryId),
+    db
+      .from("standings")
+      .select("participant_id, group_id, rank")
+      .eq("category_id", categoryId),
+  ]);
+  const posByGroup = new Map<string, number>();
+  (groups ?? []).forEach((g) => posByGroup.set(g.id, g.position));
+  const seedById = new Map<string, string>();
+  (seedStandings ?? []).forEach((s) => {
+    const pos = posByGroup.get(s.group_id);
+    if (pos != null)
+      seedById.set(s.participant_id, `${groupLabel(pos)}${s.rank}`);
+  });
+  const seed = (id: string | null) => (id ? (seedById.get(id) ?? null) : null);
 
   const { data: matches } = await db
     .from("final_matches")
@@ -68,8 +87,16 @@ export async function loadFinals(
       round: m.round,
       slot: m.slot,
       label: m.label ?? "Match",
-      team1: { id: m.participant1_id, name: nm(m.participant1_id) },
-      team2: { id: m.participant2_id, name: nm(m.participant2_id) },
+      team1: {
+        id: m.participant1_id,
+        name: nm(m.participant1_id),
+        seed: seed(m.participant1_id),
+      },
+      team2: {
+        id: m.participant2_id,
+        name: nm(m.participant2_id),
+        seed: seed(m.participant2_id),
+      },
       status: m.status,
       winnerId: m.winner_id,
       sets: scoresByMatch.get(m.id) ?? [],
@@ -125,10 +152,15 @@ export async function loadSchedule(
 
   const { data: categories } = await db
     .from("categories")
-    .select("id, name")
+    .select("id, name, settings")
     .eq("tournament_id", tournamentId);
   const categoryNameById = new Map<string, string>();
-  (categories ?? []).forEach((c) => categoryNameById.set(c.id, c.name));
+  const venueById = new Map<string, string>();
+  (categories ?? []).forEach((c) => {
+    categoryNameById.set(c.id, c.name);
+    const venue = (c.settings as CategorySettings | null)?.venue_name;
+    if (venue) venueById.set(c.id, venue);
+  });
 
   const { data: groups } = await db
     .from("groups")
@@ -146,7 +178,7 @@ export async function loadSchedule(
 
   const { data: matches } = await db
     .from("group_matches")
-    .select("id, group_id, participant1_id, participant2_id")
+    .select("id, group_id, participant1_id, participant2_id, status")
     .eq("tournament_id", tournamentId);
   const matchById = new Map(
     (matches ?? []).map((m) => [m.id, m]),
@@ -157,6 +189,7 @@ export async function loadSchedule(
     const category = s.category_id
       ? (categoryNameById.get(s.category_id) ?? null)
       : null;
+    const venue = s.category_id ? (venueById.get(s.category_id) ?? null) : null;
     if (s.match_type === "knockout") {
       // Reserved bracket slot — teams aren't known yet; the label is the round.
       return {
@@ -164,6 +197,7 @@ export async function loadSchedule(
         time: s.scheduled_time,
         court,
         category,
+        venue,
         team1: "TBD",
         team2: "TBD",
         group: s.label ?? "Knockout",
@@ -177,6 +211,7 @@ export async function loadSchedule(
       time: s.scheduled_time,
       court,
       category,
+      venue,
       team1: m?.participant1_id
         ? (nameById.get(m.participant1_id) ?? "TBD")
         : "TBD",
@@ -184,7 +219,7 @@ export async function loadSchedule(
         ? (nameById.get(m.participant2_id) ?? "TBD")
         : "TBD",
       group: m?.group_id ? (groupName.get(m.group_id) ?? "—") : "—",
-      status: s.status,
+      status: m?.status ?? s.status,
       kind: "group" as const,
     };
   });
@@ -216,7 +251,8 @@ export async function loadGroupStage(
       "id, group_id, round, participant1_id, participant2_id, status, winner_id",
     )
     .eq("category_id", categoryId)
-    .order("round");
+    .order("round")
+    .order("id");
 
   const matchIds = (matches ?? []).map((m) => m.id);
   const { data: scores } = matchIds.length
@@ -275,6 +311,7 @@ export async function loadGroupStage(
         setWins: s.set_wins,
         setTies: s.set_ties,
         points: s.points,
+        pointDiff: s.point_diff,
         history: (s.history as ("W" | "L" | "T")[]) ?? [],
       })),
   }));
