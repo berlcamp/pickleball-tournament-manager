@@ -32,6 +32,7 @@ export async function createTournament(input: unknown) {
         location: parsed.location || null,
         start_date: parsed.start_date || null,
         banner: parsed.banner || null,
+        show_public_schedule: parsed.show_public_schedule,
         slug,
         created_by: user.id,
       })
@@ -73,11 +74,13 @@ export async function updateTournament(id: string, input: unknown) {
         location: parsed.location || null,
         start_date: parsed.start_date || null,
         banner: parsed.banner || null,
+        show_public_schedule: parsed.show_public_schedule,
       })
       .eq("id", id);
     if (error) throw new ActionError(error.message);
     await logAudit(id, "tournament.update", {});
     revalidatePath(`/dashboard/tournaments/${id}`);
+    revalidatePath(`/tournament`, "layout");
   });
 }
 

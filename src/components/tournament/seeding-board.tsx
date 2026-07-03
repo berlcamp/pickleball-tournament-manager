@@ -122,7 +122,7 @@ export function SeedingBoard({
   function randomize() {
     if (shuffling) return;
     setShuffling(true);
-    // Animated 3-second visual shuffle.
+    // Animated 5-second visual shuffle.
     intervalRef.current = setInterval(() => {
       setItems((prev) => shuffle(prev));
     }, 110);
@@ -138,7 +138,7 @@ export function SeedingBoard({
         toast.error(res.error);
       }
       setShuffling(false);
-    }, 3000);
+    }, 5000);
   }
 
   return (

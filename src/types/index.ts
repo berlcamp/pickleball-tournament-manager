@@ -73,6 +73,7 @@ export type Tournament = {
   start_date: string | null;
   banner: string | null;
   settings: TournamentSettings;
+  show_public_schedule: boolean;
   created_by: string;
   created_at: string;
 }

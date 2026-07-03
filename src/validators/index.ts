@@ -7,6 +7,7 @@ export const tournamentSchema = z.object({
   location: z.string().max(200).optional().or(z.literal("")),
   start_date: z.string().optional().or(z.literal("")),
   banner: z.string().url().optional().or(z.literal("")),
+  show_public_schedule: z.boolean().default(true),
 });
 export type TournamentInput = z.infer<typeof tournamentSchema>;
 

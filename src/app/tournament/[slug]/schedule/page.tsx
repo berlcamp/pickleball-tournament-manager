@@ -22,6 +22,14 @@ export default async function PublicSchedulePage({
   const tournament = await getTournamentBySlug(slug);
   if (!tournament) notFound();
 
+  if (!tournament.show_public_schedule) {
+    return (
+      <p className="glass rounded-2xl p-10 text-center text-muted-foreground">
+        The match schedule is currently unavailable.
+      </p>
+    );
+  }
+
   const categories = await getPublicCategories(tournament.id);
   // Default to the combined "All categories" view.
   const active =

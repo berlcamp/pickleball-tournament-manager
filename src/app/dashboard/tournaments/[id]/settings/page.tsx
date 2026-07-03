@@ -27,6 +27,7 @@ export default async function TournamentSettingsPage({
           location: tournament.location ?? "",
           start_date: tournament.start_date ?? "",
           banner: tournament.banner ?? "",
+          show_public_schedule: tournament.show_public_schedule,
         }}
       />
       <CategoryManager tournamentId={id} categories={categories} />

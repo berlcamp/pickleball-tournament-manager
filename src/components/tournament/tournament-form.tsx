@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -25,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Trash2, Upload, X, ImageIcon } from "lucide-react";
 import { createTournament, updateTournament } from "@/actions/tournaments";
+import { BracketTypeInfo } from "@/components/tournament/bracket-type-info";
 
 export function TournamentForm({
   tournamentId,
@@ -84,6 +86,7 @@ export function TournamentForm({
       location: defaults?.location ?? "",
       start_date: defaults?.start_date ?? "",
       banner: defaults?.banner ?? "",
+      show_public_schedule: defaults?.show_public_schedule ?? true,
       categories: defaults?.categories ?? [
         { name: "", final_bracket_type: "crossover" },
       ],
@@ -96,6 +99,7 @@ export function TournamentForm({
   });
 
   const bannerUrl = form.watch("banner");
+  const showPublicSchedule = form.watch("show_public_schedule");
 
   function onSubmit(values: CreateTournamentInput) {
     startTransition(async () => {
@@ -225,6 +229,25 @@ export function TournamentForm({
         />
       </div>
 
+      <div className="flex items-center justify-between rounded-xl border border-white/5 p-3">
+        <div>
+          <Label htmlFor="show_public_schedule">Show schedule on public page</Label>
+          <p className="text-xs text-muted-foreground">
+            When off, visitors who open the Schedule tab will see &quot;The
+            match schedule is currently unavailable&quot;.
+          </p>
+        </div>
+        <Switch
+          id="show_public_schedule"
+          checked={showPublicSchedule}
+          onCheckedChange={(checked) =>
+            form.setValue("show_public_schedule", checked, {
+              shouldDirty: true,
+            })
+          }
+        />
+      </div>
+
       {!isEdit && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
@@ -238,6 +261,7 @@ export function TournamentForm({
               type="button"
               variant="outline"
               size="sm"
+              className="w-full sm:w-auto"
               onClick={() =>
                 append({ name: "", final_bracket_type: "crossover" })
               }
@@ -246,12 +270,14 @@ export function TournamentForm({
             </Button>
           </div>
 
+          <BracketTypeInfo />
+
           {fields.map((field, i) => (
             <div
               key={field.id}
               className="flex flex-col gap-2 rounded-xl border border-white/5 p-3 sm:flex-row sm:items-end"
             >
-              <div className="flex-1 space-y-1.5">
+              <div className="w-full space-y-1.5 sm:flex-1">
                 <Label htmlFor={`cat-${i}`} className="text-xs">
                   Name
                 </Label>
@@ -261,7 +287,7 @@ export function TournamentForm({
                   {...form.register(`categories.${i}.name` as const)}
                 />
               </div>
-              <div className="space-y-1.5">
+              <div className="w-full space-y-1.5 sm:w-44">
                 <Label className="text-xs">Bracket</Label>
                 <Select
                   items={[
@@ -276,7 +302,7 @@ export function TournamentForm({
                     )
                   }
                 >
-                  <SelectTrigger className="min-w-44">
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -286,14 +312,20 @@ export function TournamentForm({
                 </Select>
               </div>
               {fields.length > 1 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => remove(i)}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
+                <div className="w-full space-y-1.5 sm:w-auto">
+                  <Label className="hidden text-xs sm:block sm:invisible">
+                    Remove
+                  </Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="w-full sm:w-auto"
+                    onClick={() => remove(i)}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
               )}
             </div>
           ))}

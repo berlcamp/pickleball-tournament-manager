@@ -85,6 +85,7 @@ export function ParticipantsManager({
               </DialogHeader>
               <Textarea
                 rows={8}
+                className="field-sizing-fixed h-40 resize-none overflow-y-auto"
                 placeholder={"Cesar / Honey\nHizen / Tonix\nRiezalday / Alyza"}
                 value={bulk}
                 onChange={(e) => setBulk(e.target.value)}

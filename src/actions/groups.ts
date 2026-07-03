@@ -129,3 +129,33 @@ export async function generateGroups(
     return numGroups;
   });
 }
+
+/**
+ * Delete all groups for a category (cascades members, matches, and
+ * standings). Only allowed while the category is still a draft, i.e. before
+ * the group stage has started.
+ */
+export async function clearGroups(tournamentId: string, categoryId: string) {
+  return run(async () => {
+    const { supabase } = await assertRole(tournamentId, "admin");
+    await assertCategoryDraft(supabase, categoryId);
+
+    // match_schedules.match_id has no FK to group_matches, so it isn't
+    // covered by the groups delete cascade below — drop group schedule
+    // entries explicitly to avoid leaving orphaned rows.
+    await supabase
+      .from("match_schedules")
+      .delete()
+      .eq("category_id", categoryId)
+      .eq("match_type", "group");
+
+    const { error } = await supabase
+      .from("groups")
+      .delete()
+      .eq("category_id", categoryId);
+    if (error) throw new ActionError(error.message);
+
+    await logAudit(tournamentId, "groups.clear", { categoryId });
+    revalidatePath(`/dashboard/tournaments/${tournamentId}`, "layout");
+  });
+}
