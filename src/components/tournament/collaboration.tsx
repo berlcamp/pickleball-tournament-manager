@@ -100,6 +100,9 @@ export function Collaboration({
       )}
 
       <div className="space-y-2">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          People with access ({members.length})
+        </p>
         {members.map((m) => (
           <div
             key={m.id}
@@ -152,6 +155,11 @@ export function Collaboration({
           </div>
         ))}
 
+        {invites.length > 0 && (
+          <p className="pt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Pending invitations ({invites.length})
+          </p>
+        )}
         {invites.map((i) => (
           <div
             key={i.id}

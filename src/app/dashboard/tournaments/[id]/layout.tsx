@@ -6,7 +6,7 @@ import { CategorySwitcher } from "@/components/tournament/category-switcher";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ROLE_LABELS } from "@/lib/constants";
-import { ExternalLink, MapPin, Calendar } from "lucide-react";
+import { ExternalLink, MapPin, Calendar, QrCode } from "lucide-react";
 import { formatDate } from "@/lib/format";
 
 export default async function TournamentLayout({
@@ -53,11 +53,18 @@ export default async function TournamentLayout({
               )}
             </div>
           </div>
-          <Button asChild variant="outline" size="sm">
-            <Link href={`/tournament/${t.slug}/standings`} target="_blank">
-              <ExternalLink className="size-4" /> Public page
-            </Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/tournament/${t.slug}/standings`} target="_blank">
+                <ExternalLink className="size-4" /> Public page
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/qr/${t.slug}`} target="_blank">
+                <QrCode className="size-4" /> Open QR
+              </Link>
+            </Button>
+          </div>
         </div>
       </div>
 

@@ -25,13 +25,13 @@ export default async function PublicSchedulePage({
   const tournament = await getTournamentBySlug(slug);
   if (!tournament) notFound();
 
-  // When the schedule is hidden from the public, the tournament owner can still
-  // preview it in their own logged-in session.
-  const isOwner =
+  // When the schedule is hidden from the public, signed-in staff (scorekeeper,
+  // admin, or owner) can still preview it in their own session.
+  const isStaff =
     !tournament.show_public_schedule &&
-    roleAtLeast(await getTournamentRole(tournament.id), "owner");
+    roleAtLeast(await getTournamentRole(tournament.id), "scorekeeper");
 
-  if (!tournament.show_public_schedule && !isOwner) {
+  if (!tournament.show_public_schedule && !isStaff) {
     return (
       <p className="glass rounded-2xl p-10 text-center text-muted-foreground">
         The match schedule is currently unavailable.
@@ -52,11 +52,11 @@ export default async function PublicSchedulePage({
 
   return (
     <div className="space-y-6">
-      {isOwner && (
+      {isStaff && (
         <div className="glass flex items-center gap-2 rounded-2xl p-4 text-sm text-muted-foreground">
           <EyeOff className="size-4 shrink-0" />
-          This schedule is hidden from the public. Only you can see it because
-          you&apos;re signed in as the tournament owner.
+          This schedule is hidden from the public. You can see it because
+          you&apos;re signed in as tournament staff.
         </div>
       )}
       <CategoryFilter categories={categories} activeId={activeId} allowAll />

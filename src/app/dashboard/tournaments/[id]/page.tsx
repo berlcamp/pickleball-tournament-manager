@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getTournamentContext, resolveActiveCategory } from "@/lib/data";
 import { roleAtLeast } from "@/lib/constants";
 import {
@@ -18,6 +18,10 @@ import {
   ArrowRight,
   Pencil,
 } from "lucide-react";
+
+// Display order for the collaboration list: owner first, then admins, etc.
+const roleRank = (role: MemberRow["role"]) =>
+  ({ owner: 3, admin: 2, scorekeeper: 1, viewer: 0 })[role] ?? 0;
 
 async function count(
   table: "participants" | "groups" | "group_matches",
@@ -64,7 +68,16 @@ export default async function TournamentOverviewPage({
     countCompletedMatches(active.id),
   ]);
 
-  const { data: memberDataRaw } = await supabase
+  // The viewer is already authorized (getTournamentContext returned a role), so
+  // read the full member/invite lists with the service client. The RLS-enforced
+  // client only exposes rows for tournaments the viewer belongs to and can hide
+  // accepted members from an owner whose membership row predates the creator
+  // trigger — the service client guarantees every member/invite is returned.
+  const admin = process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createServiceClient()
+    : supabase;
+
+  const { data: memberDataRaw } = await admin
     .from("tournament_members")
     .select("id, user_id, role, profiles(full_name, email, avatar_url)")
     .eq("tournament_id", id);
@@ -80,21 +93,26 @@ export default async function TournamentOverviewPage({
     } | null;
   }[];
 
-  const members: MemberRow[] = memberData.map((m) => {
-    const p = m.profiles as unknown as
-      | { full_name: string | null; email: string; avatar_url: string | null }
-      | null;
-    return {
-      id: m.id,
-      user_id: m.user_id,
-      role: m.role,
-      name: p?.full_name ?? "",
-      email: p?.email ?? "",
-      avatar_url: p?.avatar_url ?? null,
-    };
-  });
+  const members: MemberRow[] = memberData
+    .map((m) => {
+      const p = m.profiles as unknown as
+        | { full_name: string | null; email: string; avatar_url: string | null }
+        | null;
+      return {
+        id: m.id,
+        user_id: m.user_id,
+        role: m.role,
+        name: p?.full_name ?? "",
+        email: p?.email ?? "",
+        avatar_url: p?.avatar_url ?? null,
+      };
+    })
+    // Owner first, then admins, scorekeepers, viewers.
+    .sort((a, b) => roleRank(b.role) - roleRank(a.role));
 
-  const { data: inviteData } = await supabase
+  // Only pending invites remain here; once an invite is accepted the user shows
+  // up in `members` above (the accept trigger creates their membership row).
+  const { data: inviteData } = await admin
     .from("tournament_invites")
     .select("id, email, role, status")
     .eq("tournament_id", id)
