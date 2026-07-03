@@ -6,6 +6,7 @@ import { roleAtLeast } from "@/lib/constants";
 import { PageHeader } from "@/components/page-header";
 import { ScheduleGenerator } from "@/components/tournament/schedule-generator";
 import { ScheduleTable } from "@/components/tournament/schedule-table";
+import { ClearScheduleButton } from "@/components/tournament/clear-schedule-button";
 import { QrShare } from "@/components/qr-share";
 import { Lock } from "lucide-react";
 
@@ -53,6 +54,18 @@ export default async function SchedulePage({
           Group stage has started — the schedule is locked.
         </div>
       )}
+
+      {roleAtLeast(ctx.role, "admin") &&
+        active.status === "draft" &&
+        rows.length > 0 && (
+          <div className="flex justify-end">
+            <ClearScheduleButton
+              tournamentId={id}
+              categoryId={active.id}
+              categoryName={active.name}
+            />
+          </div>
+        )}
 
       <ScheduleTable rows={rows} />
     </div>

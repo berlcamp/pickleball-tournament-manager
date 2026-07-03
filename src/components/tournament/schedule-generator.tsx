@@ -31,6 +31,7 @@ export function ScheduleGenerator({
   settings: CategorySettings;
 }) {
   const [venue, setVenue] = useState(settings.venue_name ?? "");
+  const [eventDate, setEventDate] = useState(settings.event_date ?? "");
   const [startTime, setStartTime] = useState(settings.start_time ?? "08:00");
   const [interval, setIntervalV] = useState(settings.match_interval ?? 15);
   const [numCourts, setNumCourts] = useState(settings.num_courts ?? 4);
@@ -47,6 +48,7 @@ export function ScheduleGenerator({
     startTransition(async () => {
       const res = await generateSchedule(tournamentId, categoryId, {
         venue_name: venue.trim() || undefined,
+        event_date: eventDate || undefined,
         start_time: startTime,
         // No target end time — schedule across a full-day window.
         end_time: "23:59",
@@ -99,6 +101,16 @@ export function ScheduleGenerator({
             placeholder="e.g. City Sports Complex"
             value={venue}
             onChange={(e) => setVenue(e.target.value)}
+          />
+        </Field>
+        <Field
+          label="Date"
+          hint="The calendar day this category's matches are played. Shown alongside the published schedule."
+        >
+          <Input
+            type="date"
+            value={eventDate}
+            onChange={(e) => setEventDate(e.target.value)}
           />
         </Field>
         <Field

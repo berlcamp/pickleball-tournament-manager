@@ -5,8 +5,11 @@ import {
   publicClient,
 } from "@/lib/data";
 import { loadSchedule } from "@/lib/tournament-data";
+import { getTournamentRole } from "@/lib/auth";
+import { roleAtLeast } from "@/lib/constants";
 import { ScheduleTable } from "@/components/tournament/schedule-table";
 import { CategoryFilter } from "@/components/public/category-filter";
+import { EyeOff } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +25,13 @@ export default async function PublicSchedulePage({
   const tournament = await getTournamentBySlug(slug);
   if (!tournament) notFound();
 
-  if (!tournament.show_public_schedule) {
+  // When the schedule is hidden from the public, the tournament owner can still
+  // preview it in their own logged-in session.
+  const isOwner =
+    !tournament.show_public_schedule &&
+    roleAtLeast(await getTournamentRole(tournament.id), "owner");
+
+  if (!tournament.show_public_schedule && !isOwner) {
     return (
       <p className="glass rounded-2xl p-10 text-center text-muted-foreground">
         The match schedule is currently unavailable.
@@ -43,6 +52,13 @@ export default async function PublicSchedulePage({
 
   return (
     <div className="space-y-6">
+      {isOwner && (
+        <div className="glass flex items-center gap-2 rounded-2xl p-4 text-sm text-muted-foreground">
+          <EyeOff className="size-4 shrink-0" />
+          This schedule is hidden from the public. Only you can see it because
+          you&apos;re signed in as the tournament owner.
+        </div>
+      )}
       <CategoryFilter categories={categories} activeId={activeId} allowAll />
       {rows.length === 0 ? (
         <p className="glass rounded-2xl p-10 text-center text-muted-foreground">

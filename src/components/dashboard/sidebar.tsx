@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Trophy, Settings, Tv } from "lucide-react";
+import { LayoutDashboard, Trophy, Settings, Tv, Ticket } from "lucide-react";
 
 const NAV = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, exact: true },
   { href: "/dashboard/tournaments", label: "Tournaments", icon: Trophy },
+  { href: "/dashboard/raffle", label: "Raffle", icon: Ticket },
   { href: "/monitor", label: "Live Monitor", icon: Tv },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];

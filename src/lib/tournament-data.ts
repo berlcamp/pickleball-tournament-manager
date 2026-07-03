@@ -135,7 +135,7 @@ export async function loadSchedule(
   let scheduleQuery = db
     .from("match_schedules")
     .select(
-      "id, category_id, match_type, match_id, label, scheduled_time, status, court_id",
+      "id, category_id, match_type, match_id, label, scheduled_time, scheduled_date, status, court_id",
     )
     .eq("tournament_id", tournamentId)
     .in("match_type", ["group", "knockout"]);
@@ -195,6 +195,7 @@ export async function loadSchedule(
       return {
         id: s.id,
         time: s.scheduled_time,
+        date: s.scheduled_date,
         court,
         category,
         venue,
@@ -209,6 +210,7 @@ export async function loadSchedule(
     return {
       id: s.id,
       time: s.scheduled_time,
+      date: s.scheduled_date,
       court,
       category,
       venue,

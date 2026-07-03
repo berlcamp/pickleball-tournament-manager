@@ -33,51 +33,51 @@ export interface ScheduleResult {
   totalSlots: number;
 }
 
-/**
- * Order matches by the chosen scheduling mode. Matches may span multiple
- * categories (sub-tournaments) sharing the same courts, so ordering is keyed by
- * (category, group): sequential plays category by category, distributed
- * round-robins across every category+group bucket to spread play evenly.
- */
-function orderMatches(
+/** Bucket matches by their owning group, preserving input (round) order. */
+function bucketByGroup(
   matches: SchedulableMatch[],
-  mode: ScheduleMode,
-): SchedulableMatch[] {
-  if (mode === "sequential") {
-    return [...matches].sort(
-      (a, b) =>
-        a.categoryIndex - b.categoryIndex || a.groupIndex - b.groupIndex,
-    );
-  }
-  // distributed: round-robin pull across category+group buckets.
+): { key: string; matches: SchedulableMatch[] }[] {
   const buckets = new Map<string, SchedulableMatch[]>();
-  const keyOf = (m: SchedulableMatch) => `${m.categoryIndex}:${m.groupIndex}`;
   for (const m of matches) {
-    const k = keyOf(m);
+    const k = `${m.categoryIndex}:${m.groupIndex}`;
     if (!buckets.has(k)) buckets.set(k, []);
     buckets.get(k)!.push(m);
   }
-  const order = [...buckets.keys()].sort((a, b) => {
-    const [ac, ag] = a.split(":").map(Number);
-    const [bc, bg] = b.split(":").map(Number);
-    return ac - bc || ag - bg;
-  });
-  const result: SchedulableMatch[] = [];
+  return [...buckets.keys()]
+    .sort((a, b) => {
+      const [ac, ag] = a.split(":").map(Number);
+      const [bc, bg] = b.split(":").map(Number);
+      return ac - bc || ag - bg;
+    })
+    .map((key) => ({ key, matches: buckets.get(key)! }));
+}
+
+/** Interleave several ordered lists round-robin into a single list. */
+function interleave<T>(lists: T[][]): T[] {
+  const queues = lists.map((l) => [...l]);
+  const out: T[] = [];
   let added = true;
   while (added) {
     added = false;
-    for (const k of order) {
-      const bucket = buckets.get(k)!;
-      const next = bucket.shift();
+    for (const q of queues) {
+      const next = q.shift();
       if (next) {
-        result.push(next);
+        out.push(next);
         added = true;
       }
     }
   }
-  return result;
+  return out;
 }
 
+/**
+ * Build the group-stage schedule. Every group is pinned to a single court, so a
+ * group never jumps courts — all of its matches play out on the same court, one
+ * after another. Groups are dealt across the available courts round-robin; when
+ * there are more groups than courts, a court simply hosts several groups in
+ * turn. `sequential` plays a court's groups one whole group at a time;
+ * `distributed` round-robins a court's groups so they progress together.
+ */
 export function buildSchedule(
   matches: SchedulableMatch[],
   config: ScheduleConfig,
@@ -88,11 +88,34 @@ export function buildSchedule(
     config.interval > 0
       ? Math.max(0, Math.floor((endMin - startMin) / config.interval) + 1)
       : 0;
+  const numCourts = Math.max(1, config.numCourts);
 
-  const ordered = orderMatches(matches, config.mode);
-  const pending = [...ordered];
+  // Deal each group to a court and keep it there. Assign the biggest groups
+  // first, each onto the court that currently holds the fewest matches, so
+  // court loads stay balanced (a group is never split — it just lands on the
+  // least-busy court). Round-robin dealing instead would pile two groups onto
+  // one court while others sit idle, overflowing the day window needlessly.
+  const groups = bucketByGroup(matches);
+  const courtGroups: SchedulableMatch[][][] = Array.from(
+    { length: numCourts },
+    () => [],
+  );
+  const courtLoad = new Array<number>(numCourts).fill(0);
+  [...groups]
+    .sort((a, b) => b.matches.length - a.matches.length)
+    .forEach((g) => {
+      let target = 0;
+      for (let c = 1; c < numCourts; c++) {
+        if (courtLoad[c] < courtLoad[target]) target = c;
+      }
+      courtGroups[target].push(g.matches);
+      courtLoad[target] += g.matches.length;
+    });
+
   const assignments: ScheduledAssignment[] = [];
+  const unscheduled: string[] = [];
   const lastPlayed = new Map<string, number>();
+  let lastAssignedTime: string | null = null;
 
   const canPlay = (teamId: string | null, slotMin: number) => {
     if (!teamId) return true; // bye / TBD slot doesn't constrain
@@ -100,42 +123,49 @@ export function buildSchedule(
     return last === undefined || slotMin >= last + config.restPeriod;
   };
 
-  let lastAssignedTime: string | null = null;
+  for (let court = 1; court <= numCourts; court++) {
+    const groupsHere = courtGroups[court - 1];
+    if (groupsHere.length === 0) continue;
 
-  for (let s = 0; s < totalSlots && pending.length > 0; s++) {
-    const slotMin = startMin + s * config.interval;
-    const time = addMinutes(config.startTime, s * config.interval);
-    const usedTeams = new Set<string>();
+    // Order this court's matches: sequential plays each group through in turn,
+    // distributed round-robins between the groups sharing the court.
+    const courtMatches =
+      config.mode === "distributed"
+        ? interleave(groupsHere)
+        : groupsHere.flat();
 
-    for (let court = 1; court <= config.numCourts && pending.length > 0; court++) {
-      const idx = pending.findIndex((m) => {
-        const t1 = m.team1Id;
-        const t2 = m.team2Id;
-        if (t1 && usedTeams.has(t1)) return false;
-        if (t2 && usedTeams.has(t2)) return false;
-        return canPlay(t1, slotMin) && canPlay(t2, slotMin);
-      });
-      if (idx === -1) continue; // nothing eligible for this court right now
+    let slot = 0;
+    for (const match of courtMatches) {
+      // Advance to the next slot on this court where both teams have rested.
+      while (slot < totalSlots) {
+        const slotMin = startMin + slot * config.interval;
+        if (canPlay(match.team1Id, slotMin) && canPlay(match.team2Id, slotMin)) {
+          break;
+        }
+        slot++;
+      }
+      if (slot >= totalSlots) {
+        unscheduled.push(match.id);
+        continue;
+      }
 
-      const [match] = pending.splice(idx, 1);
+      const slotMin = startMin + slot * config.interval;
+      const time = addMinutes(config.startTime, slot * config.interval);
       assignments.push({ matchId: match.id, time, court });
-      lastAssignedTime = time;
-      if (match.team1Id) {
-        usedTeams.add(match.team1Id);
-        lastPlayed.set(match.team1Id, slotMin);
+      if (!lastAssignedTime || timeToMinutes(time) > timeToMinutes(lastAssignedTime)) {
+        lastAssignedTime = time;
       }
-      if (match.team2Id) {
-        usedTeams.add(match.team2Id);
-        lastPlayed.set(match.team2Id, slotMin);
-      }
+      if (match.team1Id) lastPlayed.set(match.team1Id, slotMin);
+      if (match.team2Id) lastPlayed.set(match.team2Id, slotMin);
+      slot++; // next match on this court takes the following slot
     }
   }
 
   return {
     assignments,
-    unscheduled: pending.map((m) => m.id),
+    unscheduled,
     projectedEnd: lastAssignedTime,
-    feasible: pending.length === 0,
+    feasible: unscheduled.length === 0,
     totalSlots,
   };
 }

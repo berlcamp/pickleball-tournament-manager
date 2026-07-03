@@ -40,6 +40,7 @@ export async function generateSchedule(
     const settings = {
       ...(category.settings ?? {}),
       venue_name: cfg.venue_name,
+      event_date: cfg.event_date,
       start_time: cfg.start_time,
       end_time: cfg.end_time,
       match_interval: cfg.match_interval,
@@ -134,6 +135,7 @@ export async function generateSchedule(
       match_id: a.matchId,
       court_id: courtIdByPos.get(a.court) ?? null,
       scheduled_time: a.time,
+      scheduled_date: cfg.event_date ?? null,
       status: "pending" as const,
     }));
     if (scheduleRows.length) {
@@ -195,6 +197,7 @@ export async function generateSchedule(
             label: p.label,
             court_id: courtIdByPos.get(p.court) ?? null,
             scheduled_time: p.time,
+            scheduled_date: cfg.event_date ?? null,
             status: "pending" as const,
           }));
           if (koRows.length) {
@@ -222,5 +225,25 @@ export async function generateSchedule(
       projectedEnd: result.projectedEnd,
       knockoutReserved,
     };
+  });
+}
+
+/** Remove every scheduled slot (group + reserved knockout) for one category. */
+export async function clearSchedule(
+  tournamentId: string,
+  categoryId: string,
+) {
+  return run(async () => {
+    const { supabase } = await assertRole(tournamentId, "admin");
+
+    const { error } = await supabase
+      .from("match_schedules")
+      .delete()
+      .eq("tournament_id", tournamentId)
+      .eq("category_id", categoryId);
+    if (error) throw new ActionError(error.message);
+
+    await logAudit(tournamentId, "schedule.clear", { categoryId });
+    revalidatePath(`/dashboard/tournaments/${tournamentId}/schedule`);
   });
 }

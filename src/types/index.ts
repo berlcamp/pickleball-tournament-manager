@@ -47,6 +47,7 @@ export type CategorySettings = {
   random_tiebreak?: boolean;
   // Each category schedules independently and remembers its own configuration.
   venue_name?: string;
+  event_date?: string; // "2026-07-03"
   schedule_mode?: ScheduleMode;
   start_time?: string; // "08:00"
   end_time?: string; // "17:00"
@@ -219,6 +220,8 @@ export type MatchSchedule = {
   match_id: string;
   court_id: string | null;
   scheduled_time: string | null;
+  /** Calendar date the matches fall on, ISO "YYYY-MM-DD". */
+  scheduled_date: string | null;
   status: MatchStatus;
   /** Round label for reserved knockout placeholder slots, e.g. "Semifinal 1". */
   label: string | null;
@@ -231,4 +234,48 @@ export type AuditLog = {
   action: string;
   detail: Record<string, unknown>;
   created_at: string;
+}
+
+// ---------- Raffle module ----------------------------------------------------
+
+export type Raffle = {
+  id: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type RaffleDepartment = {
+  id: string;
+  raffle_id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type RaffleEntry = {
+  id: string;
+  raffle_id: string;
+  department_id: string;
+  name: string;
+  designation: string | null;
+  created_at: string;
+}
+
+export type RaffleWinner = {
+  id: string;
+  raffle_id: string;
+  department_id: string;
+  entry_id: string;
+  entry_name: string;
+  entry_designation: string | null;
+  department_name: string;
+  prize_label: string | null;
+  session_id: string;
+  draw_index: number;
+  drawn_by: string | null;
+  drawn_at: string;
 }

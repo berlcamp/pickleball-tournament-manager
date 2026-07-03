@@ -4,12 +4,14 @@ import { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { MatchStatusBadge } from "@/components/status-badge";
-import { formatTime, timeToMinutes } from "@/lib/format";
+import { formatDate, formatTime, timeToMinutes } from "@/lib/format";
 import { Search, Trophy } from "lucide-react";
 
 export interface ScheduleRow {
   id: string;
   time: string | null;
+  /** Calendar date the match falls on, ISO "YYYY-MM-DD". */
+  date?: string | null;
   court: string;
   team1: string;
   team2: string;
@@ -47,6 +49,7 @@ export function ScheduleTable({ rows }: { rows: ScheduleRow[] }) {
   );
   const showCategory = categories.length > 1;
   const showVenue = rows.some((r) => r.venue);
+  const showDate = rows.some((r) => r.date);
 
   const filtered = useMemo(() => {
     return rows
@@ -65,6 +68,9 @@ export function ScheduleTable({ rows }: { rows: ScheduleRow[] }) {
         return true;
       })
       .sort((a, b) => {
+        const da = a.date ?? "9999-99-99";
+        const db = b.date ?? "9999-99-99";
+        if (da !== db) return da.localeCompare(db);
         const ta = a.time ? timeToMinutes(a.time) : 9999;
         const tb = b.time ? timeToMinutes(b.time) : 9999;
         if (ta !== tb) return ta - tb;
@@ -119,6 +125,7 @@ export function ScheduleTable({ rows }: { rows: ScheduleRow[] }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-white/10 text-left text-xs uppercase tracking-wide text-muted-foreground">
+              {showDate && <th className="px-3 py-3">Date</th>}
               <th className="px-3 py-3">Time</th>
               <th className="px-3 py-3">Court</th>
               {showVenue && <th className="px-3 py-3">Venue</th>}
@@ -132,7 +139,12 @@ export function ScheduleTable({ rows }: { rows: ScheduleRow[] }) {
             {filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={5 + (showVenue ? 1 : 0) + (showCategory ? 1 : 0)}
+                  colSpan={
+                    5 +
+                    (showDate ? 1 : 0) +
+                    (showVenue ? 1 : 0) +
+                    (showCategory ? 1 : 0)
+                  }
                   className="px-3 py-10 text-center text-muted-foreground"
                 >
                   No matches found.
@@ -144,6 +156,11 @@ export function ScheduleTable({ rows }: { rows: ScheduleRow[] }) {
                   key={r.id}
                   className="border-b border-white/5 last:border-0 hover:bg-accent/30"
                 >
+                  {showDate && (
+                    <td className="whitespace-nowrap px-3 py-3 text-muted-foreground">
+                      {r.date ? formatDate(r.date) : "—"}
+                    </td>
+                  )}
                   <td className="whitespace-nowrap px-3 py-3 font-medium tabular-nums">
                     {formatTime(r.time)}
                   </td>
