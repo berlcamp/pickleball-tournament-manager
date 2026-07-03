@@ -1,27 +1,19 @@
 import { notFound } from "next/navigation";
-import {
-  getTournamentBySlug,
-  getPublicCategories,
-  publicClient,
-} from "@/lib/data";
+import { getTournamentBySlug, publicClient } from "@/lib/data";
 import { loadSchedule } from "@/lib/tournament-data";
 import { getTournamentRole } from "@/lib/auth";
 import { roleAtLeast } from "@/lib/constants";
 import { ScheduleTable } from "@/components/tournament/schedule-table";
-import { CategoryFilter } from "@/components/public/category-filter";
 import { EyeOff } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function PublicSchedulePage({
   params,
-  searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ category?: string }>;
 }) {
   const { slug } = await params;
-  const { category } = await searchParams;
   const tournament = await getTournamentBySlug(slug);
   if (!tournament) notFound();
 
@@ -39,16 +31,10 @@ export default async function PublicSchedulePage({
     );
   }
 
-  const categories = await getPublicCategories(tournament.id);
-  // Default to the combined "All categories" view.
-  const active =
-    category && category !== "all"
-      ? categories.find((c) => c.id === category)
-      : undefined;
-  const activeId = active ? active.id : "all";
-
+  // Load every category's matches; the schedule table's own filter row handles
+  // narrowing by category, so no separate dropdown is needed here.
   const db = await publicClient();
-  const rows = await loadSchedule(db, tournament.id, active?.id);
+  const rows = await loadSchedule(db, tournament.id);
 
   return (
     <div className="space-y-6">
@@ -59,7 +45,6 @@ export default async function PublicSchedulePage({
           you&apos;re signed in as tournament staff.
         </div>
       )}
-      <CategoryFilter categories={categories} activeId={activeId} allowAll />
       {rows.length === 0 ? (
         <p className="glass rounded-2xl p-10 text-center text-muted-foreground">
           The schedule hasn’t been published yet. Check back soon!

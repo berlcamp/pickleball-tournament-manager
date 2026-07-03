@@ -1,11 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { MatchStatusBadge } from "@/components/status-badge";
+import { toggleQueued } from "@/actions/schedule";
 import { formatDate, formatTime, timeToMinutes } from "@/lib/format";
-import { Search, Trophy } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Loader2, Search, Trophy } from "lucide-react";
 
 export interface ScheduleRow {
   id: string;
@@ -21,18 +23,31 @@ export interface ScheduleRow {
   /** Venue where this category's matches are played, if configured. */
   venue?: string | null;
   status: "pending" | "in_progress" | "completed";
+  /** Staff-set flag: this match is queued / called to the court next. */
+  queued?: boolean;
   /** "group" stage match or a reserved "knockout" bracket slot. */
   kind: "group" | "knockout";
 }
 
 type DaySlot = "all" | "morning" | "afternoon";
 
-export function ScheduleTable({ rows }: { rows: ScheduleRow[] }) {
+export function ScheduleTable({
+  rows,
+  tournamentId,
+  canQueue = false,
+}: {
+  rows: ScheduleRow[];
+  /** Required to enable the queued toggle (dashboard only). */
+  tournamentId?: string;
+  /** Show the queued on/off toggle in the Status column for un-scored matches. */
+  canQueue?: boolean;
+}) {
   const [q, setQ] = useState("");
   const [day, setDay] = useState<DaySlot>("all");
   const [group, setGroup] = useState("all");
   const [court, setCourt] = useState("all");
   const [category, setCategory] = useState("all");
+  const [venue, setVenue] = useState("all");
 
   const groups = useMemo(
     () => [...new Set(rows.map((r) => r.group))].sort(),
@@ -40,6 +55,11 @@ export function ScheduleTable({ rows }: { rows: ScheduleRow[] }) {
   );
   const courts = useMemo(
     () => [...new Set(rows.map((r) => r.court))].sort(),
+    [rows],
+  );
+  const venues = useMemo(
+    () =>
+      [...new Set(rows.map((r) => r.venue).filter(Boolean))].sort() as string[],
     [rows],
   );
   const categories = useMemo(
@@ -60,6 +80,7 @@ export function ScheduleTable({ rows }: { rows: ScheduleRow[] }) {
         if (group !== "all" && r.group !== group) return false;
         if (court !== "all" && r.court !== court) return false;
         if (category !== "all" && r.category !== category) return false;
+        if (venue !== "all" && r.venue !== venue) return false;
         if (day !== "all" && r.time) {
           const noon = timeToMinutes(r.time) < 12 * 60;
           if (day === "morning" && !noon) return false;
@@ -76,7 +97,7 @@ export function ScheduleTable({ rows }: { rows: ScheduleRow[] }) {
         if (ta !== tb) return ta - tb;
         return a.court.localeCompare(b.court);
       });
-  }, [rows, q, day, group, court, category]);
+  }, [rows, q, day, group, court, category, venue]);
 
   return (
     <div className="space-y-4">
@@ -105,6 +126,14 @@ export function ScheduleTable({ rows }: { rows: ScheduleRow[] }) {
             onChange={setCategory}
             all="All categories"
             options={categories}
+          />
+        )}
+        {venues.length > 1 && (
+          <FilterSelect
+            value={venue}
+            onChange={setVenue}
+            all="All venues"
+            options={venues}
           />
         )}
         <FilterSelect
@@ -191,7 +220,15 @@ export function ScheduleTable({ rows }: { rows: ScheduleRow[] }) {
                     )}
                   </td>
                   <td className="px-3 py-3">
-                    <MatchStatusBadge status={r.status} />
+                    {canQueue && tournamentId && r.status === "pending" ? (
+                      <QueueToggle
+                        tournamentId={tournamentId}
+                        scheduleId={r.id}
+                        queued={!!r.queued}
+                      />
+                    ) : (
+                      <MatchStatusBadge status={r.status} />
+                    )}
                   </td>
                 </tr>
               ))
@@ -228,6 +265,61 @@ function Pills({
         </button>
       ))}
     </div>
+  );
+}
+
+/**
+ * Green (on) / gray (off) toggle for a match's "queued" flag. Rendered in the
+ * Status column only while a match has no score yet; once scored the parent
+ * swaps this for the status badge instead.
+ */
+function QueueToggle({
+  tournamentId,
+  scheduleId,
+  queued,
+}: {
+  tournamentId: string;
+  scheduleId: string;
+  queued: boolean;
+}) {
+  const [pending, startTransition] = useTransition();
+  // Optimistic local state so the pill flips instantly on click.
+  const [on, setOn] = useState(queued);
+
+  function toggle() {
+    const next = !on;
+    setOn(next);
+    startTransition(async () => {
+      const res = await toggleQueued(tournamentId, scheduleId, next);
+      if (!res.ok) setOn(!next); // revert on failure
+    });
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      disabled={pending}
+      aria-pressed={on}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-60",
+        on
+          ? "bg-primary/20 text-primary hover:bg-primary/30"
+          : "bg-muted text-muted-foreground hover:bg-muted/70",
+      )}
+    >
+      {pending ? (
+        <Loader2 className="size-3 animate-spin" />
+      ) : (
+        <span
+          className={cn(
+            "size-2 rounded-full",
+            on ? "bg-primary" : "bg-muted-foreground/50",
+          )}
+        />
+      )}
+      {on ? "Queued" : "Queue"}
+    </button>
   );
 }
 

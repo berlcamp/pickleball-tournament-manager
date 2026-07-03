@@ -135,7 +135,7 @@ export async function loadSchedule(
   let scheduleQuery = db
     .from("match_schedules")
     .select(
-      "id, category_id, match_type, match_id, label, scheduled_time, scheduled_date, status, court_id",
+      "id, category_id, match_type, match_id, label, scheduled_time, scheduled_date, status, queued, court_id",
     )
     .eq("tournament_id", tournamentId)
     .in("match_type", ["group", "knockout"]);
@@ -203,6 +203,7 @@ export async function loadSchedule(
         team2: "TBD",
         group: s.label ?? "Knockout",
         status: s.status,
+        queued: s.queued,
         kind: "knockout" as const,
       };
     }
@@ -222,6 +223,7 @@ export async function loadSchedule(
         : "TBD",
       group: m?.group_id ? (groupName.get(m.group_id) ?? "—") : "—",
       status: m?.status ?? s.status,
+      queued: s.queued,
       kind: "group" as const,
     };
   });

@@ -223,6 +223,8 @@ export type MatchSchedule = {
   /** Calendar date the matches fall on, ISO "YYYY-MM-DD". */
   scheduled_date: string | null;
   status: MatchStatus;
+  /** Staff-set flag: this match is queued / called to the court next. */
+  queued: boolean;
   /** Round label for reserved knockout placeholder slots, e.g. "Semifinal 1". */
   label: string | null;
 }

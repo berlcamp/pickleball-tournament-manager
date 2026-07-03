@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/page-header";
 import { ScheduleGenerator } from "@/components/tournament/schedule-generator";
 import { ScheduleTable } from "@/components/tournament/schedule-table";
 import { ClearScheduleButton } from "@/components/tournament/clear-schedule-button";
+import { ScheduleSummaryButton } from "@/components/tournament/schedule-summary-button";
 import { QrShare } from "@/components/qr-share";
 import { Lock } from "lucide-react";
 
@@ -26,6 +27,8 @@ export default async function SchedulePage({
 
   const supabase = await createClient();
   const rows = await loadSchedule(supabase, id, active.id);
+  // The PDF summary spans every category, not just the active one.
+  const allRows = await loadSchedule(supabase, id);
 
   return (
     <div className="space-y-6">
@@ -33,6 +36,10 @@ export default async function SchedulePage({
         title="Schedule"
         description="Court assignments and match times for this category."
       >
+        <ScheduleSummaryButton
+          rows={allRows}
+          tournamentName={ctx.tournament.name}
+        />
         <QrShare
           path={`/tournament/${ctx.tournament.slug}/schedule`}
           label="Share schedule"
@@ -51,7 +58,8 @@ export default async function SchedulePage({
       {roleAtLeast(ctx.role, "admin") && active.status !== "draft" && (
         <div className="glass flex items-center gap-2 rounded-2xl p-4 text-sm text-muted-foreground">
           <Lock className="size-4" />
-          Group stage has started — the schedule is locked.
+          Group stage has started — match times and courts are locked, but you
+          can still queue matches below.
         </div>
       )}
 
@@ -67,7 +75,11 @@ export default async function SchedulePage({
           </div>
         )}
 
-      <ScheduleTable rows={rows} />
+      <ScheduleTable
+        rows={rows}
+        tournamentId={id}
+        canQueue={roleAtLeast(ctx.role, "scorekeeper")}
+      />
     </div>
   );
 }

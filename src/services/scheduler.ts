@@ -22,6 +22,8 @@ export interface ScheduleConfig {
 export interface ScheduledAssignment {
   matchId: string;
   time: string;
+  /** Days past the event start date, for slots that roll past midnight. */
+  day: number;
   court: number; // 1-based
 }
 
@@ -116,6 +118,7 @@ export function buildSchedule(
   const unscheduled: string[] = [];
   const lastPlayed = new Map<string, number>();
   let lastAssignedTime: string | null = null;
+  let lastAssignedMin = -1; // absolute minutes, so past-midnight slots sort right
 
   const canPlay = (teamId: string | null, slotMin: number) => {
     if (!teamId) return true; // bye / TBD slot doesn't constrain
@@ -151,8 +154,10 @@ export function buildSchedule(
 
       const slotMin = startMin + slot * config.interval;
       const time = addMinutes(config.startTime, slot * config.interval);
-      assignments.push({ matchId: match.id, time, court });
-      if (!lastAssignedTime || timeToMinutes(time) > timeToMinutes(lastAssignedTime)) {
+      const day = Math.floor(slotMin / (24 * 60));
+      assignments.push({ matchId: match.id, time, day, court });
+      if (slotMin > lastAssignedMin) {
+        lastAssignedMin = slotMin;
         lastAssignedTime = time;
       }
       if (match.team1Id) lastPlayed.set(match.team1Id, slotMin);
@@ -180,6 +185,8 @@ export interface KnockoutPlaceholder {
   matchId: string;
   label: string;
   time: string;
+  /** Days past the event start date, for slots that roll past midnight. */
+  day: number;
   court: number; // 1-based
 }
 
@@ -190,7 +197,13 @@ export interface KnockoutPlaceholder {
  */
 export function buildKnockoutSchedule(
   rounds: KnockoutRoundMatch[],
-  opts: { startTime: string; interval: number; numCourts: number },
+  opts: {
+    startTime: string;
+    interval: number;
+    numCourts: number;
+    /** Day offset of `startTime` when the knockout stage begins next day+. */
+    startDay?: number;
+  },
 ): KnockoutPlaceholder[] {
   const byRound = new Map<number, KnockoutRoundMatch[]>();
   for (const m of rounds) {
@@ -198,6 +211,8 @@ export function buildKnockoutSchedule(
     byRound.get(m.round)!.push(m);
   }
 
+  const startMin = timeToMinutes(opts.startTime);
+  const baseDay = opts.startDay ?? 0;
   const result: KnockoutPlaceholder[] = [];
   let slotIndex = 0;
 
@@ -209,10 +224,12 @@ export function buildKnockoutSchedule(
         court = 1;
         slotIndex++;
       }
+      const offsetMin = slotIndex * opts.interval;
       result.push({
         matchId: crypto.randomUUID(),
         label: m.label,
-        time: addMinutes(opts.startTime, slotIndex * opts.interval),
+        time: addMinutes(opts.startTime, offsetMin),
+        day: baseDay + Math.floor((startMin + offsetMin) / (24 * 60)),
         court,
       });
       court++;

@@ -13,7 +13,7 @@ import {
   generateFinalBracket,
   type QualifierSlot,
 } from "@/services/brackets";
-import { addMinutes, timeToMinutes } from "@/lib/format";
+import { addDays, addMinutes, timeToMinutes } from "@/lib/format";
 
 // Top N from each group advance to the knockout bracket.
 const ADVANCE_PER_GROUP = 2;
@@ -128,6 +128,10 @@ export async function generateSchedule(
       .eq("tournament_id", tournamentId)
       .eq("category_id", categoryId);
 
+    // Slots that roll past midnight carry a day offset; push their date forward.
+    const dateForDay = (day: number) =>
+      cfg.event_date ? addDays(cfg.event_date, day) : null;
+
     const scheduleRows = result.assignments.map((a) => ({
       tournament_id: tournamentId,
       category_id: categoryId,
@@ -135,7 +139,7 @@ export async function generateSchedule(
       match_id: a.matchId,
       court_id: courtIdByPos.get(a.court) ?? null,
       scheduled_time: a.time,
-      scheduled_date: cfg.event_date ?? null,
+      scheduled_date: dateForDay(a.day),
       status: "pending" as const,
     }));
     if (scheduleRows.length) {
@@ -152,15 +156,16 @@ export async function generateSchedule(
     if (cfg.knockout_rounds !== "none") {
       const qualifierCount = (groups?.length ?? 0) * ADVANCE_PER_GROUP;
       if (qualifierCount >= 2) {
+        // Work in absolute minutes so a group stage that runs past midnight
+        // pushes the knockout start onto the correct (later) day.
         const startBaseMin = timeToMinutes(cfg.start_time);
-        const lastGroupMin = result.assignments.reduce(
-          (max, a) => Math.max(max, timeToMinutes(a.time)),
+        const lastGroupAbs = result.assignments.reduce(
+          (max, a) => Math.max(max, a.day * 24 * 60 + timeToMinutes(a.time)),
           startBaseMin - cfg.match_interval,
         );
-        const koStart = addMinutes(
-          cfg.start_time,
-          lastGroupMin - startBaseMin + cfg.match_interval,
-        );
+        const koStartAbs = lastGroupAbs + cfg.match_interval;
+        const koStartDay = Math.floor(koStartAbs / (24 * 60));
+        const koStart = addMinutes(cfg.start_time, koStartAbs - startBaseMin);
 
         // Dummy qualifiers just give us the bracket shape (rounds + labels).
         const dummies: QualifierSlot[] = Array.from(
@@ -188,6 +193,7 @@ export async function generateSchedule(
             startTime: koStart,
             interval: cfg.match_interval,
             numCourts: cfg.num_courts,
+            startDay: koStartDay,
           });
           const koRows = placeholders.map((p) => ({
             tournament_id: tournamentId,
@@ -197,7 +203,7 @@ export async function generateSchedule(
             label: p.label,
             court_id: courtIdByPos.get(p.court) ?? null,
             scheduled_time: p.time,
-            scheduled_date: cfg.event_date ?? null,
+            scheduled_date: dateForDay(p.day),
             status: "pending" as const,
           }));
           if (koRows.length) {
@@ -244,6 +250,26 @@ export async function clearSchedule(
     if (error) throw new ActionError(error.message);
 
     await logAudit(tournamentId, "schedule.clear", { categoryId });
+    revalidatePath(`/dashboard/tournaments/${tournamentId}/schedule`);
+  });
+}
+
+/** Toggle a scheduled slot's "queued" flag (called-to-court marker). */
+export async function toggleQueued(
+  tournamentId: string,
+  scheduleId: string,
+  queued: boolean,
+) {
+  return run(async () => {
+    const { supabase } = await assertRole(tournamentId, "scorekeeper");
+
+    const { error } = await supabase
+      .from("match_schedules")
+      .update({ queued })
+      .eq("id", scheduleId)
+      .eq("tournament_id", tournamentId);
+    if (error) throw new ActionError(error.message);
+
     revalidatePath(`/dashboard/tournaments/${tournamentId}/schedule`);
   });
 }
