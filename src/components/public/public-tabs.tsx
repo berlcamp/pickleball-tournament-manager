@@ -10,6 +10,7 @@ export function PublicTabs({ slug }: { slug: string }) {
   const tabs = [
     { href: `${base}/standings`, label: "Standings" },
     { href: `${base}/schedule`, label: "Schedule" },
+    { href: `${base}/finals`, label: "Finals" },
   ];
   return (
     <div className="flex gap-1 border-b border-white/5">
