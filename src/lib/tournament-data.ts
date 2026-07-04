@@ -184,6 +184,25 @@ export async function loadSchedule(
     (matches ?? []).map((m) => [m.id, m]),
   );
 
+  // Reserved knockout slots aren't linked to real bracket matches, but once the
+  // finals are generated the teams become known. Match them back by
+  // (category, round label) — labels are unique within a category's bracket.
+  const { data: finalMatches } = await db
+    .from("final_matches")
+    .select("category_id, label, participant1_id, participant2_id")
+    .eq("tournament_id", tournamentId);
+  const finalByKey = new Map<
+    string,
+    { participant1_id: string | null; participant2_id: string | null }
+  >();
+  (finalMatches ?? []).forEach((m) => {
+    if (m.label)
+      finalByKey.set(`${m.category_id}|${m.label}`, {
+        participant1_id: m.participant1_id,
+        participant2_id: m.participant2_id,
+      });
+  });
+
   return schedules.map((s) => {
     const court = s.court_id ? (courtName.get(s.court_id) ?? "—") : "—";
     const category = s.category_id
@@ -191,7 +210,13 @@ export async function loadSchedule(
       : null;
     const venue = s.category_id ? (venueById.get(s.category_id) ?? null) : null;
     if (s.match_type === "knockout") {
-      // Reserved bracket slot — teams aren't known yet; the label is the round.
+      // Reserved bracket slot — teams may not be known yet. Once the finals are
+      // generated, match this slot back to the real bracket match by its round
+      // label and fill in the actual team names.
+      const fm =
+        s.category_id && s.label
+          ? finalByKey.get(`${s.category_id}|${s.label}`)
+          : undefined;
       return {
         id: s.id,
         time: s.scheduled_time,
@@ -199,8 +224,12 @@ export async function loadSchedule(
         court,
         category,
         venue,
-        team1: "TBD",
-        team2: "TBD",
+        team1: fm?.participant1_id
+          ? (nameById.get(fm.participant1_id) ?? "TBD")
+          : "TBD",
+        team2: fm?.participant2_id
+          ? (nameById.get(fm.participant2_id) ?? "TBD")
+          : "TBD",
         group: s.label ?? "Knockout",
         status: s.status,
         queued: s.queued,
