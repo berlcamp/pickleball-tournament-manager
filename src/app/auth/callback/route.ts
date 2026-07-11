@@ -42,6 +42,28 @@ export async function GET(request: Request) {
           console.error("[auth/callback] profile upsert failed", profileError);
         }
       }
+
+      // Strip Google's provider tokens from the persisted session. The OAuth
+      // exchange returns provider_token / provider_refresh_token once, and
+      // @supabase/ssr stores the whole session in chunked auth cookies. Those
+      // tokens are large and can push total request-header size past Node's
+      // ~16KB limit, producing 431 (Request Header Fields Too Large) on every
+      // server-action POST. We don't call Google APIs on the user's behalf, so
+      // we don't need them. Re-persisting via setSession (which only takes the
+      // Supabase access/refresh tokens) rewrites the cookies without the
+      // provider tokens and prunes any now-unused chunk cookies.
+      const session = data.session;
+      if (session?.provider_token || session?.provider_refresh_token) {
+        const { error: trimError } = await supabase.auth.setSession({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+        });
+        if (trimError) {
+          // Best-effort: the full session is already valid; never block login.
+          console.error("[auth/callback] provider-token trim failed", trimError);
+        }
+      }
+
       const response = NextResponse.redirect(`${origin}${next}`);
       response.cookies.delete("auth_next");
       return response;
