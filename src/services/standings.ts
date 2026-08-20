@@ -153,13 +153,22 @@ export function computeGroupStandings(
     // 2. Tie-break: head-to-head wins among the tied teams
     if (b.tieBreak !== a.tieBreak) return b.tieBreak - a.tieBreak;
 
-    // 3. Total points
-    if (b.points !== a.points) return b.points - a.points;
+    // 3. Set wins. A match is decided on sets, so how many sets a team took
+    //    across the group is the closest thing to a second record.
+    if (b.setWins !== a.setWins) return b.setWins - a.setWins;
 
-    // 4. Point differential
+    // 4. Point differential — points scored minus conceded.
     if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
 
-    // 5. Direct head-to-head: the team that won the match between these two
+    // 5. Total points scored. Deliberately BELOW differential: games run to a
+    //    fixed target, so the winner of a game nearly always scores the same
+    //    amount and this number is driven mostly by how many sets a team
+    //    played and how close its losses were. Ranking on it above
+    //    differential would put a team that squeaked through above one that
+    //    dominated.
+    if (b.points !== a.points) return b.points - a.points;
+
+    // 6. Direct head-to-head: the team that won the match between these two
     //    specific teams ranks higher. This is distinct from step 2, which is a
     //    mini-league win count across everyone sharing the same match-win total
     //    and can stay level in a 3-way cycle even when the direct result is
@@ -168,7 +177,7 @@ export function computeGroupStandings(
     const bOverA = h2h.get(b.participantId)?.get(a.participantId) ?? 0;
     if (aOverB !== bOverA) return bOverA - aOverB;
 
-    // 6. Random draw (configurable fallback)
+    // 7. Random draw (never enabled by callers; kept as an opt-in fallback)
     if (options.randomTiebreak) return Math.random() - 0.5;
     return 0;
   });

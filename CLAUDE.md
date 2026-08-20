@@ -64,7 +64,7 @@ in `actions/helpers.ts` and must be followed:
 Pure, framework-free, I/O-free modules — keep them that way (no Supabase imports):
 - `seeding.ts` — manual/random seeding + `assignGroups`, the Challonge-style pair-alternating group distribution
 - `roundRobin.ts` — group match generation
-- `standings.ts` — standings computation + tie-breaker chain (match wins → head-to-head → points → point differential → random)
+- `standings.ts` — standings computation + tie-breaker chain (match wins → head-to-head mini-league → set wins → point differential → total points → direct head-to-head, then order left as-is). Point differential sits **above** total points on purpose: games run to a fixed target, so points-scored mostly reflects how many sets were played, not how well.
 - `brackets.ts` — ranks qualifiers across groups and draws the single-elimination final stage (byes, third-place playoff, round labeling)
 - `scheduler.ts` — court scheduling (intervals, rest periods, conflict detection; `sequential` vs equally-distributed modes)
 - `registration.ts` — whether a category is accepting entries (open flag, deadline, team cap, stage) and how many players a format needs

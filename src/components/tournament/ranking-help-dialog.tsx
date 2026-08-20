@@ -20,15 +20,19 @@ const RULES: { title: string; body: string }[] = [
     body: "If teams are level on wins, we count wins against the other tied teams only.",
   },
   {
-    title: "3. Total points",
-    body: "Still tied? The team that scored more points across all their matches ranks higher.",
+    title: "3. Set wins",
+    body: "Still tied? The team that won more sets across all their matches ranks higher.",
   },
   {
     title: "4. Point differential",
     body: "Points scored minus points conceded across all matches. A higher net ranks higher.",
   },
   {
-    title: "5. Direct head-to-head",
+    title: "5. Total points",
+    body: "The team that scored more points across all their matches ranks higher.",
+  },
+  {
+    title: "6. Direct head-to-head",
     body: "If two teams are still level, the winner of the match played between those two ranks higher.",
   },
 ];
