@@ -15,7 +15,6 @@ export interface ScheduleConfig {
   endTime: string; // "17:00"
   interval: number; // minutes between slots
   numCourts: number;
-  restPeriod: number; // minutes a team must rest between matches
   mode: ScheduleMode;
 }
 
@@ -116,15 +115,8 @@ export function buildSchedule(
 
   const assignments: ScheduledAssignment[] = [];
   const unscheduled: string[] = [];
-  const lastPlayed = new Map<string, number>();
   let lastAssignedTime: string | null = null;
   let lastAssignedMin = -1; // absolute minutes, so past-midnight slots sort right
-
-  const canPlay = (teamId: string | null, slotMin: number) => {
-    if (!teamId) return true; // bye / TBD slot doesn't constrain
-    const last = lastPlayed.get(teamId);
-    return last === undefined || slotMin >= last + config.restPeriod;
-  };
 
   for (let court = 1; court <= numCourts; court++) {
     const groupsHere = courtGroups[court - 1];
@@ -139,14 +131,8 @@ export function buildSchedule(
 
     let slot = 0;
     for (const match of courtMatches) {
-      // Advance to the next slot on this court where both teams have rested.
-      while (slot < totalSlots) {
-        const slotMin = startMin + slot * config.interval;
-        if (canPlay(match.team1Id, slotMin) && canPlay(match.team2Id, slotMin)) {
-          break;
-        }
-        slot++;
-      }
+      // A court's matches run back to back; there is no rest requirement, so
+      // the only reason a match goes unscheduled is the day window running out.
       if (slot >= totalSlots) {
         unscheduled.push(match.id);
         continue;
@@ -160,8 +146,6 @@ export function buildSchedule(
         lastAssignedMin = slotMin;
         lastAssignedTime = time;
       }
-      if (match.team1Id) lastPlayed.set(match.team1Id, slotMin);
-      if (match.team2Id) lastPlayed.set(match.team2Id, slotMin);
       slot++; // next match on this court takes the following slot
     }
   }

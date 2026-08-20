@@ -35,7 +35,6 @@ export function ScheduleGenerator({
   const [startTime, setStartTime] = useState(settings.start_time ?? "08:00");
   const [interval, setIntervalV] = useState(settings.match_interval ?? 15);
   const [numCourts, setNumCourts] = useState(settings.num_courts ?? 4);
-  const [rest, setRest] = useState(settings.rest_period ?? 0);
   const [mode, setMode] = useState<ScheduleMode>(
     settings.schedule_mode ?? "sequential",
   );
@@ -54,7 +53,6 @@ export function ScheduleGenerator({
         end_time: "23:59",
         match_interval: interval,
         num_courts: numCourts,
-        rest_period: rest,
         schedule_mode: mode,
         knockout_rounds: knockout,
       });
@@ -85,8 +83,7 @@ export function ScheduleGenerator({
           <h3 className="font-semibold">Smart scheduling engine</h3>
           <p className="text-sm text-muted-foreground">
             Builds the schedule for <strong>{categoryName}</strong> — spreading
-            its matches across the shared courts with rest periods and conflict
-            detection.
+            its matches across the shared courts back to back.
           </p>
         </div>
       </div>
@@ -157,18 +154,6 @@ export function ScheduleGenerator({
             max={20}
             value={numCourts}
             onChange={(e) => setNumCourts(Number(e.target.value))}
-          />
-        </Field>
-        <Field
-          label="Rest period (min)"
-          hint="Minimum minutes a team rests between its own matches, so the same team is never scheduled back-to-back. Set to 0 for no rest requirement."
-        >
-          <Input
-            type="number"
-            min={0}
-            max={180}
-            value={rest}
-            onChange={(e) => setRest(Number(e.target.value))}
           />
         </Field>
         <Field

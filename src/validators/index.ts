@@ -77,7 +77,6 @@ export const scheduleSchema = z.object({
     .number()
     .refine((v) => (MATCH_INTERVALS as readonly number[]).includes(v)),
   num_courts: z.coerce.number().int().min(1).max(20),
-  rest_period: z.coerce.number().int().min(0).max(180),
   schedule_mode: z.enum(["sequential", "distributed"]),
   knockout_rounds: z.enum(["none", "semifinals", "finals"]).default("none"),
 });

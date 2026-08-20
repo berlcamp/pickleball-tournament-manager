@@ -61,7 +61,6 @@ export type TournamentSettings = {
   start_time?: string; // "08:00"
   end_time?: string; // "17:00"
   match_interval?: number; // minutes
-  rest_period?: number; // minutes
   num_courts?: number;
   knockout_rounds?: KnockoutRounds;
 }
@@ -76,7 +75,6 @@ export type CategorySettings = {
   start_time?: string; // "08:00"
   end_time?: string; // "17:00"
   match_interval?: number; // minutes
-  rest_period?: number; // minutes
   num_courts?: number;
   knockout_rounds?: KnockoutRounds;
 }

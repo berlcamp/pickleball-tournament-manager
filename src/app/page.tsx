@@ -45,7 +45,7 @@ const FEATURES = [
   {
     icon: CalendarClock,
     title: "Smart Scheduling",
-    desc: "Spread matches across courts with rest periods and conflict detection.",
+    desc: "Spread matches across courts with automatic slot and court assignment.",
     iconBg: "bg-chart-4/15 text-chart-4",
     glow: "group-hover:shadow-[0_0_0_1px_var(--color-chart-4)]",
   },

@@ -43,7 +43,6 @@ export async function generateSchedule(
       end_time: cfg.end_time,
       match_interval: cfg.match_interval,
       num_courts: cfg.num_courts,
-      rest_period: cfg.rest_period,
       schedule_mode: cfg.schedule_mode,
       knockout_rounds: cfg.knockout_rounds,
     };
@@ -115,7 +114,6 @@ export async function generateSchedule(
       endTime: cfg.end_time,
       interval: cfg.match_interval,
       numCourts: cfg.num_courts,
-      restPeriod: cfg.rest_period,
       mode: cfg.schedule_mode,
     });
 
