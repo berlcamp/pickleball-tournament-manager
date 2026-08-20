@@ -75,12 +75,11 @@ pages live in `src/lib/tournament-data.ts` and take a `SupabaseClient` so they
 work with either the authed or public client.
 
 ### Routing
-- `src/app/dashboard/**` — authed management UI; tournament workspace is `tournaments/[id]/{registrations,participants,seeding,groups,group-stage,schedule,finals,results,settings}`.
+- `src/app/dashboard/**` — authed management UI (no side nav; `/dashboard` **is** the tournament list and `/dashboard/tournaments` redirects to it); tournament workspace is `tournaments/[id]/{registrations,participants,seeding,groups,group-stage,schedule,finals,results,settings}`.
 - `src/app/[code]/**` — public, no-login portal, served from the **domain root** so links stay short (`sortbrite.com/ab3kd`). The index IS the Registration tab; siblings are standings, schedule, finals, teams/[id]. `getTournamentByPublicRef` resolves `tournaments.short_code` first and falls back to the long `slug`, so older links keep working.
 - `src/app/tournament/[slug]/[[...rest]]` — redirect stub only; forwards legacy portal URLs to the short form.
 - Because `/[code]` shares the top-level namespace with every real page, custom codes are checked against `RESERVED_CODES` in `src/lib/short-code.ts`. **Add any new top-level route to that set.**
 - `src/app/r/[code]` — a registrant's own status page, addressed by reference code (noindex).
-- `src/app/monitor` — live TV board (`/monitor?t=[slug]`).
 
 ### Link previews (Facebook / Messenger / Viber)
 `src/app/[code]/layout.tsx → generateMetadata` produces the `og:` tags for the

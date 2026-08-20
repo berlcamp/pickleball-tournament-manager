@@ -2,28 +2,24 @@ import Link from "next/link";
 import { getMyTournaments } from "@/lib/data";
 import { PageHeader, EmptyState } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { TournamentStatusBadge } from "@/components/status-badge";
+import { ROLE_LABELS } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
-import { Plus, Trophy, Activity, CheckCircle2, Calendar } from "lucide-react";
+import { Plus, Trophy, MapPin, Calendar } from "lucide-react";
 
+/**
+ * The dashboard IS the tournament list — there is no side nav to hang an
+ * overview off, and every other screen is reached through a tournament.
+ */
 export default async function DashboardPage() {
   const tournaments = await getMyTournaments();
-  const active = tournaments.filter(
-    (t) => t.status === "group_stage" || t.status === "final_stage",
-  ).length;
-  const completed = tournaments.filter((t) => t.status === "completed").length;
-
-  const stats = [
-    { label: "Tournaments", value: tournaments.length, icon: Trophy },
-    { label: "Active", value: active, icon: Activity },
-    { label: "Completed", value: completed, icon: CheckCircle2 },
-  ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
-        title="Overview"
-        description="Your pickleball tournaments at a glance."
+        title="Tournaments"
+        description="All tournaments you own or collaborate on."
       >
         <Button asChild>
           <Link href="/dashboard/tournaments/new">
@@ -32,60 +28,61 @@ export default async function DashboardPage() {
         </Button>
       </PageHeader>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        {stats.map((s) => (
-          <div key={s.label} className="glass rounded-2xl p-5">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">{s.label}</span>
-              <s.icon className="size-5 text-primary" />
-            </div>
-            <div className="mt-2 text-3xl font-bold">{s.value}</div>
-          </div>
-        ))}
-      </div>
-
-      <div>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Recent tournaments</h2>
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/dashboard/tournaments">View all</Link>
+      {tournaments.length === 0 ? (
+        <EmptyState
+          icon={Trophy}
+          title="No tournaments yet"
+          description="Create your first tournament to start adding teams and generating groups."
+        >
+          <Button asChild>
+            <Link href="/dashboard/tournaments/new">
+              <Plus className="size-4" /> Create tournament
+            </Link>
           </Button>
-        </div>
-
-        {tournaments.length === 0 ? (
-          <EmptyState
-            icon={Trophy}
-            title="No tournaments yet"
-            description="Create your first tournament to start adding teams and generating groups."
-          >
-            <Button asChild>
-              <Link href="/dashboard/tournaments/new">
-                <Plus className="size-4" /> Create tournament
-              </Link>
-            </Button>
-          </EmptyState>
-        ) : (
-          <div className="grid gap-3">
-            {tournaments.slice(0, 5).map((t) => (
-              <Link
-                key={t.id}
-                href={`/dashboard/tournaments/${t.id}`}
-                className="glass flex items-center justify-between rounded-2xl p-4 transition-colors hover:bg-accent/40"
-              >
-                <div className="min-w-0">
-                  <div className="truncate font-semibold">{t.name}</div>
-                  <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
-                    <Calendar className="size-3.5" />
-                    {formatDate(t.start_date)}
-                    {t.location && <span>· {t.location}</span>}
-                  </div>
+        </EmptyState>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {tournaments.map((t) => (
+            <Link
+              key={t.id}
+              href={`/dashboard/tournaments/${t.id}`}
+              className="glass group flex flex-col overflow-hidden rounded-2xl transition-transform hover:-translate-y-0.5"
+            >
+              <div
+                className="h-24 bg-gradient-to-br from-primary/30 to-chart-2/20"
+                style={
+                  t.banner
+                    ? {
+                        backgroundImage: `url(${t.banner})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                      }
+                    : undefined
+                }
+              />
+              <div className="flex flex-1 flex-col p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-semibold leading-tight">{t.name}</h3>
+                  <TournamentStatusBadge status={t.status} />
                 </div>
-                <TournamentStatusBadge status={t.status} />
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
+                <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="size-3.5" /> {formatDate(t.start_date)}
+                  </div>
+                  {t.location && (
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="size-3.5" /> {t.location}
+                    </div>
+                  )}
+                </div>
+                <div className="mt-3 flex items-center justify-between">
+                  <Badge variant="secondary">{ROLE_LABELS[t.role]}</Badge>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
