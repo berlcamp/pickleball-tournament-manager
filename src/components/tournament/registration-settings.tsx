@@ -123,7 +123,7 @@ function CategoryRegistrationRow({
   }
 
   return (
-    <li className="rounded-xl border border-white/10">
+    <li className="rounded-xl border border-border">
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
@@ -160,9 +160,9 @@ function CategoryRegistrationRow({
       </button>
 
       {expanded && (
-        <div className="space-y-4 border-t border-white/10 p-4">
+        <div className="space-y-4 border-t border-border p-4">
           {locked && (
-            <p className="rounded-lg border border-white/10 bg-muted/30 p-2.5 text-xs text-muted-foreground">
+            <p className="rounded-lg border border-border bg-muted/30 p-2.5 text-xs text-muted-foreground">
               This category&apos;s group stage has started, so it no longer
               accepts new entries regardless of these settings.
             </p>
@@ -246,7 +246,7 @@ function CategoryRegistrationRow({
             </div>
           </div>
 
-          <div className="space-y-3 border-t border-white/10 pt-4">
+          <div className="space-y-3 border-t border-border pt-4">
             <Toggle
               id={`upfront-${category.id}`}
               label="Require proof of payment to register"
@@ -300,7 +300,7 @@ function Toggle({
   return (
     <div
       className={cn(
-        "flex items-center justify-between gap-4 rounded-xl border border-white/5 p-3",
+        "flex items-center justify-between gap-4 rounded-xl border border-border/50 p-3",
         disabled && "opacity-60",
       )}
     >

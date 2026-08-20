@@ -19,7 +19,7 @@ export function PublicTabs({ code }: { code: string }) {
   ];
 
   return (
-    <div className="no-scrollbar -mx-1 flex gap-1 overflow-x-auto border-b border-white/5 px-1">
+    <div className="no-scrollbar -mx-1 flex gap-1 overflow-x-auto border-b border-border/50 px-1">
       {tabs.map((t) => {
         const active = t.exact
           ? pathname === t.href

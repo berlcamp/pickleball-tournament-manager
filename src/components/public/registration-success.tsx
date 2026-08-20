@@ -103,7 +103,7 @@ export function RegistrationSuccess({
         </ol>
 
         {owesPayment && (
-          <p className="mt-4 rounded-xl border border-white/10 bg-background/40 p-3 text-xs text-muted-foreground">
+          <p className="mt-4 rounded-xl border border-border bg-background/40 p-3 text-xs text-muted-foreground">
             Fee due: <span className="font-semibold text-foreground">{formatCurrency(category.fee)}</span>.
             Pay anytime and upload your receipt from your status link above.
           </p>
@@ -128,7 +128,7 @@ function Step({
         className={
           done
             ? "flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground"
-            : "flex size-6 shrink-0 items-center justify-center rounded-full border border-white/15 text-xs font-bold"
+            : "flex size-6 shrink-0 items-center justify-center rounded-full border border-border text-xs font-bold"
         }
       >
         {done ? "✓" : n}

@@ -31,7 +31,7 @@ export function TournamentBanner({ tournament }: { tournament: Tournament }) {
       )}
 
       <div
-        className={`p-5 sm:p-7 ${tournament.banner ? "border-t border-white/10" : ""}`}
+        className={`p-5 sm:p-7 ${tournament.banner ? "border-t border-border" : ""}`}
       >
         <h1 className="text-balance text-2xl font-bold leading-tight sm:text-4xl">
           {tournament.name}

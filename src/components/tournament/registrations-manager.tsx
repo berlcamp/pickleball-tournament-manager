@@ -44,7 +44,7 @@ const STATUS_STYLE: Record<RegistrationStatus, string> = {
   pending: "border-warning/40 bg-warning/10 text-warning",
   approved: "border-primary/40 bg-primary/10 text-primary",
   disqualified: "border-destructive/40 bg-destructive/10 text-destructive",
-  cancelled: "border-white/15 bg-muted/40 text-muted-foreground",
+  cancelled: "border-border bg-muted/40 text-muted-foreground",
 };
 
 const STATUS_LABEL: Record<RegistrationStatus, string> = {
@@ -65,7 +65,7 @@ const PAYMENT_STYLE: Record<PaymentStatus, string> = {
   unpaid: "border-warning/40 text-warning",
   submitted: "border-chart-2/40 text-chart-2",
   verified: "border-primary/40 text-primary",
-  refunded: "border-white/15 text-muted-foreground",
+  refunded: "border-border text-muted-foreground",
 };
 
 type StatusFilter = RegistrationStatus | "all";
@@ -215,7 +215,7 @@ export function RegistrationsManager({
               </Chip>
             ),
           )}
-          <span className="w-px self-stretch bg-white/10" />
+          <span className="w-px self-stretch bg-border" />
           {(["all", "unpaid", "submitted", "verified", "refunded"] as const).map(
             (p) => (
               <Chip key={p} active={payment === p} onClick={() => setPayment(p)}>
@@ -393,7 +393,7 @@ function RegistrationDetail({
             {r.players.map((p) => (
               <div
                 key={p.id}
-                className="flex items-center gap-3 rounded-xl border border-white/10 p-3"
+                className="flex items-center gap-3 rounded-xl border border-border p-3"
               >
                 {p.id_photo_url ? (
                   <a
@@ -413,7 +413,7 @@ function RegistrationDetail({
                     />
                   </a>
                 ) : (
-                  <div className="flex size-16 shrink-0 items-center justify-center rounded-lg border border-dashed border-white/15 text-[0.65rem] text-muted-foreground">
+                  <div className="flex size-16 shrink-0 items-center justify-center rounded-lg border border-dashed border-border text-[0.65rem] text-muted-foreground">
                     No ID
                   </div>
                 )}
@@ -440,7 +440,7 @@ function RegistrationDetail({
 
           {/* payment */}
           {Number(r.fee_amount) > 0 && (
-            <div className="space-y-2 rounded-xl border border-white/10 p-3">
+            <div className="space-y-2 rounded-xl border border-border p-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm font-medium">Proof of payment</span>
                 <span
@@ -457,7 +457,7 @@ function RegistrationDetail({
                   href={r.payment_proof_url}
                   target="_blank"
                   rel="noreferrer"
-                  className="block overflow-hidden rounded-lg border border-white/10"
+                  className="block overflow-hidden rounded-lg border border-border"
                 >
                   <Image
                     src={r.payment_proof_url}
@@ -550,7 +550,7 @@ function RegistrationDetail({
                 </Button>
               </div>
 
-              <div className="flex items-center justify-between gap-2 border-t border-white/10 pt-3">
+              <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
                 <Button asChild variant="ghost" size="sm">
                   <a href={`/r/${r.reference_code}`} target="_blank">
                     Open team view <ExternalLink className="size-4" />
@@ -620,7 +620,7 @@ function Chip({
         "rounded-full border px-3 py-1 text-xs font-medium transition",
         active
           ? "border-primary bg-primary/15 text-primary"
-          : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground",
+          : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground",
       )}
     >
       {children}

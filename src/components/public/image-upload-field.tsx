@@ -90,7 +90,7 @@ export function ImageUploadField({
       />
 
       {value && preview ? (
-        <div className="relative overflow-hidden rounded-xl border border-white/10">
+        <div className="relative overflow-hidden rounded-xl border border-border">
           <Image
             src={preview}
             alt={label}
@@ -133,7 +133,7 @@ export function ImageUploadField({
             "flex h-28 w-full flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed text-muted-foreground transition",
             error
               ? "border-destructive/60 text-destructive"
-              : "border-white/15 hover:border-primary/50 hover:text-foreground",
+              : "border-border hover:border-primary/50 hover:text-foreground",
           )}
         >
           {busy ? (

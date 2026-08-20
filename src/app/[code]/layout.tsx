@@ -99,7 +99,7 @@ export default async function PublicTournamentLayout({
   return (
     <div className="min-h-screen">
       {/* Sticky so the brand stays put while a long registration form scrolls. */}
-      <header className="glass sticky top-0 z-40 border-b border-white/10">
+      <header className="glass sticky top-0 z-40 border-b border-border">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-2 sm:px-6">
           <Link
             href="/"

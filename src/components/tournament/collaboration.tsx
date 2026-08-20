@@ -163,7 +163,7 @@ export function Collaboration({
         {invites.map((i) => (
           <div
             key={i.id}
-            className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-white/10 px-3 py-2"
+            className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-border px-3 py-2"
           >
             <div className="flex min-w-0 items-center gap-3">
               <span className="grid size-8 place-items-center rounded-full bg-muted">

@@ -122,7 +122,7 @@ function Stepper({ current }: { current: Step }) {
                 "flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold transition",
                 done && "bg-primary/20 text-primary",
                 active && "bg-primary text-primary-foreground",
-                !done && !active && "border border-white/15 text-muted-foreground",
+                !done && !active && "border border-border text-muted-foreground",
               )}
             >
               {done ? "✓" : i + 1}
@@ -139,7 +139,7 @@ function Stepper({ current }: { current: Step }) {
               <span
                 className={cn(
                   "hidden h-px flex-1 sm:block",
-                  done ? "bg-primary/40" : "bg-white/10",
+                  done ? "bg-primary/40" : "bg-border",
                 )}
               />
             )}

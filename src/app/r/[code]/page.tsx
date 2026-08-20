@@ -29,7 +29,7 @@ export default async function RegistrationStatusPage({
 
   return (
     <div className="min-h-screen">
-      <header className="glass sticky top-0 z-40 border-b border-white/10">
+      <header className="glass sticky top-0 z-40 border-b border-border">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-2 sm:px-6">
           <Link
             href="/"

@@ -139,7 +139,7 @@ export default async function Home() {
         </section>
       </main>
 
-      <footer className="border-t border-white/5 py-12 text-center">
+      <footer className="border-t border-border/50 py-12 text-center">
         <QrCode className="mx-auto mb-4 size-6 text-primary opacity-70" />
         <p className="text-xl font-semibold tracking-tight sm:text-2xl">
           Built by a pickleball player{" "}

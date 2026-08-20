@@ -89,7 +89,7 @@ export function GroupStageView({
               <h4 className="px-3 py-2 text-sm font-semibold text-muted-foreground">
                 Matches
               </h4>
-              <ul className="divide-y divide-white/5">
+              <ul className="divide-y divide-border/50">
                 {g.matches.map((m) => {
                   const winner = m.winnerId;
                   return (

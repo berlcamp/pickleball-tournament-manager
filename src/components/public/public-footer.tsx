@@ -7,7 +7,7 @@ import { LogIn } from "lucide-react";
  */
 export function PublicFooter() {
   return (
-    <footer className="mt-10 border-t border-white/10 py-8">
+    <footer className="mt-10 border-t border-border py-8">
       <div className="mx-auto flex max-w-5xl flex-col items-center gap-3 px-4 text-center sm:px-6">
         <Link
           href="/login"

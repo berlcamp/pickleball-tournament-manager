@@ -78,7 +78,7 @@ export function TabNav({
       </DropdownMenu>
 
       {/* Desktop: the familiar tab strip. */}
-      <div className="no-scrollbar -mx-1 hidden gap-1 overflow-x-auto border-b border-white/5 pb-px sm:flex">
+      <div className="no-scrollbar -mx-1 hidden gap-1 overflow-x-auto border-b border-border/50 pb-px sm:flex">
         {tabs.map((tab) => (
           <Link
             key={tab.seg || "overview"}

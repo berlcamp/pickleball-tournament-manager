@@ -153,7 +153,7 @@ export function ScheduleTable({
       <div className="glass overflow-x-auto rounded-2xl">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-white/10 text-left text-xs uppercase tracking-wide text-muted-foreground">
+            <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
               {showDate && <th className="px-3 py-3">Date</th>}
               <th className="px-3 py-3">Time</th>
               <th className="px-3 py-3">Court</th>
@@ -183,7 +183,7 @@ export function ScheduleTable({
               filtered.map((r) => (
                 <tr
                   key={r.id}
-                  className="border-b border-white/5 last:border-0 hover:bg-accent/30"
+                  className="border-b border-border/50 last:border-0 hover:bg-accent/30"
                 >
                   {showDate && (
                     <td className="whitespace-nowrap px-3 py-3 text-muted-foreground">

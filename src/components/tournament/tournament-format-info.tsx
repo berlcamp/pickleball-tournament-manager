@@ -8,7 +8,7 @@ import { ADVANCE_PER_GROUP } from "@/lib/constants";
  */
 export function TournamentFormatInfo() {
   return (
-    <div className="flex gap-2 rounded-xl border border-white/5 bg-white/[0.02] p-3 text-xs text-muted-foreground">
+    <div className="flex gap-2 rounded-xl border border-border/50 bg-muted/30 p-3 text-xs text-muted-foreground">
       <Info className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
       <div className="space-y-1.5">
         <p>

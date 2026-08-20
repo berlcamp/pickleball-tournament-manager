@@ -59,7 +59,7 @@ function TieBreakDetails({ rows }: { rows: StandingRow[] }) {
         return (
           <div
             key={cluster[0].participantId}
-            className="rounded-xl border border-white/10 bg-white/[0.02] p-3 text-xs"
+            className="rounded-xl border border-border bg-muted/30 p-3 text-xs"
           >
             <p className="mb-2 font-medium text-muted-foreground">
               {cluster.length}-way tie · same record and {cluster[0].points} pts
@@ -111,7 +111,7 @@ export function StandingsTable({ rows }: { rows: StandingRow[] }) {
       <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-white/10 text-left text-xs uppercase tracking-wide text-muted-foreground">
+          <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
             <th className="px-3 py-3">Rank</th>
             <th className="px-3 py-3">Status</th>
             <th className="px-3 py-3">Team</th>
@@ -127,7 +127,7 @@ export function StandingsTable({ rows }: { rows: StandingRow[] }) {
           {rows.map((r) => (
             <tr
               key={r.participantId}
-              className="border-b border-white/5 last:border-0 hover:bg-accent/30"
+              className="border-b border-border/50 last:border-0 hover:bg-accent/30"
             >
               <td className="px-3 py-3 font-bold">{r.rank}</td>
               <td className="px-3 py-3">

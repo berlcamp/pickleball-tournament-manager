@@ -32,8 +32,8 @@ export function UserMenu({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="group flex cursor-pointer items-center gap-2 rounded-full border border-white/10 py-1 pl-1 pr-2.5 outline-none transition-colors hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-primary/50 data-[popup-open]:bg-accent/60">
-        <Avatar className="size-8 ring-2 ring-white/10">
+      <DropdownMenuTrigger className="group flex cursor-pointer items-center gap-2 rounded-full border border-border py-1 pl-1 pr-2.5 outline-none transition-colors hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-primary/50 data-[popup-open]:bg-accent/60">
+        <Avatar className="size-8 ring-2 ring-border">
           {avatarUrl && <AvatarImage src={avatarUrl} alt={label} />}
           <AvatarFallback>{initials(label || email)}</AvatarFallback>
         </Avatar>

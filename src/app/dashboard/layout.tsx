@@ -23,7 +23,7 @@ export default async function DashboardLayout({
     <div className="flex min-h-screen flex-col">
       {/* No side nav: the dashboard is the tournament list, and everything
           else hangs off a tournament or the user menu. */}
-      <header className="glass sticky top-0 z-20 border-b border-white/5">
+      <header className="glass sticky top-0 z-20 border-b border-border/50">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-6 py-3">
           <Link href="/dashboard" className="flex items-center gap-2 font-bold">
             <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground">

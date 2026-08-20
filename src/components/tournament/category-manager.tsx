@@ -65,7 +65,7 @@ export function CategoryManager({
         ))}
       </ul>
 
-      <div className="flex flex-col gap-2 border-t border-white/5 pt-4 sm:flex-row sm:items-end">
+      <div className="flex flex-col gap-2 border-t border-border/50 pt-4 sm:flex-row sm:items-end">
         <div className="w-full space-y-1.5 sm:flex-1">
           <Label htmlFor="new-cat" className="text-xs">
             New category
@@ -137,7 +137,7 @@ function CategoryRow({
   }
 
   return (
-    <li className="flex flex-col gap-2 rounded-xl border border-white/5 p-3 sm:flex-row sm:items-center">
+    <li className="flex flex-col gap-2 rounded-xl border border-border/50 p-3 sm:flex-row sm:items-center">
       <Input
         value={name}
         onChange={(e) => setName(e.target.value)}

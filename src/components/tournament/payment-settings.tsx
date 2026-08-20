@@ -138,7 +138,7 @@ export function PaymentSettings({ tournament }: { tournament: Tournament }) {
           }}
         />
         {qr ? (
-          <div className="flex items-center gap-3 rounded-xl border border-white/10 p-3">
+          <div className="flex items-center gap-3 rounded-xl border border-border p-3">
             <Image
               src={qr}
               alt="Payment QR"
@@ -173,7 +173,7 @@ export function PaymentSettings({ tournament }: { tournament: Tournament }) {
             type="button"
             disabled={uploading}
             onClick={() => fileRef.current?.click()}
-            className="flex h-24 w-full flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-white/15 text-muted-foreground transition hover:border-white/30 hover:text-foreground"
+            className="flex h-24 w-full flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-border text-muted-foreground transition hover:border-foreground/30 hover:text-foreground"
           >
             {uploading ? (
               <span className="text-sm">Uploading…</span>

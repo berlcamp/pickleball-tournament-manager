@@ -75,7 +75,7 @@ export function PublicLinkSettings({
         </p>
       </div>
 
-      <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-background/40 p-3 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-2 rounded-xl border border-border bg-background/40 p-3 sm:flex-row sm:items-center">
         <code className="min-w-0 flex-1 truncate text-sm">
           <span className="text-muted-foreground">{displayHost}/</span>
           <span className="font-semibold text-primary">{shortCode}</span>

@@ -85,7 +85,7 @@ export default async function PublicTeamPage({
       {mySchedule.length > 0 && (
         <section className="space-y-2">
           <h3 className="font-semibold">Schedule</h3>
-          <div className="glass divide-y divide-white/5 rounded-2xl">
+          <div className="glass divide-y divide-border/50 rounded-2xl">
             {mySchedule.map((r) => {
               const opp = r.team1 === participant.name ? r.team2 : r.team1;
               return (
@@ -111,7 +111,7 @@ export default async function PublicTeamPage({
       {teamMatches.length > 0 && (
         <section className="space-y-2">
           <h3 className="font-semibold">Group results</h3>
-          <div className="glass divide-y divide-white/5 rounded-2xl">
+          <div className="glass divide-y divide-border/50 rounded-2xl">
             {teamMatches.map((m) => {
               const isT1 = m.team1.id === id;
               const opp = isT1 ? m.team2.name : m.team1.name;
@@ -148,7 +148,7 @@ export default async function PublicTeamPage({
       {finalMatches.length > 0 && (
         <section className="space-y-2">
           <h3 className="font-semibold">Finals</h3>
-          <div className="glass divide-y divide-white/5 rounded-2xl">
+          <div className="glass divide-y divide-border/50 rounded-2xl">
             {finalMatches.map((m) => {
               const opp = m.team1.id === id ? m.team2.name : m.team1.name;
               return (

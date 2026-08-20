@@ -57,7 +57,7 @@ const STATUS_META: Record<
     label: "Cancelled",
     blurb: "This registration was cancelled.",
     icon: XCircle,
-    tone: "border-white/15 bg-muted/40 text-muted-foreground",
+    tone: "border-border bg-muted/40 text-muted-foreground",
   },
 };
 
@@ -68,7 +68,7 @@ const PAYMENT_META: Record<PaymentStatus, { label: string; tone: string }> = {
     tone: "border-chart-2/40 text-chart-2",
   },
   verified: { label: "Payment verified", tone: "border-primary/40 text-primary" },
-  refunded: { label: "Refunded", tone: "border-white/15 text-muted-foreground" },
+  refunded: { label: "Refunded", tone: "border-border text-muted-foreground" },
 };
 
 export function RegistrationStatusCard({
@@ -171,7 +171,7 @@ export function RegistrationStatusCard({
           {registration.players.map((player) => (
             <div
               key={player.id}
-              className="rounded-xl border border-white/10 p-3"
+              className="rounded-xl border border-border p-3"
             >
               <dt className="text-xs text-muted-foreground">
                 Player {player.position}
@@ -253,7 +253,7 @@ export function RegistrationStatusCard({
                 href={registration.payment_proof_url}
                 target="_blank"
                 rel="noreferrer"
-                className="block overflow-hidden rounded-xl border border-white/10"
+                className="block overflow-hidden rounded-xl border border-border"
               >
                 <Image
                   src={registration.payment_proof_url}
@@ -270,7 +270,7 @@ export function RegistrationStatusCard({
           {canUpload ? (
             <form
               onSubmit={submitProof}
-              className="space-y-3 rounded-xl border border-white/10 p-4"
+              className="space-y-3 rounded-xl border border-border p-4"
             >
               <div>
                 <h3 className="text-sm font-medium">

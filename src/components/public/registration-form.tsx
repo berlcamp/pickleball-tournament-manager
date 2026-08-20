@@ -176,7 +176,7 @@ export function RegistrationForm({
         {players.map((player, i) => (
           <div
             key={i}
-            className="space-y-3 rounded-xl border border-white/10 p-4"
+            className="space-y-3 rounded-xl border border-border p-4"
           >
             <div className="flex items-center gap-2">
               <span className="flex size-6 items-center justify-center rounded-full bg-primary/15 text-xs font-bold text-primary">
@@ -225,7 +225,7 @@ export function RegistrationForm({
                         "h-9 min-w-11 rounded-lg border px-3 text-sm font-medium transition",
                         player.shirt_size === size
                           ? "border-primary bg-primary text-primary-foreground"
-                          : "border-white/15 text-muted-foreground hover:border-primary/50 hover:text-foreground",
+                          : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground",
                       )}
                       aria-pressed={player.shirt_size === size}
                     >
@@ -328,7 +328,7 @@ export function RegistrationForm({
           </header>
 
           {(payment.name || payment.number || payment.qr) && (
-            <div className="flex flex-col gap-4 rounded-xl border border-white/10 bg-background/40 p-4 sm:flex-row sm:items-center">
+            <div className="flex flex-col gap-4 rounded-xl border border-border bg-background/40 p-4 sm:flex-row sm:items-center">
               <div className="min-w-0 flex-1 space-y-1.5 text-sm">
                 {payment.number && (
                   <div>

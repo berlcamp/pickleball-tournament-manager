@@ -154,7 +154,7 @@ export function TournamentForm({
           }}
         />
         {bannerUrl ? (
-          <div className="relative overflow-hidden rounded-xl border border-white/5">
+          <div className="relative overflow-hidden rounded-xl border border-border/50">
             <Image
               src={bannerUrl}
               alt="Tournament banner"
@@ -190,7 +190,7 @@ export function TournamentForm({
             type="button"
             disabled={uploading}
             onClick={() => fileInputRef.current?.click()}
-            className="flex h-40 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 text-muted-foreground transition hover:border-white/30 hover:text-foreground disabled:opacity-60"
+            className="flex h-40 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border text-muted-foreground transition hover:border-foreground/30 hover:text-foreground disabled:opacity-60"
           >
             {uploading ? (
               <span className="text-sm">Uploading…</span>
@@ -220,7 +220,7 @@ export function TournamentForm({
         />
       </div>
 
-      <div className="flex items-center justify-between rounded-xl border border-white/5 p-3">
+      <div className="flex items-center justify-between rounded-xl border border-border/50 p-3">
         <div>
           <Label htmlFor="show_public_schedule">Show schedule on public page</Label>
           <p className="text-xs text-muted-foreground">
@@ -264,7 +264,7 @@ export function TournamentForm({
           {fields.map((field, i) => (
             <div
               key={field.id}
-              className="flex flex-col gap-2 rounded-xl border border-white/5 p-3 sm:flex-row sm:items-end"
+              className="flex flex-col gap-2 rounded-xl border border-border/50 p-3 sm:flex-row sm:items-end"
             >
               <div className="w-full space-y-1.5 sm:flex-1">
                 <Label htmlFor={`cat-${i}`} className="text-xs">

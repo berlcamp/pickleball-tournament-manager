@@ -106,7 +106,7 @@ export function ParticipantsManager({
             No teams yet. Add your first team above.
           </p>
         ) : (
-          <ul className="divide-y divide-white/5">
+          <ul className="divide-y divide-border/50">
             {participants.map((p, i) => (
               <li
                 key={p.id}
