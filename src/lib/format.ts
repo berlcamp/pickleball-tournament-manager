@@ -58,3 +58,47 @@ export function initials(name: string): string {
     .map((p) => p[0]?.toUpperCase())
     .join("");
 }
+
+/** Peso amounts for registration fees. Whole pesos render without decimals. */
+export function formatCurrency(amount: number | null | undefined): string {
+  const value = Number(amount ?? 0);
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+    minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+/** "Sep 1, 2026, 11:59 PM" for registration deadlines. */
+export function formatDateTime(value: string | null | undefined): string {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+/**
+ * Compact deadline for tight mobile chips: "Sep 1, 11:59 PM". The year is
+ * included only when it differs from the current one, since a registration
+ * deadline is almost always within the same year.
+ */
+export function formatDeadline(value: string | null | undefined): string {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+  const sameYear = d.getFullYear() === new Date().getFullYear();
+  return d.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    ...(sameYear ? {} : { year: "numeric" }),
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}

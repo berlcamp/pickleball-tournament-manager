@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { MATCH_INTERVALS } from "@/lib/constants";
+import { shortCodeProblem } from "@/lib/short-code";
 
 export const tournamentSchema = z.object({
   name: z.string().min(2, "Name is too short").max(120),
@@ -11,9 +12,22 @@ export const tournamentSchema = z.object({
 });
 export type TournamentInput = z.infer<typeof tournamentSchema>;
 
+export const shortCodeSchema = z.object({
+  short_code: z
+    .string()
+    .trim()
+    .toLowerCase()
+    // superRefine so the specific reason (too short / bad characters /
+    // reserved word) reaches the organizer instead of a generic message.
+    .superRefine((value, ctx) => {
+      const problem = shortCodeProblem(value);
+      if (problem) ctx.addIssue({ code: "custom", message: problem });
+    }),
+});
+export type ShortCodeInput = z.infer<typeof shortCodeSchema>;
+
 export const categorySchema = z.object({
   name: z.string().min(1, "Category name is required").max(120),
-  final_bracket_type: z.enum(["crossover", "standard_seed"]),
 });
 export type CategoryInput = z.infer<typeof categorySchema>;
 

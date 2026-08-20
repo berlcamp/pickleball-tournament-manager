@@ -17,16 +17,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Plus, Trash2, Upload, X, ImageIcon } from "lucide-react";
 import { createTournament, updateTournament } from "@/actions/tournaments";
-import { BracketTypeInfo } from "@/components/tournament/bracket-type-info";
+import { TournamentFormatInfo } from "@/components/tournament/tournament-format-info";
 
 export function TournamentForm({
   tournamentId,
@@ -87,9 +80,7 @@ export function TournamentForm({
       start_date: defaults?.start_date ?? "",
       banner: defaults?.banner ?? "",
       show_public_schedule: defaults?.show_public_schedule ?? true,
-      categories: defaults?.categories ?? [
-        { name: "", final_bracket_type: "crossover" },
-      ],
+      categories: defaults?.categories ?? [{ name: "" }],
     },
   });
 
@@ -262,15 +253,13 @@ export function TournamentForm({
               variant="outline"
               size="sm"
               className="w-full sm:w-auto"
-              onClick={() =>
-                append({ name: "", final_bracket_type: "crossover" })
-              }
+              onClick={() => append({ name: "" })}
             >
               <Plus className="size-4" /> Add category
             </Button>
           </div>
 
-          <BracketTypeInfo />
+          <TournamentFormatInfo />
 
           {fields.map((field, i) => (
             <div
@@ -286,30 +275,6 @@ export function TournamentForm({
                   placeholder="e.g. Men's Doubles"
                   {...form.register(`categories.${i}.name` as const)}
                 />
-              </div>
-              <div className="w-full space-y-1.5 sm:w-44">
-                <Label className="text-xs">Bracket</Label>
-                <Select
-                  items={[
-                    { label: "Crossover Bracket", value: "crossover" },
-                    { label: "Standard Seed", value: "standard_seed" },
-                  ]}
-                  defaultValue={field.final_bracket_type}
-                  onValueChange={(v) =>
-                    form.setValue(
-                      `categories.${i}.final_bracket_type` as const,
-                      v as CreateTournamentInput["categories"][number]["final_bracket_type"],
-                    )
-                  }
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="crossover">Crossover Bracket</SelectItem>
-                    <SelectItem value="standard_seed">Standard Seed</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
               {fields.length > 1 && (
                 <div className="w-full space-y-1.5 sm:w-auto">

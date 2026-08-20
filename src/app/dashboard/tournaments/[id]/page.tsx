@@ -188,11 +188,11 @@ export default async function TournamentOverviewPage({
           </p>
           <div className="flex flex-wrap gap-2">
             <QrShare
-              path={`/tournament/${tournament.slug}/standings`}
+              path={`/${tournament.short_code}/standings`}
               label="Standings"
             />
             <QrShare
-              path={`/tournament/${tournament.slug}/schedule`}
+              path={`/${tournament.short_code}/schedule`}
               label="Schedule"
             />
             <Button asChild variant="outline" size="sm">

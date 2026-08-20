@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getTournamentBySlug, publicClient } from "@/lib/data";
+import { getTournamentByPublicRef, publicClient } from "@/lib/data";
 import { loadSchedule } from "@/lib/tournament-data";
 import { getTournamentRole } from "@/lib/auth";
 import { roleAtLeast } from "@/lib/constants";
@@ -11,10 +11,10 @@ export const dynamic = "force-dynamic";
 export default async function PublicSchedulePage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ code: string }>;
 }) {
-  const { slug } = await params;
-  const tournament = await getTournamentBySlug(slug);
+  const { code } = await params;
+  const tournament = await getTournamentByPublicRef(code);
   if (!tournament) notFound();
 
   // When the schedule is hidden from the public, signed-in staff (scorekeeper,

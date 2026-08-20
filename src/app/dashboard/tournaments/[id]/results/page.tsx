@@ -35,7 +35,7 @@ export default async function ResultsPage({
     <div className="space-y-8">
       <PageHeader title="Results" description="Final standings and bracket.">
         <QrShare
-          path={`/tournament/${ctx.tournament.slug}/standings?category=${active.id}`}
+          path={`/${ctx.tournament.short_code}/standings?category=${active.id}`}
           label="Share results"
         />
       </PageHeader>

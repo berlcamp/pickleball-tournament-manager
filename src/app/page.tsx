@@ -38,7 +38,7 @@ const FEATURES = [
   {
     icon: Network,
     title: "Finals Brackets",
-    desc: "Auto-generate crossover or standard-seed knockout brackets.",
+    desc: "Group winners seed straight into an auto-drawn knockout bracket.",
     iconBg: "bg-chart-5/15 text-chart-5",
     glow: "group-hover:shadow-[0_0_0_1px_var(--color-chart-5)]",
   },

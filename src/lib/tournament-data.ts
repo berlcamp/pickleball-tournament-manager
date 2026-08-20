@@ -50,7 +50,7 @@ export async function loadFinals(
   const { data: matches } = await db
     .from("final_matches")
     .select(
-      "id, round, slot, label, participant1_id, participant2_id, status, winner_id",
+      "id, round, slot, label, participant1_id, participant2_id, source1, source2, status, winner_id",
     )
     .eq("category_id", categoryId)
     .order("round")
@@ -89,12 +89,13 @@ export async function loadFinals(
       label: m.label ?? "Match",
       team1: {
         id: m.participant1_id,
-        name: nm(m.participant1_id),
+        // An empty side is a bye, not a team still to be decided.
+        name: m.source1 === "BYE" ? "Bye" : nm(m.participant1_id),
         seed: seed(m.participant1_id),
       },
       team2: {
         id: m.participant2_id,
-        name: nm(m.participant2_id),
+        name: m.source2 === "BYE" ? "Bye" : nm(m.participant2_id),
         seed: seed(m.participant2_id),
       },
       status: m.status,

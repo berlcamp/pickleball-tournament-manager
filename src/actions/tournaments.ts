@@ -8,7 +8,9 @@ import {
   createTournamentSchema,
   categorySchema,
   profileSchema,
+  shortCodeSchema,
 } from "@/validators";
+import { generateShortCode } from "@/lib/short-code";
 import {
   ActionError,
   assertRole,
@@ -24,29 +26,42 @@ export async function createTournament(input: unknown) {
 
     const slug = `${slugify(parsed.name)}-${Math.random().toString(36).slice(2, 7)}`;
 
-    const { data, error } = await supabase
-      .from("tournaments")
-      .insert({
-        name: parsed.name,
-        description: parsed.description || null,
-        location: parsed.location || null,
-        start_date: parsed.start_date || null,
-        banner: parsed.banner || null,
-        show_public_schedule: parsed.show_public_schedule,
-        slug,
-        created_by: user.id,
-      })
-      .select("id")
-      .single();
-
-    if (error) throw new ActionError(error.message);
+    // Claim a short code, retrying the (rare) collision. 31^5 keeps this to
+    // effectively one attempt.
+    let data: { id: string } | null = null;
+    for (let attempt = 0; attempt < 5 && !data; attempt++) {
+      const { data: row, error } = await supabase
+        .from("tournaments")
+        .insert({
+          name: parsed.name,
+          description: parsed.description || null,
+          location: parsed.location || null,
+          start_date: parsed.start_date || null,
+          banner: parsed.banner || null,
+          show_public_schedule: parsed.show_public_schedule,
+          slug,
+          short_code: generateShortCode(),
+          created_by: user.id,
+        })
+        .select("id")
+        .single();
+      if (!error) {
+        data = row;
+        break;
+      }
+      if ((error as { code?: string }).code !== "23505") {
+        throw new ActionError(error.message);
+      }
+    }
+    if (!data) {
+      throw new ActionError("Could not create the tournament. Please retry.");
+    }
 
     // Create the tournament's categories (sub-tournaments).
     const categoryRows = parsed.categories.map((c, i) => ({
       tournament_id: data.id,
       name: c.name,
       position: i,
-      final_bracket_type: c.final_bracket_type,
     }));
     const { error: cErr } = await supabase
       .from("categories")
@@ -84,6 +99,46 @@ export async function updateTournament(id: string, input: unknown) {
   });
 }
 
+/**
+ * Change the tournament's public link. The code lives at the domain root, so
+ * uniqueness and the reserved-word list are both enforced here — the DB check
+ * constraint only guards the shape.
+ */
+export async function updateShortCode(tournamentId: string, input: unknown) {
+  return run(async () => {
+    const parsed = shortCodeSchema.parse(input);
+    const { supabase } = await assertRole(tournamentId, "admin");
+
+    const { data: taken } = await supabase
+      .from("tournaments")
+      .select("id")
+      .eq("short_code", parsed.short_code)
+      .neq("id", tournamentId)
+      .maybeSingle();
+    if (taken) {
+      throw new ActionError("That link is already taken. Try another.");
+    }
+
+    const { error } = await supabase
+      .from("tournaments")
+      .update({ short_code: parsed.short_code })
+      .eq("id", tournamentId);
+    if (error) {
+      throw new ActionError(
+        (error as { code?: string }).code === "23505"
+          ? "That link is already taken. Try another."
+          : error.message,
+      );
+    }
+
+    await logAudit(tournamentId, "tournament.short_code", {
+      short_code: parsed.short_code,
+    });
+    revalidatePath(`/dashboard/tournaments/${tournamentId}`, "layout");
+    return parsed.short_code;
+  });
+}
+
 export async function createCategory(tournamentId: string, input: unknown) {
   return run(async () => {
     const parsed = categorySchema.parse(input);
@@ -100,7 +155,6 @@ export async function createCategory(tournamentId: string, input: unknown) {
         tournament_id: tournamentId,
         name: parsed.name,
         position: count ?? 0,
-        final_bracket_type: parsed.final_bracket_type,
       })
       .select("id")
       .single();
@@ -135,10 +189,7 @@ export async function updateCategory(
 
     const { error } = await supabase
       .from("categories")
-      .update({
-        name: parsed.name,
-        final_bracket_type: parsed.final_bracket_type,
-      })
+      .update({ name: parsed.name })
       .eq("id", categoryId)
       .eq("tournament_id", tournamentId);
     if (error) throw new ActionError(error.message);

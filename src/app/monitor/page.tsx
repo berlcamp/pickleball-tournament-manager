@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
   publicClient,
-  getTournamentBySlug,
+  getTournamentByPublicRef,
   getPublicCategories,
   aggregateStatus,
 } from "@/lib/data";
@@ -21,7 +21,7 @@ export default async function MonitorPage({
   const { t } = await searchParams;
 
   if (t) {
-    const tournament = await getTournamentBySlug(t);
+    const tournament = await getTournamentByPublicRef(t);
     if (tournament) {
       const db = await publicClient();
       const publicCategories = await getPublicCategories(tournament.id);
@@ -92,7 +92,7 @@ export default async function MonitorPage({
             {tournaments.map((t) => (
               <Link
                 key={t.id}
-                href={`/monitor?t=${t.slug}`}
+                href={`/monitor?t=${t.short_code}`}
                 className="glass flex items-center justify-between rounded-2xl p-4 transition-colors hover:bg-accent/40"
               >
                 <span className="font-semibold">{t.name}</span>

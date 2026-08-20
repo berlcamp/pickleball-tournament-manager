@@ -1,27 +1,27 @@
 import { notFound } from "next/navigation";
 import {
-  getTournamentBySlug,
+  getTournamentByPublicRef,
   getPublicCategories,
   resolveActiveCategory,
   publicClient,
 } from "@/lib/data";
-import { loadGroupStage, loadFinals } from "@/lib/tournament-data";
-import { PublicStandings } from "@/components/public/public-standings";
+import { loadFinals } from "@/lib/tournament-data";
 import { CategoryFilter } from "@/components/public/category-filter";
+import { BracketView } from "@/components/tournament/bracket-view";
 import { Podium } from "@/components/tournament/podium";
 
 export const dynamic = "force-dynamic";
 
-export default async function PublicStandingsPage({
+export default async function PublicFinalsPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ code: string }>;
   searchParams: Promise<{ category?: string }>;
 }) {
-  const { slug } = await params;
+  const { code } = await params;
   const { category } = await searchParams;
-  const tournament = await getTournamentBySlug(slug);
+  const tournament = await getTournamentByPublicRef(code);
   if (!tournament) notFound();
 
   const categories = await getPublicCategories(tournament.id);
@@ -36,23 +36,24 @@ export default async function PublicStandingsPage({
   }
 
   const db = await publicClient();
-  const [groups, finals] = await Promise.all([
-    loadGroupStage(db, active.id),
-    loadFinals(db, active.id),
-  ]);
+  const { rounds, placements } = await loadFinals(db, active.id);
 
   return (
     <div className="space-y-8">
       <CategoryFilter categories={categories} activeId={active.id} />
-      <Podium placements={finals.placements} />
-      <PublicStandings
-        key={active.id}
-        groups={groups.map((g) => ({
-          id: g.id,
-          name: g.name,
-          standings: g.standings,
-        }))}
-      />
+      <Podium placements={placements} />
+      {rounds.length === 0 ? (
+        <p className="glass rounded-2xl p-10 text-center text-muted-foreground">
+          The finals bracket hasn’t been drawn yet. Check back soon!
+        </p>
+      ) : (
+        <BracketView
+          key={active.id}
+          tournamentId={tournament.id}
+          rounds={rounds}
+          canScore={false}
+        />
+      )}
     </div>
   );
 }

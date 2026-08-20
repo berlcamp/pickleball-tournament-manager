@@ -12,6 +12,8 @@ import type {
   Participant,
   Placement,
   Profile,
+  Registration,
+  RegistrationPlayer,
   Raffle,
   RaffleDepartment,
   RaffleEntry,
@@ -77,6 +79,18 @@ export type Database = {
         "tournament_id" | "match_type" | "match_id"
       >;
       audit_logs: TableShape<AuditLog, "tournament_id" | "action">;
+      registrations: TableShape<
+        Registration,
+        | "tournament_id"
+        | "category_id"
+        | "reference_code"
+        | "team_name"
+        | "contact_number"
+      >;
+      registration_players: TableShape<
+        RegistrationPlayer,
+        "registration_id" | "position" | "full_name"
+      >;
       raffles: TableShape<Raffle, "name">;
       raffle_departments: TableShape<RaffleDepartment, "raffle_id" | "name">;
       raffle_entries: TableShape<
@@ -99,8 +113,14 @@ export type Database = {
     Enums: {
       role: "owner" | "admin" | "scorekeeper" | "viewer";
       tournament_status: "draft" | "group_stage" | "final_stage" | "completed";
-      final_bracket_type: "crossover" | "standard_seed";
       match_status: "pending" | "in_progress" | "completed";
+      category_format: "singles" | "doubles";
+      registration_status:
+        | "pending"
+        | "approved"
+        | "disqualified"
+        | "cancelled";
+      payment_status: "unpaid" | "submitted" | "verified" | "refunded";
     };
     CompositeTypes: Record<string, never>;
   };

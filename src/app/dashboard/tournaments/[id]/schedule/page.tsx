@@ -41,7 +41,7 @@ export default async function SchedulePage({
           tournamentName={ctx.tournament.name}
         />
         <QrShare
-          path={`/tournament/${ctx.tournament.slug}/schedule`}
+          path={`/${ctx.tournament.short_code}/schedule`}
           label="Share schedule"
         />
       </PageHeader>

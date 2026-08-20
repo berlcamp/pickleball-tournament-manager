@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 const TABS = [
   { seg: "", label: "Overview" },
+  { seg: "registrations", label: "Registrations" },
   { seg: "participants", label: "Teams" },
   { seg: "seeding", label: "Seeding" },
   { seg: "groups", label: "Groups" },

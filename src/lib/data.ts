@@ -142,15 +142,30 @@ export async function getTournamentContext(id: string): Promise<{
   };
 }
 
-export async function getTournamentBySlug(slug: string) {
+/**
+ * Resolve a tournament from whatever appears in a public URL: the short code
+ * first, then the long slug. The fallback keeps every previously shared link
+ * and printed QR code working after the move to short codes.
+ */
+export async function getTournamentByPublicRef(ref: string) {
   const supabase = await publicClient();
-  const { data } = await supabase
+  const value = ref.trim().toLowerCase();
+
+  const { data: byCode } = await supabase
     .from("tournaments")
     .select("*")
-    .eq("slug", slug)
+    .eq("short_code", value)
     .maybeSingle();
-  return data as Tournament | null;
+  if (byCode) return byCode as Tournament;
+
+  const { data: bySlug } = await supabase
+    .from("tournaments")
+    .select("*")
+    .eq("slug", value)
+    .maybeSingle();
+  return (bySlug as Tournament) ?? null;
 }
+
 
 /** Categories for a tournament, readable on public (no-login) pages. */
 export async function getPublicCategories(

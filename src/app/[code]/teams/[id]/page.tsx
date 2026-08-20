@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getTournamentBySlug, publicClient } from "@/lib/data";
+import { getTournamentByPublicRef, publicClient } from "@/lib/data";
 import {
   loadGroupStage,
   loadSchedule,
@@ -15,10 +15,10 @@ export const dynamic = "force-dynamic";
 export default async function PublicTeamPage({
   params,
 }: {
-  params: Promise<{ slug: string; id: string }>;
+  params: Promise<{ code: string; id: string }>;
 }) {
-  const { slug, id } = await params;
-  const tournament = await getTournamentBySlug(slug);
+  const { code, id } = await params;
+  const tournament = await getTournamentByPublicRef(code);
   if (!tournament) notFound();
 
   const db = await publicClient();
@@ -52,7 +52,7 @@ export default async function PublicTeamPage({
     <div className="space-y-8">
       <div>
         <Link
-          href={`/tournament/${slug}/standings`}
+          href={`/${code}/standings`}
           className="mb-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="size-4" /> Back to standings

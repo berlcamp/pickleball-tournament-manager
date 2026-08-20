@@ -2,6 +2,13 @@ import type { Role } from "@/types";
 
 export const MATCH_INTERVALS = [5, 10, 15, 20, 30] as const;
 
+/**
+ * How many teams advance from each group into the final stage. Read by finals
+ * generation, group-stage standings highlighting and knockout slot reservation
+ * alike — keep it here so those three can never disagree.
+ */
+export const ADVANCE_PER_GROUP = 2;
+
 export const ROLE_LABELS: Record<Role, string> = {
   owner: "Owner",
   admin: "Admin",

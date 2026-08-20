@@ -55,12 +55,12 @@ export default async function TournamentLayout({
           </div>
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline" size="sm">
-              <Link href={`/tournament/${t.slug}/standings`} target="_blank">
+              <Link href={`/${t.short_code}`} target="_blank">
                 <ExternalLink className="size-4" /> Public page
               </Link>
             </Button>
             <Button asChild variant="outline" size="sm">
-              <Link href={`/qr/${t.slug}`} target="_blank">
+              <Link href={`/qr/${t.short_code}`} target="_blank">
                 <QrCode className="size-4" /> Open QR
               </Link>
             </Button>

@@ -14,9 +14,7 @@ import {
   type QualifierSlot,
 } from "@/services/brackets";
 import { addDays, addMinutes, timeToMinutes } from "@/lib/format";
-
-// Top N from each group advance to the knockout bracket.
-const ADVANCE_PER_GROUP = 2;
+import { ADVANCE_PER_GROUP } from "@/lib/constants";
 
 export async function generateSchedule(
   tournamentId: string,
@@ -175,10 +173,15 @@ export async function generateSchedule(
             participantId: null,
             groupIndex: i,
             position: 1,
-            overallSeed: i + 1,
+            record: {
+              matchesWon: 0,
+              matchesPlayed: 0,
+              pointDiff: 0,
+              points: 0,
+            },
           }),
         );
-        const bracket = generateFinalBracket(dummies, "standard_seed");
+        const bracket = generateFinalBracket(dummies);
         const maxRound = bracket.reduce((m, b) => Math.max(m, b.round), 0);
         // "semifinals" stops before the final round (which holds the final and
         // the third-place playoff); "finals" includes everything.

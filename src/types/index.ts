@@ -6,7 +6,31 @@ export type TournamentStatus =
   | "final_stage"
   | "completed";
 
-export type FinalBracketType = "crossover" | "standard_seed";
+/** A category is contested either 1-v-1 or 2-v-2. Drives the player fields
+ * shown on the public registration form. */
+export type CategoryFormat = "singles" | "doubles";
+
+/** Admin decision on a submitted registration. */
+export type RegistrationStatus =
+  | "pending"
+  | "approved"
+  | "disqualified"
+  | "cancelled";
+
+/** Money state, tracked separately from `RegistrationStatus` so a team can be
+ * approved while still unpaid. */
+export type PaymentStatus = "unpaid" | "submitted" | "verified" | "refunded";
+
+export const SHIRT_SIZES = [
+  "XS",
+  "S",
+  "M",
+  "L",
+  "XL",
+  "2XL",
+  "3XL",
+] as const;
+export type ShirtSize = (typeof SHIRT_SIZES)[number];
 
 export type MatchStatus = "pending" | "in_progress" | "completed";
 
@@ -67,7 +91,10 @@ export type Profile = {
 
 export type Tournament = {
   id: string;
+  /** Long, name-derived slug. Kept so existing links keep resolving. */
   slug: string;
+  /** Memorable public code serving the portal at `/{short_code}`. */
+  short_code: string;
   name: string;
   description: string | null;
   location: string | null;
@@ -75,6 +102,12 @@ export type Tournament = {
   banner: string | null;
   settings: TournamentSettings;
   show_public_schedule: boolean;
+  /** GCash (or other) account collecting registration fees, tournament-wide. */
+  payment_name: string | null;
+  payment_number: string | null;
+  /** Public URL of an optional payment QR image. */
+  payment_qr: string | null;
+  payment_instructions: string | null;
   created_by: string;
   created_at: string;
 }
@@ -85,9 +118,20 @@ export type Category = {
   name: string;
   position: number;
   status: TournamentStatus;
-  final_bracket_type: FinalBracketType;
   settings: CategorySettings;
   created_at: string;
+  // ----- public registration settings -----
+  format: CategoryFormat;
+  registration_open: boolean;
+  /** ISO timestamp; registration auto-closes once it passes. */
+  registration_deadline: string | null;
+  /** Cap on APPROVED teams; null means unlimited. */
+  max_teams: number | null;
+  registration_fee: number;
+  /** true → proof of payment required to submit; false → pay later via link. */
+  require_payment_upfront: boolean;
+  collect_shirt_sizes: boolean;
+  require_player_id: boolean;
 }
 
 export type TournamentMember = {
@@ -235,6 +279,44 @@ export type AuditLog = {
   user_id: string | null;
   action: string;
   detail: Record<string, unknown>;
+  created_at: string;
+}
+
+export type Registration = {
+  id: string;
+  tournament_id: string;
+  category_id: string;
+  /** Human-quotable, unguessable code that also forms the status-page URL. */
+  reference_code: string;
+  team_name: string;
+  contact_number: string;
+  contact_email: string | null;
+  status: RegistrationStatus;
+  payment_status: PaymentStatus;
+  /** Fee snapshot taken at submission time. */
+  fee_amount: number;
+  payment_reference: string | null;
+  /** Storage object path in the private `pickleball-registrations` bucket. */
+  payment_proof_path: string | null;
+  payment_submitted_at: string | null;
+  admin_note: string | null;
+  /** Set once approved — the `participants` row this team competes as. */
+  participant_id: string | null;
+  submitted_ip: string | null;
+  decided_at: string | null;
+  decided_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type RegistrationPlayer = {
+  id: string;
+  registration_id: string;
+  /** 1 for singles; 1 and 2 for doubles. */
+  position: number;
+  full_name: string;
+  shirt_size: string | null;
+  id_photo_path: string | null;
   created_at: string;
 }
 

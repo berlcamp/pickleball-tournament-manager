@@ -9,9 +9,9 @@ import {
   computeGroupStandings,
   type ScoredMatch,
 } from "@/services/standings";
+import { ADVANCE_PER_GROUP } from "@/lib/constants";
 
 type DB = SupabaseClient<Database>;
-const ADVANCE_PER_GROUP = 2;
 
 function winnerFromSets(
   sets: { participant1_score: number; participant2_score: number }[],

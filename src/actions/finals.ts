@@ -10,10 +10,10 @@ import {
   type QualifierSlot,
 } from "@/services/brackets";
 import { groupLabel } from "@/services/seeding";
-import type { FinalBracketType, PlacementType } from "@/types";
+import { ADVANCE_PER_GROUP } from "@/lib/constants";
+import type { PlacementType } from "@/types";
 
 type DB = SupabaseClient<Database>;
-const ADVANCE_PER_GROUP = 2;
 
 export async function generateFinals(
   tournamentId: string,
@@ -24,7 +24,7 @@ export async function generateFinals(
 
     const { data: category } = await supabase
       .from("categories")
-      .select("final_bracket_type, status")
+      .select("status")
       .eq("id", categoryId)
       .single();
     if (!category) throw new ActionError("Category not found.");
@@ -57,7 +57,7 @@ export async function generateFinals(
     const { data: standings } = await supabase
       .from("standings")
       .select(
-        "group_id, participant_id, rank, matches_won, points, point_diff",
+        "group_id, participant_id, rank, matches_won, matches_lost, matches_tied, points, point_diff",
       )
       .eq("category_id", categoryId);
 
@@ -77,7 +77,13 @@ export async function generateFinals(
           participantId: s.participant_id,
           groupIndex: g.position,
           position: i + 1,
-          overallSeed: 0,
+          record: {
+            matchesWon: s.matches_won,
+            matchesPlayed:
+              s.matches_won + s.matches_lost + s.matches_tied,
+            pointDiff: s.point_diff,
+            points: s.points,
+          },
         });
       });
     }
@@ -86,15 +92,8 @@ export async function generateFinals(
       throw new ActionError("Not enough qualifiers for a bracket.");
     }
 
-    // Overall seeding for standard_seed: group winners first, ranked by record.
-    const byRecord = (a: QualifierSlot, b: QualifierSlot) => a.position - b.position;
-    const sorted = [...qualifiers].sort(byRecord);
-    sorted.forEach((q, i) => (q.overallSeed = i + 1));
-
-    const bracket = generateFinalBracket(
-      qualifiers,
-      category.final_bracket_type as FinalBracketType,
-    );
+    // The engine ranks the qualifiers across groups and draws the bracket.
+    const bracket = generateFinalBracket(qualifiers);
 
     // Reset this category's existing finals + placements.
     await supabase.from("final_matches").delete().eq("category_id", categoryId);
@@ -110,6 +109,10 @@ export async function generateFinals(
       participant2_id: m.participant2Id,
       source1: m.source1,
       source2: m.source2,
+      // Byes have nothing to play: they are settled as the bracket is drawn
+      // and the survivor is already sitting in the next round's match.
+      status: m.bye ? ("completed" as const) : ("pending" as const),
+      winner_id: m.winnerId,
     }));
     const { error } = await supabase.from("final_matches").insert(rows);
     if (error) throw new ActionError(error.message);

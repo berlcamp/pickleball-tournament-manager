@@ -11,21 +11,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Plus, Trash2, Save, Lock } from "lucide-react";
-import { BracketTypeInfo } from "@/components/tournament/bracket-type-info";
-import type { Category, FinalBracketType } from "@/types";
-
-const BRACKET_OPTIONS = [
-  { label: "Crossover Bracket", value: "crossover" },
-  { label: "Standard Seed", value: "standard_seed" },
-];
+import { TournamentFormatInfo } from "@/components/tournament/tournament-format-info";
+import type { Category } from "@/types";
 
 export function CategoryManager({
   tournamentId,
@@ -37,14 +25,12 @@ export function CategoryManager({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [newName, setNewName] = useState("");
-  const [newBracket, setNewBracket] = useState<FinalBracketType>("crossover");
 
   function add() {
     if (!newName.trim()) return;
     startTransition(async () => {
       const res = await createCategory(tournamentId, {
         name: newName.trim(),
-        final_bracket_type: newBracket,
       });
       if (!res.ok) {
         toast.error(res.error);
@@ -66,7 +52,7 @@ export function CategoryManager({
         </p>
       </div>
 
-      <BracketTypeInfo />
+      <TournamentFormatInfo />
 
       <ul className="space-y-2">
         {categories.map((c) => (
@@ -91,22 +77,6 @@ export function CategoryManager({
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && add()}
           />
-        </div>
-        <div className="w-full space-y-1.5 sm:w-44">
-          <Label className="text-xs">Bracket</Label>
-          <Select
-            items={BRACKET_OPTIONS}
-            value={newBracket}
-            onValueChange={(v) => setNewBracket(v as FinalBracketType)}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="crossover">Crossover Bracket</SelectItem>
-              <SelectItem value="standard_seed">Standard Seed</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
         <div className="w-full space-y-1.5 sm:w-auto">
           <Label className="hidden text-xs sm:block sm:invisible">Add</Label>
@@ -135,19 +105,15 @@ function CategoryRow({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [name, setName] = useState(category.name);
-  const [bracket, setBracket] = useState<FinalBracketType>(
-    category.final_bracket_type,
-  );
-  // Once the group stage has started the category is locked — its teams,
-  // groups, and bracket settings can no longer be changed.
+  // Once the group stage has started the category is locked — its teams and
+  // groups can no longer be changed.
   const locked = category.status !== "draft";
-  const dirty = name !== category.name || bracket !== category.final_bracket_type;
+  const dirty = name !== category.name;
 
   function save() {
     startTransition(async () => {
       const res = await updateCategory(tournamentId, category.id, {
         name: name.trim(),
-        final_bracket_type: bracket,
       });
       if (!res.ok) {
         toast.error(res.error);
@@ -178,20 +144,6 @@ function CategoryRow({
         className="flex-1"
         disabled={locked}
       />
-      <Select
-        items={BRACKET_OPTIONS}
-        value={bracket}
-        onValueChange={(v) => setBracket(v as FinalBracketType)}
-        disabled={locked}
-      >
-        <SelectTrigger className="w-full sm:w-44">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="crossover">Crossover Bracket</SelectItem>
-          <SelectItem value="standard_seed">Standard Seed</SelectItem>
-        </SelectContent>
-      </Select>
       {locked ? (
         <div
           className="flex items-center gap-1.5 px-2 text-xs text-muted-foreground"
