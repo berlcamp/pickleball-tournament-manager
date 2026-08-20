@@ -1,7 +1,9 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getUser } from "@/lib/auth";
+import { requestOrigin } from "@/lib/site-url";
 import {
   Trophy,
   CalendarClock,
@@ -12,6 +14,16 @@ import {
   Shuffle,
   Network,
 } from "lucide-react";
+
+/**
+ * Only the base URL: the title, description and `opengraph-image.png` beside
+ * this file come from the root layout. Deriving the origin from the request
+ * keeps the shared thumbnail absolute and correct on whatever domain the link
+ * was copied from.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  return { metadataBase: new URL(await requestOrigin()) };
+}
 
 const FEATURES = [
   {

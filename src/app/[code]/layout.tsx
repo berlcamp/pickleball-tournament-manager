@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getTournamentByPublicRef } from "@/lib/data";
@@ -6,6 +7,77 @@ import { LiveRefresh } from "@/components/public/live-refresh";
 import { TournamentBanner } from "@/components/public/tournament-banner";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Trophy } from "lucide-react";
+import { formatDate } from "@/lib/format";
+import { requestOrigin } from "@/lib/site-url";
+
+/** Trim to a whole word so a preview never ends mid-syllable. */
+function clamp(text: string, max: number): string {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  const lastSpace = cut.lastIndexOf(" ");
+  return `${(lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
+}
+
+/**
+ * Link previews for the portal. Facebook, Messenger and Viber all build their
+ * thumbnail from the `og:` tags in the server-rendered HTML, so the tournament
+ * banner is handed over as `og:image` — served straight from Supabase storage,
+ * which is public. Tournaments with no banner fall back to the generated card
+ * at `/{code}/og`.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ code: string }>;
+}): Promise<Metadata> {
+  const { code } = await params;
+  const tournament = await getTournamentByPublicRef(code);
+  if (!tournament) return {};
+
+  const where = [formatDate(tournament.start_date), tournament.location]
+    .filter(Boolean)
+    .join(" · ");
+  // Chat previews show two or three lines, so lead with when and where and
+  // flatten the organiser's blurb (newlines and all) into what still fits.
+  const blurb = tournament.description?.replace(/\s+/g, " ").trim();
+  const description = clamp(
+    blurb
+      ? `${where} — ${blurb}`
+      : `${where} — live standings, schedule and registration on PicklePro.`,
+    200,
+  );
+  const url = `/${tournament.short_code ?? code}`;
+
+  // The uploaded banner is used as-is: it is the poster the organiser designed,
+  // so nothing is drawn over it. Only the no-banner case is generated, and that
+  // one has known dimensions worth declaring.
+  const image = tournament.banner
+    ? { url: tournament.banner, alt: tournament.name }
+    : { url: `${url}/og`, width: 1200, height: 630, alt: tournament.name };
+
+  return {
+    // Pin the base to the host the link was actually shared from, so a preview
+    // built on the production domain, a Vercel preview or localhost all point
+    // the crawler back at themselves.
+    metadataBase: new URL(await requestOrigin()),
+    title: tournament.name,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "website",
+      url,
+      title: tournament.name,
+      description,
+      images: [image],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: tournament.name,
+      description,
+      images: [image.url],
+    },
+  };
+}
 
 /**
  * The public portal, served from the domain root at `/{short_code}` so the

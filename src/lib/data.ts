@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import type { Category, Role, Tournament, TournamentStatus } from "@/types";
@@ -146,8 +147,11 @@ export async function getTournamentContext(id: string): Promise<{
  * Resolve a tournament from whatever appears in a public URL: the short code
  * first, then the long slug. The fallback keeps every previously shared link
  * and printed QR code working after the move to short codes.
+ *
+ * Memoized per request: the portal layout and its `generateMetadata` both need
+ * the tournament, and a link-preview crawler shouldn't cost two round trips.
  */
-export async function getTournamentByPublicRef(ref: string) {
+export const getTournamentByPublicRef = cache(async function (ref: string) {
   const supabase = await publicClient();
   const value = ref.trim().toLowerCase();
 
@@ -164,7 +168,7 @@ export async function getTournamentByPublicRef(ref: string) {
     .eq("slug", value)
     .maybeSingle();
   return (bySlug as Tournament) ?? null;
-}
+});
 
 
 /** Categories for a tournament, readable on public (no-login) pages. */

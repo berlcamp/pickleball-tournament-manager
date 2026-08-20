@@ -82,6 +82,25 @@ work with either the authed or public client.
 - `src/app/r/[code]` — a registrant's own status page, addressed by reference code (noindex).
 - `src/app/monitor` — live TV board (`/monitor?t=[slug]`).
 
+### Link previews (Facebook / Messenger / Viber)
+`src/app/[code]/layout.tsx → generateMetadata` produces the `og:` tags for the
+whole portal (every tab inherits them). The tournament **banner** is the
+`og:image`, linked straight to its public Supabase storage URL — untouched,
+since it is the poster the organiser designed. Tournaments with no banner fall
+back to a generated 1200×630 card at `src/app/[code]/og/route.tsx` (`next/og`).
+That fallback is deliberately a plain route, **not** the `opengraph-image` file
+convention: the convention is collected at the page level and would override
+the banner set by the layout. `metadataBase` comes from the request host
+(`lib/site-url.ts → requestOrigin`), so previews resolve on the production
+domain, Vercel previews and localhost alike. After changing a banner, re-scrape
+the link in Facebook's Sharing Debugger — FB caches previews for days.
+
+Every other route (the marketing page, `/login`, the dashboard) falls back to
+`src/app/opengraph-image.png` — the product artwork padded onto a 1200×630
+canvas in its own background colour, the shape chat apps crop previews to. The
+root layout deliberately leaves `openGraph.images` unset so that file convention
+applies; the portal sets it and therefore overrides.
+
 ### Public registration
 Teams sign up from the portal without logging in. Settings are per category
 (`format`, `registration_open`, deadline, `max_teams`, fee, whether proof of
