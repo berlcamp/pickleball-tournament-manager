@@ -5,6 +5,7 @@ import { getTournamentByPublicRef } from "@/lib/data";
 import { PublicTabs } from "@/components/public/public-tabs";
 import { LiveRefresh } from "@/components/public/live-refresh";
 import { TournamentBanner } from "@/components/public/tournament-banner";
+import { PublicFooter } from "@/components/public/public-footer";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Trophy } from "lucide-react";
 import { formatDate } from "@/lib/format";
@@ -122,6 +123,8 @@ export default async function PublicTournamentLayout({
           <div className="pt-6">{children}</div>
         </div>
       </div>
+
+      <PublicFooter />
 
       <LiveRefresh tournamentId={tournament.id} />
     </div>

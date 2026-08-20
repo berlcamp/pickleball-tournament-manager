@@ -4,6 +4,7 @@ import { getRegistrationByCode, registrationsEnabled } from "@/lib/registration-
 import { RegistrationStatusCard } from "@/components/public/registration-status-card";
 import { RegistrationLookup } from "@/components/public/registration-lookup";
 import { TournamentBanner } from "@/components/public/tournament-banner";
+import { PublicFooter } from "@/components/public/public-footer";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SearchX, Trophy } from "lucide-react";
@@ -74,6 +75,8 @@ export default async function RegistrationStatusPage({
           </>
         )}
       </main>
+
+      <PublicFooter />
     </div>
   );
 }

@@ -4,57 +4,57 @@ import { formatDate } from "@/lib/format";
 import type { Tournament } from "@/types";
 
 /**
- * Hero banner for the public portal. The uploaded image is the backdrop with
- * the tournament's name, date and venue laid over a gradient scrim so text
- * stays readable on any photo. Falls back to a branded gradient when no banner
- * has been uploaded.
+ * Hero for the public portal: the uploaded banner on top, then the tournament's
+ * name, date and venue underneath.
+ *
+ * Nothing is drawn over the image — organisers upload a designed poster whose
+ * own copy would otherwise sit behind ours. For the same reason the image keeps
+ * its natural aspect ratio rather than being cropped to a fixed strip; a very
+ * tall poster is capped and letterboxed instead of taking over the page.
  */
 export function TournamentBanner({ tournament }: { tournament: Tournament }) {
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-white/10 shadow-xl">
-      <div className="relative h-48 w-full sm:h-64 lg:h-72">
-        {tournament.banner ? (
+    <section className="glass overflow-hidden rounded-2xl shadow-xl">
+      {tournament.banner && (
+        <div className="flex justify-center bg-black/25">
           <Image
             src={tournament.banner}
-            alt=""
-            fill
+            alt={`${tournament.name} banner`}
+            width={1600}
+            height={900}
             unoptimized
             priority
             sizes="(max-width: 1024px) 100vw, 1024px"
-            className="object-cover"
+            className="h-auto max-h-[70vh] w-full object-contain"
           />
-        ) : (
-          <div className="absolute inset-0 bg-app-gradient bg-card" />
-        )}
-        {/* Scrim: dark at the bottom where the copy sits, lighter at the top. */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/10" />
-
-        <div className="absolute inset-x-0 bottom-0 p-5 sm:p-7">
-          <h1 className="text-balance text-2xl font-bold leading-tight text-white drop-shadow sm:text-4xl">
-            {tournament.name}
-          </h1>
-          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/85">
-            <span className="flex items-center gap-1.5">
-              <CalendarDays className="size-4" />
-              {formatDate(tournament.start_date)}
-            </span>
-            {tournament.location && (
-              <span className="flex items-center gap-1.5">
-                <MapPin className="size-4" />
-                {tournament.location}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {tournament.description && (
-        <div className="glass border-t border-white/10 px-5 py-4 sm:px-7">
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            {tournament.description}
-          </p>
         </div>
       )}
+
+      <div
+        className={`p-5 sm:p-7 ${tournament.banner ? "border-t border-white/10" : ""}`}
+      >
+        <h1 className="text-balance text-2xl font-bold leading-tight sm:text-4xl">
+          {tournament.name}
+        </h1>
+        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground sm:text-base">
+          <span className="flex items-center gap-1.5">
+            <CalendarDays className="size-4 shrink-0 text-primary" />
+            {formatDate(tournament.start_date)}
+          </span>
+          {tournament.location && (
+            <span className="flex items-center gap-1.5">
+              <MapPin className="size-4 shrink-0 text-primary" />
+              {tournament.location}
+            </span>
+          )}
+        </div>
+
+        {tournament.description && (
+          <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+            {tournament.description}
+          </p>
+        )}
+      </div>
     </section>
   );
 }
