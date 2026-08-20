@@ -8,10 +8,7 @@ import {
   approvedCountsByCategory,
   registrationsEnabled,
 } from "@/lib/registration-data";
-import {
-  registrationAvailability,
-  slotsRemaining,
-} from "@/services/registration";
+import { registrationAvailability } from "@/services/registration";
 import { RegistrationFlow } from "@/components/public/registration-flow";
 import type { RegistrationCategory } from "@/components/public/registration-types";
 import { TriangleAlert } from "lucide-react";
@@ -65,7 +62,6 @@ export default async function PublicRegisterPage({
       deadline: c.registration_deadline,
       maxTeams: c.max_teams,
       approvedCount,
-      slotsRemaining: slotsRemaining(c.max_teams, approvedCount),
       availability: registrationAvailability(c, approvedCount),
     };
   });

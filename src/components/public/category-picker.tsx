@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatDeadline } from "@/lib/format";
 import type { RegistrationCategory } from "@/components/public/registration-types";
-import { ChevronRight, Clock3, Ticket, User, Users } from "lucide-react";
+import { ChevronRight, Clock3, User, Users } from "lucide-react";
 
 /**
  * Rotating accent colours so a stack of categories stays scannable on a phone,
@@ -36,8 +36,6 @@ export function CategoryPicker({
         const accent = ACCENTS[index % ACCENTS.length];
         const singles = category.format === "singles";
         const Icon = singles ? User : Users;
-        const nearlyFull =
-          category.slotsRemaining !== null && category.slotsRemaining <= 3;
 
         return (
           <li key={category.id}>
@@ -100,14 +98,6 @@ export function CategoryPicker({
                   )}
 
                   <div className="flex flex-wrap items-center gap-1.5">
-                    {category.slotsRemaining !== null && (
-                      <Chip
-                        icon={Ticket}
-                        tone={nearlyFull ? "warning" : "muted"}
-                      >
-                        {category.slotsRemaining} left
-                      </Chip>
-                    )}
                     {category.deadline && (
                       <Chip icon={Clock3} tone="muted">
                         <span suppressHydrationWarning>

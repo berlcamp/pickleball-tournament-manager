@@ -13,7 +13,6 @@ export type RegistrationCategory = {
   deadline: string | null;
   maxTeams: number | null;
   approvedCount: number;
-  slotsRemaining: number | null;
   availability: RegistrationAvailability;
 };
 
