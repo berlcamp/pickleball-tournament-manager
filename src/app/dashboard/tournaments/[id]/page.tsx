@@ -191,11 +191,6 @@ export default async function TournamentOverviewPage({
               path={`/${tournament.short_code}/schedule`}
               label="Schedule"
             />
-            <Button asChild variant="outline" size="sm">
-              <Link href="/monitor" target="_blank">
-                Live monitor
-              </Link>
-            </Button>
           </div>
         </div>
       </div>

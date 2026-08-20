@@ -2,8 +2,8 @@
 
 A production-ready pickleball tournament SaaS inspired by Challonge. Run
 tournaments with collaborator roles, round-robin groups, finals brackets, a
-smart court-scheduling engine, public shareable pages, a live TV monitor, and
-QR-code sharing.
+smart court-scheduling engine, public shareable pages with online registration,
+and QR-code sharing.
 
 Built with **Next.js 16 (App Router)**, **TypeScript**, **Tailwind CSS v4**,
 **shadcn/ui**, and **Supabase** (Postgres + Auth + Realtime + RLS).
@@ -23,7 +23,7 @@ Built with **Next.js 16 (App Router)**, **TypeScript**, **Tailwind CSS v4**,
 - **Smart scheduling engine** — courts, intervals, rest periods, conflict detection, sequential or equally-distributed modes
 - **Public portal** (no login) — standings, schedule, and per-team pages
 - **Live standings** — Supabase Realtime, no refresh required
-- **Live monitor** — Now Playing / Upcoming TV board with fullscreen mode
+- **Online registration** — teams sign up from the public link and upload proof of payment
 - **QR sharing** for standings, schedule, and results
 - Dark mode, glassmorphism UI, animated progress & brackets, responsive design
 
@@ -108,7 +108,6 @@ Public, no-login pages:
 - `/tournament/[slug]/standings`
 - `/tournament/[slug]/schedule`
 - `/tournament/[slug]/teams/[id]`
-- `/monitor?t=[slug]` — live TV board
 
 ---
 
@@ -118,7 +117,7 @@ Public, no-login pages:
 src/
   actions/      Server actions (tournaments, participants, seeding, groups,
                 group stage, finals, schedule, members)
-  app/          App Router pages (dashboard, public portal, monitor, auth)
+  app/          App Router pages (dashboard, public portal, auth)
   components/   UI + feature components (shadcn/ui in components/ui)
   lib/          Supabase clients, auth, data loaders, formatting, constants
   services/     Pure tournament engine (seeding, round robin, standings,

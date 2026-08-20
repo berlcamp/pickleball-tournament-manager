@@ -25,10 +25,8 @@ export const RESERVED_CODES = new Set([
   "auth",
   "dashboard",
   "login",
-  "monitor",
   "qr",
   "r",
-  "raffle-draw",
   "tournament",
   // framework and well-known files
   "_next",
@@ -42,6 +40,10 @@ export const RESERVED_CODES = new Set([
   "sitemap.xml",
   "static",
   "www",
+  // retired routes — still reserved so old links can never resolve to a
+  // tournament that happens to claim the code
+  "monitor",
+  "raffle-draw",
   // plausible future pages — cheap to reserve now, painful to reclaim later
   "about",
   "account",

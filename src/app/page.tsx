@@ -9,8 +9,8 @@ import {
   CalendarClock,
   Users,
   BarChart3,
-  Tv,
   QrCode,
+  CreditCard,
   Shuffle,
   Network,
 } from "lucide-react";
@@ -62,9 +62,9 @@ const FEATURES = [
     glow: "group-hover:shadow-[0_0_0_1px_var(--color-chart-4)]",
   },
   {
-    icon: Tv,
-    title: "Live Monitor & QR",
-    desc: "TV-mode now-playing board and shareable QR codes for spectators.",
+    icon: CreditCard,
+    title: "Online Registrations & Payments",
+    desc: "Teams sign up from your public link and upload proof of payment — you just approve.",
     iconBg: "bg-chart-2/15 text-chart-2",
     glow: "group-hover:shadow-[0_0_0_1px_var(--color-chart-2)]",
   },
@@ -113,14 +113,6 @@ export default async function Home() {
               <Link href={user ? "/dashboard/tournaments/new" : "/login"}>
                 Create a tournament
               </Link>
-            </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="h-13 rounded-xl px-8 text-base font-semibold shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
-            >
-              <Link href="/monitor">View live monitor</Link>
             </Button>
           </div>
         </section>
