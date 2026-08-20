@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getTournamentContext, resolveActiveCategory } from "@/lib/data";
-import { roleAtLeast } from "@/lib/constants";
 import {
   Collaboration,
   type MemberRow,
@@ -16,7 +15,6 @@ import {
   Network,
   CalendarClock,
   ArrowRight,
-  Pencil,
 } from "lucide-react";
 
 // Display order for the collaboration list: owner first, then admins, etc.
@@ -133,8 +131,6 @@ export default async function TournamentOverviewPage({
     },
   ];
 
-  const canEdit = roleAtLeast(role, "admin");
-
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       <div className="space-y-6 lg:col-span-2">
@@ -205,17 +201,6 @@ export default async function TournamentOverviewPage({
       </div>
 
       <div className="space-y-6">
-        {canEdit && (
-          <div className="glass space-y-3 rounded-2xl p-5">
-            <h3 className="font-semibold">Settings</h3>
-            <Button asChild variant="outline" size="sm" className="w-full">
-              <Link href={`/dashboard/tournaments/${id}/settings`}>
-                <Pencil className="size-4" /> Edit details
-              </Link>
-            </Button>
-          </div>
-        )}
-
         {tournament.description && (
           <div className="glass space-y-2 rounded-2xl p-5">
             <h3 className="font-semibold">About</h3>

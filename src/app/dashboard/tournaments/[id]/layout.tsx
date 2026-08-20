@@ -5,7 +5,7 @@ import { TabNav } from "@/components/tournament/tab-nav";
 import { CategorySwitcher } from "@/components/tournament/category-switcher";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ROLE_LABELS } from "@/lib/constants";
+import { ROLE_LABELS, roleAtLeast } from "@/lib/constants";
 import { ExternalLink, MapPin, Calendar, QrCode } from "lucide-react";
 import { formatDate } from "@/lib/format";
 
@@ -72,7 +72,7 @@ export default async function TournamentLayout({
         <CategorySwitcher categories={categories} />
       </div>
 
-      <TabNav id={id} />
+      <TabNav id={id} canManage={roleAtLeast(role, "admin")} />
 
       <div>{children}</div>
     </div>
