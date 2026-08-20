@@ -120,8 +120,8 @@ function pairSwap<T>(items: T[]): T[] {
  * seeded above one that went 2-1, if its group winner finished higher.
  *
  * The winners' own tiebreak chain uses win *rate* rather than raw wins,
- * because snake seeding routinely leaves groups of unequal size and a bigger
- * group would otherwise hand out more wins for the same performance. The last
+ * because group assignment routinely leaves groups of unequal size and a
+ * bigger group would otherwise hand out more wins for the same performance. The last
  * tiebreak is the group index, not a coin flip: regenerating a bracket must
  * produce the same draw every time, and unlike group standings there is no
  * further match left in which to settle it.

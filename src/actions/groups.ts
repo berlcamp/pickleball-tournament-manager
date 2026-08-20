@@ -8,11 +8,12 @@ import {
   logAudit,
   run,
 } from "./helpers";
-import { snakeAssignGroups, groupLabel } from "@/services/seeding";
+import { assignGroups, groupLabel } from "@/services/seeding";
 import { generateRoundRobin } from "@/services/roundRobin";
 
 /**
- * Generate groups using snake seeding, build round-robin matches for each
+ * Generate groups using Challonge-style pair-alternating distribution,
+ * build round-robin matches for each
  * group, and initialise standings. Moves the category to group_stage.
  */
 export async function generateGroups(
@@ -44,7 +45,7 @@ export async function generateGroups(
       id: p.id,
       seed: p.seed ?? i + 1,
     }));
-    const assignments = snakeAssignGroups(seeded, numGroups);
+    const assignments = assignGroups(seeded, numGroups);
 
     // Create groups.
     const groupRows = assignments.map((g) => ({

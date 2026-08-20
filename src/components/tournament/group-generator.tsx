@@ -27,7 +27,7 @@ export function GroupGenerator({
     startTransition(async () => {
       const res = await generateGroups(tournamentId, categoryId, num);
       if (!res.ok) { toast.error(res.error); return; }
-      toast.success(`${num} groups generated with snake seeding`);
+      toast.success(`${num} groups generated`);
     });
   }
 
@@ -40,7 +40,7 @@ export function GroupGenerator({
         <div>
           <h3 className="font-semibold">Generate groups</h3>
           <p className="text-sm text-muted-foreground">
-            Snake seeding evenly distributes {participantCount} teams.
+            Distributes {participantCount} teams across the groups by seed.
           </p>
         </div>
       </div>

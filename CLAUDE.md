@@ -62,7 +62,7 @@ in `actions/helpers.ts` and must be followed:
 
 ### The tournament engine (`src/services/`)
 Pure, framework-free, I/O-free modules — keep them that way (no Supabase imports):
-- `seeding.ts` — manual + snake/random seeding
+- `seeding.ts` — manual/random seeding + `assignGroups`, the Challonge-style pair-alternating group distribution
 - `roundRobin.ts` — group match generation
 - `standings.ts` — standings computation + tie-breaker chain (match wins → head-to-head → points → point differential → random)
 - `brackets.ts` — ranks qualifiers across groups and draws the single-elimination final stage (byes, third-place playoff, round labeling)
@@ -115,7 +115,11 @@ Public/live pages subscribe via the browser client (see `components/public/live-
 ### Tournament format (one method, two stages)
 Every category runs the same Challonge-style format — there is no bracket type
 to choose:
-1. **Group stage** — snake-seeded groups, round robin inside each group. The
+1. **Group stage** — `assignGroups` spreads seeds across groups two groups at
+   a time, flipping direction per pair and per pass (verified against
+   Challonge: 16 seeds / 8 groups gives A{1,10} B{2,9} C{4,11} D{3,12}…). This
+   is NOT a plain serpentine and does not equalise group strength; that is
+   Challonge's behaviour, matched deliberately. Round robin inside each group. The
    top `ADVANCE_PER_GROUP` (`lib/constants.ts`, currently 2) qualify. That
    constant is the single source of truth for finals generation, standings
    highlighting and knockout slot reservation; don't re-declare it locally.

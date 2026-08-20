@@ -23,13 +23,26 @@ export interface GroupAssignment {
 }
 
 /**
- * Snake (serpentine) seeding. With N groups, seeds are distributed:
- * Round 1: G0 G1 G2 ...   Round 2: ...G2 G1 G0   etc.
- * This balances strength across groups.
+ * Distribute seeded participants across groups, Challonge-style.
+ *
+ * Groups are taken two at a time — (A,B), (C,D), (E,F) … — and each pair is
+ * filled in alternating direction: the direction flips from one pair to the
+ * next, and flips again on every pass through the groups. Reverse-engineered
+ * from Challonge's automatic assignment, where 16 seeds across 8 groups
+ * produced:
+ *
+ *   seeds 1-8   ->  A B D C E F H G
+ *   seeds 9-16  ->  B A C D F E G H   (the same order, pairs swapped)
+ *
+ * Note this is deliberately NOT a plain serpentine. A serpentine balances
+ * every group to the same seed total; this does not — the first pair of
+ * groups draws the strongest teams and the last pair the weakest. That is
+ * Challonge's behaviour and it is what this project matches on purpose; see
+ * `rankQualifiers` in services/brackets.ts, which pairs groups the same way.
  *
  * `seeded` must be ordered by seed ascending (seed 1 = strongest).
  */
-export function snakeAssignGroups(
+export function assignGroups(
   seeded: SeededParticipant[],
   numGroups: number,
 ): GroupAssignment[] {
@@ -41,10 +54,21 @@ export function snakeAssignGroups(
   const ordered = [...seeded].sort((a, b) => a.seed - b.seed);
 
   ordered.forEach((p, index) => {
-    const round = Math.floor(index / numGroups);
-    const posInRound = index % numGroups;
-    const groupIndex =
-      round % 2 === 0 ? posInRound : numGroups - 1 - posInRound;
+    const pass = Math.floor(index / numGroups);
+    const slot = index % numGroups;
+    const pair = Math.floor(slot / 2);
+    const withinPair = slot % 2;
+
+    let groupIndex: number;
+    if (pair * 2 + 1 >= numGroups) {
+      // An odd group count leaves a final group with no partner to alternate
+      // against; it just takes the slot directly.
+      groupIndex = slot;
+    } else {
+      const forward = (pair + pass) % 2 === 0;
+      groupIndex = pair * 2 + (forward ? withinPair : 1 - withinPair);
+    }
+
     groups[groupIndex].members.push({
       participantId: p.id,
       seedInGroup: groups[groupIndex].members.length + 1,
