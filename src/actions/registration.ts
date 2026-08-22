@@ -579,52 +579,18 @@ export async function setPaymentStatus(
   });
 }
 
-/** Permanently remove a registration and its uploaded files. */
-export async function deleteRegistration(
-  tournamentId: string,
-  registrationId: string,
-) {
+/**
+ * Deleting registrations is disabled — they are the audit trail for payments,
+ * uploads and the reference codes handed to teams. Mark an entry `cancelled`
+ * instead; that also releases its participant row.
+ *
+ * Kept as a stub so any stale caller fails loudly instead of silently
+ * destroying data.
+ */
+export async function deleteRegistration() {
   return run(async () => {
-    const { supabase } = await assertRole(tournamentId, "admin");
-
-    const { data: row } = await supabase
-      .from("registrations")
-      .select("*")
-      .eq("id", registrationId)
-      .eq("tournament_id", tournamentId)
-      .maybeSingle();
-    if (!row) throw new ActionError("Registration not found.");
-    const registration = row as Registration;
-
-    if (registration.participant_id) {
-      await syncParticipant(supabase, registration, "cancelled");
-    }
-
-    const { error } = await supabase
-      .from("registrations")
-      .delete()
-      .eq("id", registrationId);
-    if (error) throw new ActionError(error.message);
-
-    // Best-effort cleanup of the private uploads; the row is already gone.
-    if (registrationsEnabled()) {
-      try {
-        const db = registrationClient();
-        const { data: files } = await db.storage
-          .from(REGISTRATION_BUCKET)
-          .list(registration.id);
-        if (files?.length) {
-          await db.storage
-            .from(REGISTRATION_BUCKET)
-            .remove(files.map((f) => `${registration.id}/${f.name}`));
-        }
-      } catch {
-        // Orphaned files are harmless; never fail the delete over them.
-      }
-    }
-
-    await logAudit(tournamentId, "registration.delete", { registrationId });
-    revalidatePath(`/dashboard/tournaments/${tournamentId}/registrations`);
-    revalidatePath(`/dashboard/tournaments/${tournamentId}/participants`);
+    throw new ActionError(
+      "Deleting registrations is disabled. Mark the entry cancelled instead.",
+    );
   });
 }
