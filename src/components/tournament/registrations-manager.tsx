@@ -6,7 +6,6 @@ import Image from "next/image";
 import { toast } from "sonner";
 import {
   decideRegistration,
-  deleteRegistration,
   setPaymentStatus,
 } from "@/actions/registration";
 import { Button } from "@/components/ui/button";
@@ -35,7 +34,6 @@ import {
   Download,
   ExternalLink,
   Search,
-  Trash2,
   Users,
   XCircle,
 } from "lucide-react";
@@ -350,19 +348,6 @@ function RegistrationDetail({
     });
   }
 
-  function remove() {
-    startTransition(async () => {
-      const res = await deleteRegistration(tournamentId, r.id);
-      if (!res.ok) {
-        toast.error(res.error);
-        return;
-      }
-      toast.success("Registration deleted");
-      onClose();
-      router.refresh();
-    });
-  }
-
   return (
     <Dialog
       open={Boolean(registration)}
@@ -555,15 +540,6 @@ function RegistrationDetail({
                   <a href={`/r/${r.reference_code}`} target="_blank">
                     Open team view <ExternalLink className="size-4" />
                   </a>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={pending}
-                  onClick={remove}
-                  title="Permanently delete this registration and its uploads"
-                >
-                  <Trash2 className="size-4" /> Delete
                 </Button>
               </div>
             </>
