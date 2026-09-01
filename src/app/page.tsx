@@ -13,6 +13,7 @@ import {
   CreditCard,
   Shuffle,
   Network,
+  Sparkles,
 } from "lucide-react";
 
 /**
@@ -96,6 +97,10 @@ export default async function Home() {
 
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col items-center px-6">
         <section className="flex flex-col items-center py-20 text-center">
+          <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-border/70 bg-card/50 px-4 py-1.5 text-xs font-medium text-muted-foreground sm:text-sm">
+            <Sparkles className="size-4 text-primary" />
+            An alternative to Challonge, built around pickleball
+          </span>
           <h1 className="max-w-3xl text-5xl font-extrabold tracking-tight sm:text-6xl">
             Run <span className="text-gradient">pickleball tournaments</span>{" "}
             without the spreadsheets
@@ -103,6 +108,13 @@ export default async function Home() {
           <p className="mt-6 max-w-2xl text-lg text-muted-foreground">
             Round robin groups, finals brackets, smart court scheduling and live
             public standings. Built for organizers, loved by players.
+          </p>
+          <p className="mt-4 max-w-2xl text-base text-muted-foreground">
+            You get the same group-into-knockout format you already know — plus
+            the parts a general bracket tool leaves you to handle yourself:
+            court-by-court scheduling, set and point-differential tie-breakers,
+            online team registration with GCash proof of payment, and a public
+            link players can follow live.
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <Button
