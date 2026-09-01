@@ -17,19 +17,15 @@
 alter table pickleball.categories
   add column if not exists event_date date;
 
--- Backfill: the scheduler's stored date first, else the tournament's start date.
+-- Backfill from the scheduler's stored date — the only per-category date that
+-- already existed. The tournament's `start_date` is deliberately NOT copied
+-- down: one date stamped onto every category publishes a day each of them was
+-- never scheduled for. Categories with no date read as "not decided yet".
 update pickleball.categories c
   set event_date = nullif(c.settings ->> 'event_date', '')::date
   where c.event_date is null
     and c.settings ? 'event_date'
     and nullif(c.settings ->> 'event_date', '') is not null;
-
-update pickleball.categories c
-  set event_date = t.start_date
-  from pickleball.tournaments t
-  where t.id = c.tournament_id
-    and c.event_date is null
-    and t.start_date is not null;
 
 -- The column now owns the date; drop the duplicate out of the settings blob.
 update pickleball.categories

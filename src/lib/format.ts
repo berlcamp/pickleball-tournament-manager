@@ -8,9 +8,24 @@ export function slugify(input: string): string {
     .slice(0, 60);
 }
 
+/**
+ * Parse a value that may be a plain calendar day ("2026-07-03").
+ *
+ * `new Date("2026-07-03")` is midnight **UTC**, which formats as the previous
+ * day for every viewer west of Greenwich — and the portal renders these dates
+ * in the visitor's browser. A calendar day carries no time zone, so it is built
+ * as local midnight and stays the day the organiser typed.
+ */
+function parseCalendarDate(value: string): Date {
+  const ymd = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  return ymd
+    ? new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]))
+    : new Date(value);
+}
+
 export function formatDate(date: string | null | undefined): string {
   if (!date) return "TBD";
-  return new Date(date).toLocaleDateString("en-US", {
+  return parseCalendarDate(date).toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
