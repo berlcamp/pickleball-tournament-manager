@@ -4,7 +4,11 @@ import { getTournamentContext, resolveActiveCategory } from "@/lib/data";
 import { roleAtLeast } from "@/lib/constants";
 import { PageHeader } from "@/components/page-header";
 import { GroupGenerator } from "@/components/tournament/group-generator";
-import { Users, Lock } from "lucide-react";
+import {
+  GroupAssignmentBoard,
+  type BoardGroup,
+} from "@/components/tournament/group-assignment-board";
+import { Lock } from "lucide-react";
 
 export default async function GroupsPage({
   params,
@@ -21,28 +25,54 @@ export default async function GroupsPage({
   if (!active) notFound();
   const supabase = await createClient();
 
-  const { count: participantCount } = await supabase
+  const { data: participants } = await supabase
     .from("participants")
-    .select("id", { count: "exact", head: true })
-    .eq("category_id", active.id);
+    .select("id, name, seed")
+    .eq("category_id", active.id)
+    .order("seed", { ascending: true });
 
   const { data: groupsRaw } = await supabase
     .from("groups")
     .select(
-      "id, name, position, group_members(seed_in_group, participants(name))",
+      "id, name, position, group_members(seed_in_group, participants(id, name))",
     )
     .eq("category_id", active.id)
     .order("position");
 
-  const groups = (groupsRaw ?? []) as unknown as {
+  const rows = (groupsRaw ?? []) as unknown as {
     id: string;
     name: string;
     position: number;
     group_members: {
       seed_in_group: number;
-      participants: { name: string } | null;
+      participants: { id: string; name: string } | null;
     }[];
   }[];
+
+  const groups: BoardGroup[] = rows.map((g) => ({
+    id: g.id,
+    name: g.name,
+    members: (g.group_members ?? [])
+      .filter((m) => m.participants)
+      .map((m) => ({
+        participantId: m.participants!.id,
+        seed: m.seed_in_group,
+        name: m.participants!.name,
+      }))
+      .sort((a, b) => a.seed - b.seed),
+  }));
+
+  const groupByParticipant = new Map<string, string>();
+  for (const g of groups) {
+    for (const m of g.members) groupByParticipant.set(m.participantId, g.id);
+  }
+
+  const teams = (participants ?? []).map((p) => ({
+    id: p.id,
+    name: p.name,
+    seed: p.seed,
+    groupId: groupByParticipant.get(p.id) ?? null,
+  }));
 
   const canEdit = roleAtLeast(ctx.role, "admin");
   const canGenerate = canEdit && active.status === "draft";
@@ -51,15 +81,15 @@ export default async function GroupsPage({
     <div className="space-y-6">
       <PageHeader
         title="Groups"
-        description="Snake-seeded round robin groups."
+        description="Assign teams to groups automatically or by hand."
       />
 
       {canGenerate && (
         <GroupGenerator
           tournamentId={id}
           categoryId={active.id}
-          participantCount={participantCount ?? 0}
-          hasGroups={(groups?.length ?? 0) > 0}
+          participantCount={teams.length}
+          hasGroups={groups.length > 0}
         />
       )}
 
@@ -70,43 +100,13 @@ export default async function GroupsPage({
         </div>
       )}
 
-      {groups && groups.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {groups.map((g) => {
-            const members = (g.group_members ?? [])
-              .map((m) => ({
-                seed: m.seed_in_group,
-                name:
-                  (m.participants as unknown as { name: string } | null)?.name ??
-                  "—",
-              }))
-              .sort((a, b) => a.seed - b.seed);
-            return (
-              <div key={g.id} className="glass rounded-2xl p-5">
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="font-semibold">{g.name}</h3>
-                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Users className="size-3.5" /> {members.length}
-                  </span>
-                </div>
-                <ul className="space-y-1.5">
-                  {members.map((m) => (
-                    <li
-                      key={m.seed}
-                      className="flex items-center gap-2 text-sm"
-                    >
-                      <span className="grid size-5 place-items-center rounded bg-muted text-[10px] font-bold text-muted-foreground">
-                        {m.seed}
-                      </span>
-                      {m.name}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      <GroupAssignmentBoard
+        tournamentId={id}
+        categoryId={active.id}
+        teams={teams}
+        groups={groups}
+        canEdit={canGenerate}
+      />
     </div>
   );
 }

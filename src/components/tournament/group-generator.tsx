@@ -27,7 +27,7 @@ export function GroupGenerator({
     startTransition(async () => {
       const res = await generateGroups(tournamentId, categoryId, num);
       if (!res.ok) { toast.error(res.error); return; }
-      toast.success(`${num} groups generated`);
+      toast.success(`Teams assigned across ${num} groups`);
     });
   }
 
@@ -38,7 +38,7 @@ export function GroupGenerator({
           <Network className="size-5" />
         </span>
         <div>
-          <h3 className="font-semibold">Generate groups</h3>
+          <h3 className="font-semibold">Automatic group assignment</h3>
           <p className="text-sm text-muted-foreground">
             Distributes {participantCount} teams across the groups by seed.
           </p>
@@ -58,16 +58,13 @@ export function GroupGenerator({
           />
         </div>
         <Button onClick={generate} disabled={pending}>
-          {pending
-            ? "Generating…"
-            : hasGroups
-              ? "Regenerate groups"
-              : "Generate groups"}
+          {pending ? "Assigning…" : "Automatically Assign to Group"}
         </Button>
       </div>
       {hasGroups && (
         <p className="text-xs text-amber-400/80">
-          Regenerating will reset existing group matches and standings.
+          Re-running this replaces the current groups, their matches and
+          standings — including any manual assignments.
         </p>
       )}
     </div>
