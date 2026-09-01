@@ -6,6 +6,7 @@ import {
   addParticipant,
   bulkAddParticipants,
   deleteParticipant,
+  renameParticipant,
 } from "@/actions/participants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Trash2, Upload } from "lucide-react";
+import { Check, Pencil, Plus, Trash2, Upload, X } from "lucide-react";
 import type { Participant } from "@/types";
 
 export function ParticipantsManager({
@@ -108,35 +109,146 @@ export function ParticipantsManager({
         ) : (
           <ul className="divide-y divide-border/50">
             {participants.map((p, i) => (
-              <li
+              <TeamRow
                 key={p.id}
-                className="flex items-center justify-between px-3 py-2.5"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="grid size-7 place-items-center rounded-lg bg-muted text-xs font-semibold text-muted-foreground">
-                    {i + 1}
-                  </span>
-                  <span className="font-medium">{p.name}</span>
-                </div>
-                {canEdit && (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() =>
-                      startTransition(async () => {
-                        const res = await deleteParticipant(tournamentId, p.id);
-                        if (!res.ok) toast.error(res.error);
-                      })
-                    }
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                )}
-              </li>
+                tournamentId={tournamentId}
+                participant={p}
+                index={i}
+                canEdit={canEdit}
+              />
             ))}
           </ul>
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * One team in the list. The name is editable in place while the category is
+ * still a draft — a typo in a team name would otherwise be stuck there once the
+ * group stage locks the list.
+ */
+function TeamRow({
+  tournamentId,
+  participant,
+  index,
+  canEdit,
+}: {
+  tournamentId: string;
+  participant: Participant;
+  index: number;
+  canEdit: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(participant.name);
+  const [pending, startTransition] = useTransition();
+
+  function startEditing() {
+    setDraft(participant.name);
+    setEditing(true);
+  }
+
+  function save() {
+    const name = draft.trim();
+    if (!name || name === participant.name) {
+      setEditing(false);
+      return;
+    }
+    startTransition(async () => {
+      const res = await renameParticipant(tournamentId, participant.id, name);
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      setEditing(false);
+      toast.success("Team renamed");
+    });
+  }
+
+  return (
+    <li className="flex items-center justify-between gap-2 px-3 py-2.5">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-muted text-xs font-semibold text-muted-foreground">
+          {index + 1}
+        </span>
+        {editing ? (
+          <Input
+            autoFocus
+            value={draft}
+            disabled={pending}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") save();
+              if (e.key === "Escape") setEditing(false);
+            }}
+            // Clicking away is a save, matching how the name reads as a field.
+            onBlur={save}
+            className="h-8 flex-1"
+            aria-label={`Rename ${participant.name}`}
+          />
+        ) : (
+          <span className="truncate font-medium">{participant.name}</span>
+        )}
+      </div>
+
+      {canEdit && (
+        <div className="flex shrink-0 items-center gap-1">
+          {editing ? (
+            <>
+              <Button
+                size="icon"
+                variant="ghost"
+                disabled={pending}
+                // The input's blur already saves; this is the explicit tap.
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={save}
+                title="Save name"
+              >
+                <Check className="size-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                disabled={pending}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => setEditing(false)}
+                title="Cancel"
+              >
+                <X className="size-4" />
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={startEditing}
+                title="Rename team"
+              >
+                <Pencil className="size-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                disabled={pending}
+                onClick={() =>
+                  startTransition(async () => {
+                    const res = await deleteParticipant(
+                      tournamentId,
+                      participant.id,
+                    );
+                    if (!res.ok) toast.error(res.error);
+                  })
+                }
+                title="Remove team"
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            </>
+          )}
+        </div>
+      )}
+    </li>
   );
 }

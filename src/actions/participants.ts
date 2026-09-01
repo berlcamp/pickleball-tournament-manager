@@ -121,6 +121,11 @@ export async function renameParticipant(
       .update({ name: parsed.name })
       .eq("id", participantId);
     if (error) throw new ActionError(error.message);
-    revalidatePath(`/dashboard/tournaments/${tournamentId}/participants`);
+    await logAudit(tournamentId, "participant.rename", {
+      participantId,
+      name: parsed.name,
+    });
+    // The name shows up on the seeding board and the public team pages too.
+    revalidatePath(`/dashboard/tournaments/${tournamentId}`, "layout");
   });
 }
