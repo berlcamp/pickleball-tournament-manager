@@ -62,6 +62,7 @@ export async function createTournament(input: unknown) {
       tournament_id: data.id,
       name: c.name,
       position: i,
+      event_date: c.event_date || null,
     }));
     const { error: cErr } = await supabase
       .from("categories")
@@ -155,6 +156,7 @@ export async function createCategory(tournamentId: string, input: unknown) {
         tournament_id: tournamentId,
         name: parsed.name,
         position: count ?? 0,
+        event_date: parsed.event_date || null,
       })
       .select("id")
       .single();
@@ -176,20 +178,22 @@ export async function updateCategory(
 
     const { data: category, error: fetchError } = await supabase
       .from("categories")
-      .select("status")
+      .select("status, name")
       .eq("id", categoryId)
       .eq("tournament_id", tournamentId)
       .single();
     if (fetchError) throw new ActionError(fetchError.message);
-    if (category.status !== "draft") {
+    // A started category is locked structurally, but its date still has to be
+    // correctable — play days slip, and the public page shows this date.
+    if (category.status !== "draft" && parsed.name !== category.name) {
       throw new ActionError(
-        "This category's group stage has started and can no longer be edited.",
+        "This category's group stage has started and can no longer be renamed.",
       );
     }
 
     const { error } = await supabase
       .from("categories")
-      .update({ name: parsed.name })
+      .update({ name: parsed.name, event_date: parsed.event_date || null })
       .eq("id", categoryId)
       .eq("tournament_id", tournamentId);
     if (error) throw new ActionError(error.message);

@@ -11,6 +11,8 @@ export type RegistrationCategory = {
   collectShirtSizes: boolean;
   requirePlayerId: boolean;
   deadline: string | null;
+  /** The day this category is played ("2026-07-03"), or null if undecided. */
+  eventDate: string | null;
   maxTeams: number | null;
   approvedCount: number;
   availability: RegistrationAvailability;

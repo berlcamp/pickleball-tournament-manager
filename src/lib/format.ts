@@ -17,6 +17,25 @@ export function formatDate(date: string | null | undefined): string {
   });
 }
 
+/**
+ * The portal's date line. Each category carries its own play date, so when the
+ * organiser hasn't set a tournament-wide start date the label is derived from
+ * the categories: one day when they share it, a span when they don't.
+ */
+export function formatEventDates(
+  startDate: string | null | undefined,
+  categoryDates: (string | null | undefined)[] = [],
+): string {
+  if (startDate) return formatDate(startDate);
+  const sorted = categoryDates.filter((d): d is string => Boolean(d)).sort();
+  if (sorted.length === 0) return formatDate(null);
+  const first = sorted[0];
+  const last = sorted[sorted.length - 1];
+  return first === last
+    ? formatDate(first)
+    : `${formatDate(first)} – ${formatDate(last)}`;
+}
+
 /** "08:00" + minutes -> "08:15" */
 export function addMinutes(time: string, minutes: number): string {
   const [h, m] = time.split(":").map(Number);
@@ -35,6 +54,14 @@ export function addDays(date: string, days: number): string {
   const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
   const dd = String(dt.getUTCDate()).padStart(2, "0");
   return `${yy}-${mm}-${dd}`;
+}
+
+/** Whole days from one ISO "YYYY-MM-DD" to another (UTC math, no tz drift). */
+export function diffDays(from: string, to: string): number {
+  const [fy, fm, fd] = from.split("-").map(Number);
+  const [ty, tm, td] = to.split("-").map(Number);
+  const ms = Date.UTC(ty, tm - 1, td) - Date.UTC(fy, fm - 1, fd);
+  return Math.round(ms / (24 * 60 * 60 * 1000));
 }
 
 export function timeToMinutes(time: string): number {

@@ -10,12 +10,26 @@ export interface SchedulableMatch {
   team2Id: string | null;
 }
 
+/** A court/time already spoken for by matches this run isn't touching. */
+export interface ReservedSlot {
+  /** Days past the event start date, matching `ScheduledAssignment.day`. */
+  day: number;
+  time: string; // "08:00"
+  court: number; // 1-based
+}
+
 export interface ScheduleConfig {
   startTime: string; // "08:00"
   endTime: string; // "17:00"
   interval: number; // minutes between slots
   numCourts: number;
   mode: ScheduleMode;
+  /**
+   * Slots this run must schedule around — the groups it was not asked to
+   * (re)build, which keep the times they already have. Only groups scheduled
+   * on the same day can collide; slots on another day are simply not passed in.
+   */
+  reserved?: ReservedSlot[];
 }
 
 export interface ScheduledAssignment {
@@ -78,6 +92,10 @@ function interleave<T>(lists: T[][]): T[] {
  * there are more groups than courts, a court simply hosts several groups in
  * turn. `sequential` plays a court's groups one whole group at a time;
  * `distributed` round-robins a court's groups so they progress together.
+ *
+ * `config.reserved` marks court/time slots that are already taken (groups left
+ * out of this run). Those courts start out that much busier, and any slot they
+ * hold is stepped over rather than double-booked.
  */
 export function buildSchedule(
   matches: SchedulableMatch[],
@@ -91,6 +109,15 @@ export function buildSchedule(
       : 0;
   const numCourts = Math.max(1, config.numCourts);
 
+  // Slots held by matches outside this run, keyed court + absolute minute.
+  const slotKey = (court: number, absMin: number) => `${court}:${absMin}`;
+  const taken = new Set<string>();
+  const reservedLoad = new Array<number>(numCourts).fill(0);
+  for (const r of config.reserved ?? []) {
+    taken.add(slotKey(r.court, r.day * 24 * 60 + timeToMinutes(r.time)));
+    if (r.court >= 1 && r.court <= numCourts) reservedLoad[r.court - 1]++;
+  }
+
   // Deal each group to a court and keep it there. Assign the biggest groups
   // first, each onto the court that currently holds the fewest matches, so
   // court loads stay balanced (a group is never split — it just lands on the
@@ -101,7 +128,9 @@ export function buildSchedule(
     { length: numCourts },
     () => [],
   );
-  const courtLoad = new Array<number>(numCourts).fill(0);
+  // Courts already carrying reserved slots count as that much busier, so a
+  // fresh group lands on a court that is actually free.
+  const courtLoad = [...reservedLoad];
   [...groups]
     .sort((a, b) => b.matches.length - a.matches.length)
     .forEach((g) => {
@@ -131,6 +160,13 @@ export function buildSchedule(
 
     let slot = 0;
     for (const match of courtMatches) {
+      // Step over slots this court owes to groups left out of the run.
+      while (
+        slot < totalSlots &&
+        taken.has(slotKey(court, startMin + slot * config.interval))
+      ) {
+        slot++;
+      }
       // A court's matches run back to back; there is no rest requirement, so
       // the only reason a match goes unscheduled is the day window running out.
       if (slot >= totalSlots) {

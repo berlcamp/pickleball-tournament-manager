@@ -80,7 +80,7 @@ export function TournamentForm({
       start_date: defaults?.start_date ?? "",
       banner: defaults?.banner ?? "",
       show_public_schedule: defaults?.show_public_schedule ?? true,
-      categories: defaults?.categories ?? [{ name: "" }],
+      categories: defaults?.categories ?? [{ name: "", event_date: "" }],
     },
   });
 
@@ -245,7 +245,8 @@ export function TournamentForm({
             <div>
               <Label>Categories</Label>
               <p className="text-xs text-muted-foreground">
-                Each category is its own sub-tournament (teams, groups, finals).
+                Each category is its own sub-tournament (teams, groups, finals)
+                and is played on its own date.
               </p>
             </div>
             <Button
@@ -253,7 +254,7 @@ export function TournamentForm({
               variant="outline"
               size="sm"
               className="w-full sm:w-auto"
-              onClick={() => append({ name: "" })}
+              onClick={() => append({ name: "", event_date: "" })}
             >
               <Plus className="size-4" /> Add category
             </Button>
@@ -274,6 +275,16 @@ export function TournamentForm({
                   id={`cat-${i}`}
                   placeholder="e.g. Men's Doubles"
                   {...form.register(`categories.${i}.name` as const)}
+                />
+              </div>
+              <div className="w-full space-y-1.5 sm:w-44">
+                <Label htmlFor={`cat-date-${i}`} className="text-xs">
+                  Date (optional)
+                </Label>
+                <Input
+                  id={`cat-date-${i}`}
+                  type="date"
+                  {...form.register(`categories.${i}.event_date` as const)}
                 />
               </div>
               {fields.length > 1 && (

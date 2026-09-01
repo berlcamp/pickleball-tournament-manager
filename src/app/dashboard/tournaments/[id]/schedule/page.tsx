@@ -27,6 +27,13 @@ export default async function SchedulePage({
 
   const supabase = await createClient();
   const rows = await loadSchedule(supabase, id, active.id);
+  // The generator can be pointed at a subset of groups (they may play on
+  // different days), so it needs the category's group list.
+  const { data: groups } = await supabase
+    .from("groups")
+    .select("id, name")
+    .eq("category_id", active.id)
+    .order("position");
   // The PDF summary spans every category, not just the active one.
   const allRows = await loadSchedule(supabase, id);
 
@@ -52,6 +59,8 @@ export default async function SchedulePage({
           categoryId={active.id}
           categoryName={active.name}
           settings={active.settings}
+          eventDate={active.event_date}
+          groups={groups ?? []}
         />
       )}
 

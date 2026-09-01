@@ -60,6 +60,7 @@ export default async function PublicRegisterPage({
       collectShirtSizes: c.collect_shirt_sizes,
       requirePlayerId: c.require_player_id,
       deadline: c.registration_deadline,
+      eventDate: c.event_date,
       maxTeams: c.max_teams,
       approvedCount,
       availability: registrationAvailability(c, approvedCount),

@@ -11,7 +11,7 @@ import { ImageUploadField } from "@/components/public/image-upload-field";
 import { submitRegistration } from "@/actions/registration";
 import { publicRegistrationSchema } from "@/validators/registration";
 import { playersPerTeam } from "@/services/registration";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatDate } from "@/lib/format";
 import { SHIRT_SIZES, type ShirtSize } from "@/types";
 import { cn } from "@/lib/utils";
 import type {
@@ -154,6 +154,9 @@ export function RegistrationForm({
           </Button>
         </div>
         <div className="flex items-center gap-2">
+          {category.eventDate && (
+            <Badge variant="secondary">{formatDate(category.eventDate)}</Badge>
+          )}
           <Badge variant="secondary">
             {category.format === "singles" ? "Singles" : "Doubles"}
           </Badge>

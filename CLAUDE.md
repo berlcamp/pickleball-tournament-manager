@@ -66,7 +66,7 @@ Pure, framework-free, I/O-free modules — keep them that way (no Supabase impor
 - `roundRobin.ts` — group match generation
 - `standings.ts` — standings computation + tie-breaker chain (match wins → head-to-head mini-league → set wins → point differential → total points → direct head-to-head, then order left as-is). Point differential sits **above** total points on purpose: games run to a fixed target, so points-scored mostly reflects how many sets were played, not how well.
 - `brackets.ts` — ranks qualifiers across groups and draws the single-elimination final stage (byes, third-place playoff, round labeling)
-- `scheduler.ts` — court scheduling (intervals, court assignment; `sequential` vs equally-distributed modes). Groups are pinned to a court and play back to back — there is no rest-period setting.
+- `scheduler.ts` — court scheduling (intervals, court assignment; `sequential` vs equally-distributed modes). Groups are pinned to a court and play back to back — there is no rest-period setting. `buildSchedule` also takes `reserved` court/time slots, so a run covering only some groups schedules around the ones it left alone.
 - `registration.ts` — whether a category is accepting entries (open flag, deadline, team cap, stage) and how many players a format needs
 
 Actions/data loaders pull rows from Supabase, hand plain objects to these
@@ -129,6 +129,17 @@ Public/live pages subscribe via the browser client (see `components/public/live-
 - Import alias: `@/*` → `src/*`.
 - UI: shadcn/ui primitives in `src/components/ui/` (configured via `components.json`); feature components in `components/tournament/`, `components/dashboard/`, `components/public/`. Tailwind v4 (no `tailwind.config`; config is in `globals.css` / `postcss.config.mjs`).
 - Tournament status flow: `draft → group_stage → final_stage → completed` (`STATUS_FLOW` in `lib/constants.ts`).
+- Dates are **per category**: `categories.event_date` is the day that category
+  is played. It is a column, not a `settings` key — the schedule generator and
+  the public portal both read it, and the portal's headline date falls back to
+  the span the categories cover (`lib/format.ts → formatEventDates`) when the
+  tournament has no `start_date`. A started category can still have its date
+  corrected; only its name locks.
+- `generateSchedule` takes an optional `group_ids`: groups within a category can
+  be played on different days, so each day's groups are generated on their own
+  run with their own date. Groups outside the run keep their slots and are fed
+  back to `buildSchedule` as `reserved`, so nothing is double-booked. After a
+  run the category's `event_date` is set to the **earliest** scheduled day.
 
 ### Tournament format (one method, two stages)
 Every category runs the same Challonge-style format — there is no bracket type

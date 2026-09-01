@@ -69,8 +69,8 @@ export type TournamentSettings = {
 export type CategorySettings = {
   random_tiebreak?: boolean;
   // Each category schedules independently and remembers its own configuration.
+  // Its calendar day is NOT here — that lives on `Category.event_date`.
   venue_name?: string;
-  event_date?: string; // "2026-07-03"
   schedule_mode?: ScheduleMode;
   start_time?: string; // "08:00"
   end_time?: string; // "17:00"
@@ -117,6 +117,8 @@ export type Category = {
   position: number;
   status: TournamentStatus;
   settings: CategorySettings;
+  /** The calendar day this category is played ("2026-07-03"); null = TBD. */
+  event_date: string | null;
   created_at: string;
   // ----- public registration settings -----
   format: CategoryFormat;

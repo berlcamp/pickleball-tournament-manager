@@ -1,9 +1,9 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { formatCurrency, formatDeadline } from "@/lib/format";
+import { formatCurrency, formatDate, formatDeadline } from "@/lib/format";
 import type { RegistrationCategory } from "@/components/public/registration-types";
-import { ChevronRight, Clock3, User, Users } from "lucide-react";
+import { CalendarDays, ChevronRight, Clock3, User, Users } from "lucide-react";
 
 /**
  * Rotating accent colours so a stack of categories stays scannable on a phone,
@@ -21,7 +21,7 @@ const ACCENTS = [
  *
  * Only categories currently accepting entries are passed in, so every card is
  * tappable — no disabled states to read past. Each card leads with the things
- * that decide the choice: division, format, fee, and how much room is left.
+ * that decide the choice: division, format, the day it is played, and fee.
  */
 export function CategoryPicker({
   categories,
@@ -74,6 +74,12 @@ export function CategoryPicker({
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {singles ? "Singles · 1 player" : "Doubles · 2 players"}
                     </p>
+                    {category.eventDate && (
+                      <p className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                        <CalendarDays className="size-3.5 shrink-0 text-primary" />
+                        {formatDate(category.eventDate)}
+                      </p>
+                    )}
                   </div>
 
                   <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">

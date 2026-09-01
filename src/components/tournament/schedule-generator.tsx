@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { MATCH_INTERVALS } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 import { formatTime } from "@/lib/format";
 import type { CategorySettings, KnockoutRounds, ScheduleMode } from "@/types";
 import { CalendarClock, HelpCircle } from "lucide-react";
@@ -24,14 +25,20 @@ export function ScheduleGenerator({
   categoryId,
   categoryName,
   settings,
+  eventDate: categoryDate,
+  groups,
 }: {
   tournamentId: string;
   categoryId: string;
   categoryName: string;
   settings: CategorySettings;
+  /** The category's play date (its own column), shared with the settings page. */
+  eventDate: string | null;
+  /** This category's groups, in board order, for the optional group filter. */
+  groups: { id: string; name: string }[];
 }) {
   const [venue, setVenue] = useState(settings.venue_name ?? "");
-  const [eventDate, setEventDate] = useState(settings.event_date ?? "");
+  const [eventDate, setEventDate] = useState(categoryDate ?? "");
   const [startTime, setStartTime] = useState(settings.start_time ?? "08:00");
   const [interval, setIntervalV] = useState(settings.match_interval ?? 15);
   const [numCourts, setNumCourts] = useState(settings.num_courts ?? 4);
@@ -41,7 +48,20 @@ export function ScheduleGenerator({
   const [knockout, setKnockout] = useState<KnockoutRounds>(
     settings.knockout_rounds ?? "none",
   );
+  // Empty = every group. Groups play on different days, so a run can be
+  // narrowed to the ones sharing the date above.
+  const [groupIds, setGroupIds] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
+
+  const allGroups = groupIds.length === 0;
+
+  function toggleGroup(id: string) {
+    setGroupIds((current) =>
+      current.includes(id)
+        ? current.filter((g) => g !== id)
+        : [...current, id],
+    );
+  }
 
   function generate() {
     startTransition(async () => {
@@ -55,15 +75,19 @@ export function ScheduleGenerator({
         num_courts: numCourts,
         schedule_mode: mode,
         knockout_rounds: knockout,
+        group_ids: groupIds,
       });
       if (!res.ok) { toast.error(res.error); return; }
       const d = res.data!;
       const koNote = d.knockoutReserved
         ? ` + ${d.knockoutReserved} knockout slots reserved`
         : "";
+      const scope = allGroups
+        ? ""
+        : ` in ${groupIds.length} ${groupIds.length === 1 ? "group" : "groups"}`;
       if (d.feasible) {
         toast.success(
-          `Scheduled ${d.scheduled} matches${koNote} (ends ~${formatTime(d.projectedEnd)})`,
+          `Scheduled ${d.scheduled} matches${scope}${koNote} (ends ~${formatTime(d.projectedEnd)})`,
         );
       } else {
         toast.warning(
@@ -102,7 +126,7 @@ export function ScheduleGenerator({
         </Field>
         <Field
           label="Date"
-          hint="The calendar day this category's matches are played. Shown alongside the published schedule."
+          hint="The calendar day this category is played. Shown on the public page and alongside the published schedule."
         >
           <Input
             type="date"
@@ -204,10 +228,72 @@ export function ScheduleGenerator({
         </Field>
       </div>
 
+      {groups.length > 1 && (
+        <Field
+          label="Groups"
+          hint="Which groups this run schedules. Groups can be played on different days, so pick the ones sharing the date above and generate them together — every other group keeps the times and courts it already has."
+        >
+          <div className="flex flex-wrap gap-2">
+            <GroupChip
+              selected={allGroups}
+              onClick={() => setGroupIds([])}
+            >
+              All groups
+            </GroupChip>
+            {groups.map((g) => (
+              <GroupChip
+                key={g.id}
+                selected={groupIds.includes(g.id)}
+                onClick={() => toggleGroup(g.id)}
+              >
+                {g.name}
+              </GroupChip>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {allGroups
+              ? "Every group is rebuilt on the date above."
+              : "Only the selected groups are rebuilt; the rest keep their current schedule."}
+          </p>
+        </Field>
+      )}
+
       <Button onClick={generate} disabled={pending}>
-        {pending ? "Building schedule…" : "Generate schedule"}
+        {pending
+          ? "Building schedule…"
+          : allGroups
+            ? "Generate schedule"
+            : `Generate ${groupIds.length} ${groupIds.length === 1 ? "group" : "groups"}`}
       </Button>
     </div>
+  );
+}
+
+/** Toggle chip for the optional group filter. */
+function GroupChip({
+  selected,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={cn(
+        "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+        selected
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-border text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {children}
+    </button>
   );
 }
 

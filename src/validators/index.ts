@@ -28,6 +28,12 @@ export type ShortCodeInput = z.infer<typeof shortCodeSchema>;
 
 export const categorySchema = z.object({
   name: z.string().min(1, "Category name is required").max(120),
+  /** The day this category is played. Empty means "not decided yet". */
+  event_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a valid date")
+    .optional()
+    .or(z.literal("")),
 });
 export type CategoryInput = z.infer<typeof categorySchema>;
 
@@ -67,6 +73,8 @@ export const scoreSchema = z.object({
 
 export const scheduleSchema = z.object({
   venue_name: z.string().trim().max(120).optional(),
+  // The category's own date. Saved back onto the category, so setting it here
+  // and in the category list are the same edit.
   event_date: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -79,6 +87,9 @@ export const scheduleSchema = z.object({
   num_courts: z.coerce.number().int().min(1).max(20),
   schedule_mode: z.enum(["sequential", "distributed"]),
   knockout_rounds: z.enum(["none", "semifinals", "finals"]).default("none"),
+  // Which of the category's groups to (re)schedule. Empty means all of them —
+  // groups left out keep the times and dates they already have.
+  group_ids: z.array(z.string().uuid()).default([]),
 });
 export type ScheduleInput = z.infer<typeof scheduleSchema>;
 

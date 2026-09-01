@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
-import { getTournamentByPublicRef } from "@/lib/data";
-import { formatDate } from "@/lib/format";
+import { getTournamentByPublicRef, getPublicCategories } from "@/lib/data";
+import { formatEventDates } from "@/lib/format";
 
 /**
  * Fallback link-preview thumbnail for tournaments with no uploaded banner.
@@ -22,9 +22,18 @@ export async function GET(
   const { code } = await params;
   const tournament = await getTournamentByPublicRef(code);
 
+  const categories = tournament
+    ? await getPublicCategories(tournament.id)
+    : [];
+
   const name = tournament?.name ?? "PicklePro";
   const meta = [
-    tournament ? formatDate(tournament.start_date) : null,
+    tournament
+      ? formatEventDates(
+          tournament.start_date,
+          categories.map((c) => c.event_date),
+        )
+      : null,
     tournament?.location,
   ]
     .filter(Boolean)

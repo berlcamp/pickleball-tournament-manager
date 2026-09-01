@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getTournamentByPublicRef } from "@/lib/data";
+import { getTournamentByPublicRef, getPublicCategories } from "@/lib/data";
 import { PublicTabs } from "@/components/public/public-tabs";
 import { LiveRefresh } from "@/components/public/live-refresh";
 import { TournamentBanner } from "@/components/public/tournament-banner";
 import { PublicFooter } from "@/components/public/public-footer";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Trophy } from "lucide-react";
-import { formatDate } from "@/lib/format";
+import { formatEventDates } from "@/lib/format";
 import { requestOrigin } from "@/lib/site-url";
 
 /** Trim to a whole word so a preview never ends mid-syllable. */
@@ -35,9 +35,12 @@ export async function generateMetadata({
   const tournament = await getTournamentByPublicRef(code);
   if (!tournament) return {};
 
-  const where = [formatDate(tournament.start_date), tournament.location]
-    .filter(Boolean)
-    .join(" · ");
+  const categories = await getPublicCategories(tournament.id);
+  const when = formatEventDates(
+    tournament.start_date,
+    categories.map((c) => c.event_date),
+  );
+  const where = [when, tournament.location].filter(Boolean).join(" · ");
   // Chat previews show two or three lines, so lead with when and where and
   // flatten the organiser's blurb (newlines and all) into what still fits.
   const blurb = tournament.description?.replace(/\s+/g, " ").trim();
@@ -96,6 +99,9 @@ export default async function PublicTournamentLayout({
   const tournament = await getTournamentByPublicRef(code);
   if (!tournament) notFound();
 
+  // Each category carries its own play date; the banner announces them all.
+  const categories = await getPublicCategories(tournament.id);
+
   return (
     <div className="min-h-screen">
       {/* Sticky so the brand stays put while a long registration form scrolls. */}
@@ -117,7 +123,7 @@ export default async function PublicTournamentLayout({
 
       <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6">
         {/* The banner carries the tournament identity across every tab. */}
-        <TournamentBanner tournament={tournament} />
+        <TournamentBanner tournament={tournament} categories={categories} />
         <div>
           <PublicTabs code={code} />
           <div className="pt-6">{children}</div>

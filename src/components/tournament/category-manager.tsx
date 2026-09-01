@@ -25,12 +25,14 @@ export function CategoryManager({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [newName, setNewName] = useState("");
+  const [newDate, setNewDate] = useState("");
 
   function add() {
     if (!newName.trim()) return;
     startTransition(async () => {
       const res = await createCategory(tournamentId, {
         name: newName.trim(),
+        event_date: newDate,
       });
       if (!res.ok) {
         toast.error(res.error);
@@ -38,6 +40,7 @@ export function CategoryManager({
       }
       toast.success("Category added");
       setNewName("");
+      setNewDate("");
       router.refresh();
     });
   }
@@ -48,7 +51,7 @@ export function CategoryManager({
         <h3 className="font-semibold">Categories</h3>
         <p className="text-sm text-muted-foreground">
           Each category is its own sub-tournament with separate teams, groups,
-          and finals.
+          and finals — and its own play date, shown on the public page.
         </p>
       </div>
 
@@ -75,6 +78,18 @@ export function CategoryManager({
             placeholder="e.g. Mixed Doubles"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && add()}
+          />
+        </div>
+        <div className="w-full space-y-1.5 sm:w-44">
+          <Label htmlFor="new-cat-date" className="text-xs">
+            Date (optional)
+          </Label>
+          <Input
+            id="new-cat-date"
+            type="date"
+            value={newDate}
+            onChange={(e) => setNewDate(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && add()}
           />
         </div>
@@ -105,15 +120,18 @@ function CategoryRow({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [name, setName] = useState(category.name);
+  const [date, setDate] = useState(category.event_date ?? "");
   // Once the group stage has started the category is locked — its teams and
-  // groups can no longer be changed.
+  // groups can no longer be changed, and neither can its name. The play date
+  // stays editable, since a postponed day still has to reach the public page.
   const locked = category.status !== "draft";
-  const dirty = name !== category.name;
+  const dirty = name !== category.name || date !== (category.event_date ?? "");
 
   function save() {
     startTransition(async () => {
       const res = await updateCategory(tournamentId, category.id, {
         name: name.trim(),
+        event_date: date,
       });
       if (!res.ok) {
         toast.error(res.error);
@@ -144,38 +162,45 @@ function CategoryRow({
         className="flex-1"
         disabled={locked}
       />
-      {locked ? (
-        <div
-          className="flex items-center gap-1.5 px-2 text-xs text-muted-foreground"
-          title="The group stage has started, so this category is locked."
+      <Input
+        type="date"
+        value={date}
+        onChange={(e) => setDate(e.target.value)}
+        className="sm:w-44"
+        aria-label={`${category.name} play date`}
+        title="The day this category is played"
+      />
+      <div className="flex items-center gap-1">
+        {locked && (
+          <span
+            className="flex items-center gap-1.5 px-2 text-xs text-muted-foreground"
+            title="The group stage has started, so only this category's date can still change."
+          >
+            <Lock className="size-3.5" />
+            <span>Locked</span>
+          </span>
+        )}
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={save}
+          disabled={pending || !dirty || !name.trim()}
+          title="Save"
         >
-          <Lock className="size-3.5" />
-          <span>Locked</span>
-        </div>
-      ) : (
-        <div className="flex gap-1">
+          <Save className="size-4" />
+        </Button>
+        {!locked && canDelete && (
           <Button
             size="icon"
             variant="ghost"
-            onClick={save}
-            disabled={pending || !dirty || !name.trim()}
-            title="Save"
+            onClick={del}
+            disabled={pending}
+            title="Delete"
           >
-            <Save className="size-4" />
+            <Trash2 className="size-4" />
           </Button>
-          {canDelete && (
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={del}
-              disabled={pending}
-              title="Delete"
-            >
-              <Trash2 className="size-4" />
-            </Button>
-          )}
-        </div>
-      )}
+        )}
+      </div>
     </li>
   );
 }
