@@ -179,3 +179,9 @@ tiny field), the clash is left rather than forced.
 Byes are resolved when the bracket is drawn: a match with a `"BYE"` source is
 inserted already `completed` with `winner_id` set, and the survivor is already
 placed in the next round's match. Nobody has to score a walkover.
+
+Before the stage ends the Finals tab shows a **preview** of that bracket:
+`lib/tournament-data.ts → loadFinalsPreview` feeds `generateFinalBracket`
+qualifier slots with no participant, so every slot reads "A1", "B2" … . The
+groups are ordered by their leaders' current standings, so the preview tracks
+the live table. It writes nothing — only `generateFinals` persists a bracket.

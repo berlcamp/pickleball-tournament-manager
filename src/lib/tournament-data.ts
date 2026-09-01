@@ -8,6 +8,8 @@ import type {
   FinalMatchVM,
 } from "@/components/tournament/bracket-view";
 import { groupLabel } from "@/services/seeding";
+import { generateFinalBracket, type QualifierSlot } from "@/services/brackets";
+import { ADVANCE_PER_GROUP } from "@/lib/constants";
 
 type DB = SupabaseClient<Database>;
 
@@ -121,6 +123,136 @@ export async function loadFinals(
   }));
 
   return { rounds, placements: placementVMs };
+}
+
+/** "1st", "2nd", "3rd"… for a qualifying position within a group. */
+function ordinal(n: number): string {
+  const rest = n % 100;
+  if (rest >= 11 && rest <= 13) return `${n}th`;
+  switch (n % 10) {
+    case 1:
+      return `${n}st`;
+    case 2:
+      return `${n}nd`;
+    case 3:
+      return `${n}rd`;
+    default:
+      return `${n}th`;
+  }
+}
+
+/**
+ * Draw the bracket a category *will* get, before its group stage has finished.
+ *
+ * Nobody has qualified yet, so every slot holds a placeholder — "A1" is
+ * whoever finishes first in Group A. The groups are ordered against each other
+ * by their current leaders' records, so the draw tracks the standings as they
+ * move and converges on the real one; before any score it falls back to group
+ * order. Read-only: it writes nothing, and the bracket that counts is drawn by
+ * `generateFinals` when the stage ends.
+ */
+export async function loadFinalsPreview(
+  db: DB,
+  categoryId: string,
+): Promise<BracketRound[]> {
+  const [{ data: groups }, { data: standings }] = await Promise.all([
+    db
+      .from("groups")
+      .select("id, position, group_members(participant_id)")
+      .eq("category_id", categoryId)
+      .order("position"),
+    db
+      .from("standings")
+      .select(
+        "group_id, rank, matches_won, matches_lost, matches_tied, points, point_diff",
+      )
+      .eq("category_id", categoryId),
+  ]);
+  if (!groups || groups.length === 0) return [];
+
+  const rows = groups as unknown as {
+    id: string;
+    position: number;
+    group_members: { participant_id: string }[];
+  }[];
+
+  const qualifiers: QualifierSlot[] = [];
+  const nameByLabel = new Map<string, string>();
+  for (const g of rows) {
+    // Ordering the groups against each other needs their leaders' current
+    // records; with no scores in yet they are all zero and `rankQualifiers`
+    // falls back to group order, which is the shape we want to show anyway.
+    const table = (standings ?? [])
+      .filter((s) => s.group_id === g.id)
+      .sort((a, b) => a.rank - b.rank)
+      .slice(0, ADVANCE_PER_GROUP);
+    const advancing = Math.max(
+      table.length,
+      Math.min(g.group_members?.length ?? 0, ADVANCE_PER_GROUP),
+    );
+
+    for (let position = 1; position <= advancing; position++) {
+      const label = `${groupLabel(g.position)}${position}`;
+      nameByLabel.set(
+        label,
+        `${ordinal(position)} · Group ${groupLabel(g.position)}`,
+      );
+      const s = table[position - 1];
+      qualifiers.push({
+        label,
+        participantId: null,
+        groupIndex: g.position,
+        position,
+        record: {
+          matchesWon: s?.matches_won ?? 0,
+          matchesPlayed: s
+            ? s.matches_won + s.matches_lost + s.matches_tied
+            : 0,
+          pointDiff: s?.point_diff ?? 0,
+          points: s?.points ?? 0,
+        },
+      });
+    }
+  }
+  if (qualifiers.length < 2) return [];
+
+  const bracket = generateFinalBracket(qualifiers);
+
+  // A later round's slot is fed by an earlier match: name it after that match
+  // ("Winner of Quarterfinal 2") rather than showing a raw W1.1 reference.
+  for (const m of bracket) {
+    nameByLabel.set(`W${m.round}.${m.slot}`, `Winner of ${m.label}`);
+    nameByLabel.set(`L${m.round}.${m.slot}`, `Loser of ${m.label}`);
+  }
+
+  const side = (source: string) => ({
+    id: null,
+    name: source === "BYE" ? "Bye" : (nameByLabel.get(source) ?? source),
+    seed: /^[A-Z]+\d+$/.test(source) ? source : null,
+  });
+
+  const byRound = new Map<number, FinalMatchVM[]>();
+  for (const m of bracket) {
+    if (!byRound.has(m.round)) byRound.set(m.round, []);
+    byRound.get(m.round)!.push({
+      id: `preview-${m.round}-${m.slot}`,
+      round: m.round,
+      slot: m.slot,
+      label: m.label,
+      team1: side(m.source1),
+      team2: side(m.source2),
+      status: "pending",
+      winnerId: null,
+      sets: [],
+    });
+  }
+
+  return [...byRound.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([round, ms]) => ({
+      round,
+      matches: ms.sort((a, b) => a.slot - b.slot),
+    }));
 }
 
 /**
