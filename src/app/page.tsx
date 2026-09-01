@@ -110,11 +110,9 @@ export default async function Home() {
             public standings. Built for organizers, loved by players.
           </p>
           <p className="mt-4 max-w-2xl text-base text-muted-foreground">
-            You get the same group-into-knockout format you already know — plus
-            the parts a general bracket tool leaves you to handle yourself:
-            court-by-court scheduling, set and point-differential tie-breakers,
-            online team registration with GCash proof of payment, and a public
-            link players can follow live.
+            The bracket format you already know, plus what a general tool leaves
+            you to do by hand: court scheduling, pickleball tie-breakers, and
+            paid registrations.
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <Button
