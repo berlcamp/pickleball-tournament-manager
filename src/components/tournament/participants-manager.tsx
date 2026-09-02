@@ -21,6 +21,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Check, Pencil, Plus, Trash2, Upload, X } from "lucide-react";
+import { BlindPairingDialog } from "./blind-pairing-dialog";
 import type { Participant } from "@/types";
 
 export function ParticipantsManager({
@@ -98,6 +99,10 @@ export function ParticipantsManager({
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          <BlindPairingDialog
+            tournamentId={tournamentId}
+            categoryId={categoryId}
+          />
         </div>
       )}
 
