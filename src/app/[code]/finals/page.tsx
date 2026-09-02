@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
   getTournamentByPublicRef,
@@ -9,6 +10,17 @@ import { loadFinals, loadFinalsPreview } from "@/lib/tournament-data";
 import { CategoryFilter } from "@/components/public/category-filter";
 import { BracketView } from "@/components/tournament/bracket-view";
 import { Podium } from "@/components/tournament/podium";
+import { portalMetadata } from "../portal-metadata";
+
+/** Own title and canonical so this tab is indexed as its own page. */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ code: string }>;
+}): Promise<Metadata> {
+  const { code } = await params;
+  return portalMetadata(code, { path: "finals", label: "Finals bracket" });
+}
 
 export const dynamic = "force-dynamic";
 

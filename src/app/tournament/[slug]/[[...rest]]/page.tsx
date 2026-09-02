@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { getTournamentByPublicRef } from "@/lib/data";
 
 /**
@@ -18,5 +18,7 @@ export default async function LegacyTournamentRedirect({
   // "register" was the old landing tab; the short URL serves it at the root.
   const tail = (rest ?? []).filter((segment) => segment !== "register");
   const suffix = tail.length ? `/${tail.join("/")}` : "";
-  redirect(`/${tournament.short_code}${suffix}`);
+  // 308, not 307: these URLs are gone for good, and a permanent redirect
+  // is what hands the old link's search ranking to the short one.
+  permanentRedirect(`/${tournament.short_code}${suffix}`);
 }

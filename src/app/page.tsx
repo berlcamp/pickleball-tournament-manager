@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getUser } from "@/lib/auth";
 import { requestOrigin } from "@/lib/site-url";
+import { SITE_NAME, SITE_TITLE, SITE_DESCRIPTION } from "@/lib/seo";
 import {
   Trophy,
   CalendarClock,
@@ -17,13 +18,30 @@ import {
 } from "lucide-react";
 
 /**
- * Only the base URL: the title, description and `opengraph-image.png` beside
- * this file come from the root layout. Deriving the origin from the request
- * keeps the shared thumbnail absolute and correct on whatever domain the link
- * was copied from.
+ * The thumbnail chat apps show when someone shares the site.
+ *
+ * Deriving the base from the request keeps every absolute `og:` URL pointing
+ * at the host the link was copied from — production, a Vercel preview or
+ * localhost alike. The image is `opengraph-image.png` beside this file, picked
+ * up by the file convention (Next copies it onto the Twitter card too).
+ *
+ * The `openGraph` block is restated in full rather than inherited: a page that
+ * declares one *replaces* the layout's instead of merging with it, so anything
+ * left out here — og:type, og:site_name, og:locale — simply never renders.
  */
 export async function generateMetadata(): Promise<Metadata> {
-  return { metadataBase: new URL(await requestOrigin()) };
+  return {
+    metadataBase: new URL(await requestOrigin()),
+    alternates: { canonical: "/" },
+    openGraph: {
+      type: "website",
+      siteName: SITE_NAME,
+      locale: "en_US",
+      url: "/",
+      title: SITE_TITLE,
+      description: SITE_DESCRIPTION,
+    },
+  };
 }
 
 const FEATURES = [
@@ -71,10 +89,66 @@ const FEATURES = [
   },
 ];
 
+/**
+ * Structured data for the marketing page.
+ *
+ * `SoftwareApplication` is what earns the app a rich result for searches like
+ * "pickleball tournament software"; `WebSite` and `Organization` tie the pages
+ * of the site to one publisher. Google reads only the JSON, so this stays in
+ * sync with the copy below by hand — keep the feature list matching FEATURES.
+ */
+function structuredData(origin: string) {
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${origin}/#organization`,
+        name: "Sortbrite",
+        url: origin,
+        logo: `${origin}/opengraph-image.png`,
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${origin}/#website`,
+        name: "PicklePro by Sortbrite",
+        url: origin,
+        publisher: { "@id": `${origin}/#organization` },
+        inLanguage: "en",
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": `${origin}/#app`,
+        name: "PicklePro",
+        applicationCategory: "SportsApplication",
+        operatingSystem: "Web",
+        url: origin,
+        description:
+          "Run pickleball tournaments with round robin groups, finals brackets, smart court scheduling, online registration and live public standings.",
+        publisher: { "@id": `${origin}/#organization` },
+        featureList: FEATURES.map((f) => f.title),
+        offers: {
+          "@type": "Offer",
+          price: "0",
+          priceCurrency: "USD",
+        },
+      },
+    ],
+  };
+}
+
 export default async function Home() {
   const user = await getUser();
+  const origin = await requestOrigin();
   return (
     <div className="flex min-h-screen flex-col">
+      <script
+        type="application/ld+json"
+        // Rendered as-is into the document; the payload is our own constants.
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(structuredData(origin)),
+        }}
+      />
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between p-6">
         <div className="flex items-center gap-2 text-lg font-bold">
           <span className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground">

@@ -82,8 +82,13 @@ work with either the authed or public client.
 - `src/app/r/[code]` — a registrant's own status page, addressed by reference code (noindex).
 
 ### Link previews (Facebook / Messenger / Viber)
-`src/app/[code]/layout.tsx → generateMetadata` produces the `og:` tags for the
-whole portal (every tab inherits them). The tournament **banner** is the
+`src/app/[code]/portal-metadata.ts → portalMetadata` produces the `og:` tags for
+every page of the portal — the layout calls it bare, each tab calls it with its
+own label. Tabs cannot simply inherit: Next.js **replaces** `openGraph` when a
+page declares one instead of merging it with the layout's, so a page that sets
+only a title silently loses the banner. Anything that touches `openGraph` at
+page level has to restate the whole object (the marketing page does the same,
+from the constants in `src/lib/seo.ts`). The tournament **banner** is the
 `og:image`, linked straight to its public Supabase storage URL — untouched,
 since it is the poster the organiser designed. Tournaments with no banner fall
 back to a generated 1200×630 card at `src/app/[code]/og/route.tsx` (`next/og`).
@@ -95,10 +100,30 @@ domain, Vercel previews and localhost alike. After changing a banner, re-scrape
 the link in Facebook's Sharing Debugger — FB caches previews for days.
 
 Every other route (the marketing page, `/login`, the dashboard) falls back to
-`src/app/opengraph-image.png` — the product artwork padded onto a 1200×630
-canvas in its own background colour, the shape chat apps crop previews to. The
-root layout deliberately leaves `openGraph.images` unset so that file convention
-applies; the portal sets it and therefore overrides.
+`src/app/opengraph-image.png` — the promotional card chat apps crop previews to,
+with `opengraph-image.alt.txt` beside it as its alt text. The root layout
+deliberately leaves `openGraph.images` unset so that file convention applies
+(Next copies it onto the Twitter card too); the portal sets it and therefore
+overrides. Changing the homepage thumbnail means replacing that PNG — keep it
+1200×630 and re-scrape the link afterwards.
+
+### SEO
+- `src/app/robots.ts` and `src/app/sitemap.ts` are generated at request time and
+  build their URLs from `requestOrigin()`, so both are correct on the production
+  domain, Vercel previews and localhost without an env var. The sitemap lists the
+  marketing page plus every tournament portal and its tabs; it swallows database
+  errors rather than 500-ing a crawler.
+- Canonicals: the marketing page claims `/`, and each portal tab claims its own
+  path. Without the per-tab canonical every tab would claim the index page and
+  search engines would fold them into one result.
+- Anything private is `noindex`: the dashboard, `/login`, `/qr/*`, `/r/*`, and
+  the schedule tab while the organiser has it hidden. `robots.txt` blocks the
+  same paths.
+- The marketing page emits JSON-LD (`Organization` / `WebSite` /
+  `SoftwareApplication`); its `featureList` is generated from `FEATURES`, so the
+  copy and the structured data cannot drift apart.
+- Legacy `/tournament/<slug>` URLs use `permanentRedirect` (308), which is what
+  passes their ranking to the short link.
 
 ### Public registration
 Teams sign up from the portal without logging in. Settings are per category

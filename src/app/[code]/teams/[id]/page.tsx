@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getTournamentByPublicRef, publicClient } from "@/lib/data";
@@ -9,6 +10,27 @@ import {
 import { MatchStatusBadge, WLBadge } from "@/components/status-badge";
 import { formatTime } from "@/lib/format";
 import { ArrowLeft } from "lucide-react";
+import { portalMetadata } from "../../portal-metadata";
+
+/**
+ * A team's own page, titled with the team name — this is what someone
+ * searching for their club or partner is most likely to land on.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ code: string; id: string }>;
+}): Promise<Metadata> {
+  const { code, id } = await params;
+  const db = await publicClient();
+  const { data: participant } = await db
+    .from("participants")
+    .select("name")
+    .eq("id", id)
+    .maybeSingle();
+  if (!participant) return {};
+  return portalMetadata(code, { path: `teams/${id}`, label: participant.name });
+}
 
 export const dynamic = "force-dynamic";
 

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTournamentByPublicRef, publicClient } from "@/lib/data";
 import { loadSchedule } from "@/lib/tournament-data";
@@ -5,6 +6,29 @@ import { getTournamentRole } from "@/lib/auth";
 import { roleAtLeast } from "@/lib/constants";
 import { ScheduleTable } from "@/components/tournament/schedule-table";
 import { EyeOff } from "lucide-react";
+import { portalMetadata } from "../portal-metadata";
+
+/**
+ * Own title and canonical so this tab is indexed as its own page — unless the
+ * organiser has hidden the schedule, in which case the only thing a crawler
+ * would find is the "currently unavailable" notice.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ code: string }>;
+}): Promise<Metadata> {
+  const { code } = await params;
+  const tournament = await getTournamentByPublicRef(code);
+  const meta = await portalMetadata(code, {
+    path: "schedule",
+    label: "Match schedule",
+  });
+  if (tournament && !tournament.show_public_schedule) {
+    return { ...meta, robots: { index: false, follow: true } };
+  }
+  return meta;
+}
 
 export const dynamic = "force-dynamic";
 

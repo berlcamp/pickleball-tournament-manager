@@ -1,8 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Trophy } from "lucide-react";
 import { requireUser, getProfile } from "@/lib/auth";
 import { UserMenu } from "@/components/dashboard/user-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
+
+/** Everything behind the login is private; keep it out of search results. */
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default async function DashboardLayout({
   children,
