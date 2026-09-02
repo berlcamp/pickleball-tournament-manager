@@ -154,10 +154,7 @@ export function ScheduleTable({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-              {showDate && <th className="px-3 py-3">Date</th>}
-              <th className="px-3 py-3">Time</th>
-              <th className="px-3 py-3">Court</th>
-              {showVenue && <th className="px-3 py-3">Venue</th>}
+              <th className="px-3 py-3">When &amp; where</th>
               {showCategory && <th className="px-3 py-3">Category</th>}
               <th className="px-3 py-3">Match</th>
               <th className="px-3 py-3">Group</th>
@@ -168,12 +165,7 @@ export function ScheduleTable({
             {filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={
-                    5 +
-                    (showDate ? 1 : 0) +
-                    (showVenue ? 1 : 0) +
-                    (showCategory ? 1 : 0)
-                  }
+                  colSpan={4 + (showCategory ? 1 : 0)}
                   className="px-3 py-10 text-center text-muted-foreground"
                 >
                   No matches found.
@@ -185,20 +177,26 @@ export function ScheduleTable({
                   key={r.id}
                   className="border-b border-border/50 last:border-0 hover:bg-accent/30"
                 >
-                  {showDate && (
-                    <td className="whitespace-nowrap px-3 py-3 text-muted-foreground">
-                      {r.date ? formatDate(r.date) : "—"}
-                    </td>
-                  )}
-                  <td className="whitespace-nowrap px-3 py-3 font-medium tabular-nums">
-                    {formatTime(r.time)}
+                  {/* Date, time, court and venue read as one block: when the
+                      match is, then where. Only the parts the board actually
+                      has are shown. */}
+                  <td className="whitespace-nowrap px-3 py-3">
+                    {showDate && (
+                      <div className="text-xs text-muted-foreground">
+                        {r.date ? formatDate(r.date) : "Date TBD"}
+                      </div>
+                    )}
+                    <div className="font-medium tabular-nums">
+                      {formatTime(r.time)}
+                      <span className="px-1.5 text-muted-foreground">·</span>
+                      <span className="font-normal">{r.court}</span>
+                    </div>
+                    {showVenue && (
+                      <div className="text-xs text-muted-foreground">
+                        {r.venue ?? "—"}
+                      </div>
+                    )}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3">{r.court}</td>
-                  {showVenue && (
-                    <td className="whitespace-nowrap px-3 py-3 text-muted-foreground">
-                      {r.venue ?? "—"}
-                    </td>
-                  )}
                   {showCategory && (
                     <td className="whitespace-nowrap px-3 py-3 text-muted-foreground">
                       {r.category ?? "—"}

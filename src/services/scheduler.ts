@@ -223,6 +223,12 @@ export function buildKnockoutSchedule(
     numCourts: number;
     /** Day offset of `startTime` when the knockout stage begins next day+. */
     startDay?: number;
+    /**
+     * Court/time slots already spoken for — the other categories in a
+     * tournament-wide run. Days are counted from the same event date as the
+     * offsets this returns.
+     */
+    reserved?: ReservedSlot[];
   },
 ): KnockoutPlaceholder[] {
   const byRound = new Map<number, KnockoutRoundMatch[]>();
@@ -233,6 +239,15 @@ export function buildKnockoutSchedule(
 
   const startMin = timeToMinutes(opts.startTime);
   const baseDay = opts.startDay ?? 0;
+  const reserved = new Set(
+    (opts.reserved ?? []).map(
+      (r) => `${r.court}:${r.day * 24 * 60 + timeToMinutes(r.time)}`,
+    ),
+  );
+  const isTaken = (court: number, slot: number) =>
+    reserved.has(
+      `${court}:${baseDay * 24 * 60 + startMin + slot * opts.interval}`,
+    );
   const result: KnockoutPlaceholder[] = [];
   let slotIndex = 0;
 
@@ -243,6 +258,16 @@ export function buildKnockoutSchedule(
       if (court > opts.numCourts) {
         court = 1;
         slotIndex++;
+      }
+      // Step over court/time slots another category already holds. The
+      // reserved set is finite, so this always lands on a free slot; the
+      // counter is only a guard against a pathological config.
+      for (let scan = 0; isTaken(court, slotIndex) && scan < 10_000; scan++) {
+        court++;
+        if (court > opts.numCourts) {
+          court = 1;
+          slotIndex++;
+        }
       }
       const offsetMin = slotIndex * opts.interval;
       result.push({

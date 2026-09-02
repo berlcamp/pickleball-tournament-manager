@@ -14,11 +14,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { MATCH_INTERVALS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { formatTime } from "@/lib/format";
 import type { CategorySettings, KnockoutRounds, ScheduleMode } from "@/types";
 import { CalendarClock, HelpCircle } from "lucide-react";
+
+type Scope = "category" | "tournament";
 
 export function ScheduleGenerator({
   tournamentId,
@@ -27,6 +38,7 @@ export function ScheduleGenerator({
   settings,
   eventDate: categoryDate,
   groups,
+  draftCategories,
 }: {
   tournamentId: string;
   categoryId: string;
@@ -36,6 +48,8 @@ export function ScheduleGenerator({
   eventDate: string | null;
   /** This category's groups, in board order, for the optional group filter. */
   groups: { id: string; name: string }[];
+  /** Every category still in draft — what a tournament-wide run would rebuild. */
+  draftCategories: { id: string; name: string }[];
 }) {
   const [venue, setVenue] = useState(settings.venue_name ?? "");
   const [eventDate, setEventDate] = useState(categoryDate ?? "");
@@ -51,9 +65,15 @@ export function ScheduleGenerator({
   // Empty = every group. Groups play on different days, so a run can be
   // narrowed to the ones sharing the date above.
   const [groupIds, setGroupIds] = useState<string[]>([]);
+  // How far the run reaches: this category, or every category still in draft.
+  const [scope, setScope] = useState<Scope>("category");
+  const [confirmAll, setConfirmAll] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  const allGroups = groupIds.length === 0;
+  const wholeTournament = scope === "tournament";
+  // The group filter only applies to a single-category run.
+  const allGroups = groupIds.length === 0 || wholeTournament;
+  const otherCount = Math.max(0, draftCategories.length - 1);
 
   function toggleGroup(id: string) {
     setGroupIds((current) =>
@@ -75,23 +95,30 @@ export function ScheduleGenerator({
         num_courts: numCourts,
         schedule_mode: mode,
         knockout_rounds: knockout,
-        group_ids: groupIds,
+        scope,
+        group_ids: wholeTournament ? [] : groupIds,
       });
       if (!res.ok) { toast.error(res.error); return; }
+      setConfirmAll(false);
       const d = res.data!;
       const koNote = d.knockoutReserved
         ? ` + ${d.knockoutReserved} knockout slots reserved`
         : "";
-      const scope = allGroups
-        ? ""
-        : ` in ${groupIds.length} ${groupIds.length === 1 ? "group" : "groups"}`;
+      const where = wholeTournament
+        ? ` across ${d.categories.length} ${d.categories.length === 1 ? "category" : "categories"}`
+        : allGroups
+          ? ""
+          : ` in ${groupIds.length} ${groupIds.length === 1 ? "group" : "groups"}`;
+      const skippedNote = d.skipped.length
+        ? ` Skipped ${d.skipped.join(", ")} — no groups or matches yet.`
+        : "";
       if (d.feasible) {
         toast.success(
-          `Scheduled ${d.scheduled} matches${scope}${koNote} (ends ~${formatTime(d.projectedEnd)})`,
+          `Scheduled ${d.scheduled} matches${where}${koNote} (ends ~${formatTime(d.projectedEnd)}).${skippedNote}`,
         );
       } else {
         toast.warning(
-          `Scheduled ${d.scheduled}, but ${d.unscheduled} couldn't fit. Add courts or extend the window.`,
+          `Scheduled ${d.scheduled}, but ${d.unscheduled} couldn't fit. Add courts or extend the window.${skippedNote}`,
         );
       }
     });
@@ -106,11 +133,48 @@ export function ScheduleGenerator({
         <div>
           <h3 className="font-semibold">Smart scheduling engine</h3>
           <p className="text-sm text-muted-foreground">
-            Builds the schedule for <strong>{categoryName}</strong> — spreading
-            its matches across the shared courts back to back.
+            {wholeTournament ? (
+              <>
+                Builds the schedule for <strong>every category</strong> still in
+                draft — each one laid out after the last on the shared courts,
+                so no court is double-booked.
+              </>
+            ) : (
+              <>
+                Builds the schedule for <strong>{categoryName}</strong> —
+                spreading its matches across the shared courts back to back.
+              </>
+            )}
           </p>
         </div>
       </div>
+
+      {draftCategories.length > 1 && (
+        <Field
+          label="Apply to"
+          hint="This category schedules on its own, exactly as before. All categories rebuilds every category still in draft in one run, laying each out around the slots the earlier ones took — categories that have already started keep their locked times."
+        >
+          <div className="flex flex-wrap gap-2">
+            <GroupChip
+              selected={!wholeTournament}
+              onClick={() => setScope("category")}
+            >
+              This category
+            </GroupChip>
+            <GroupChip
+              selected={wholeTournament}
+              onClick={() => setScope("tournament")}
+            >
+              All categories ({draftCategories.length})
+            </GroupChip>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {wholeTournament
+              ? `${categoryName} and ${otherCount} other ${otherCount === 1 ? "category" : "categories"} are rebuilt together, one after another on the same courts.`
+              : "Only this category is rebuilt; every other category keeps its schedule."}
+          </p>
+        </Field>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Field
@@ -126,7 +190,11 @@ export function ScheduleGenerator({
         </Field>
         <Field
           label="Date"
-          hint="The calendar day this category is played. Shown on the public page and alongside the published schedule."
+          hint={
+            wholeTournament
+              ? "Fills in the play date of categories that don't have one yet. A category that already has its own date keeps it, and is scheduled on that day."
+              : "The calendar day this category is played. Shown on the public page and alongside the published schedule."
+          }
         >
           <Input
             type="date"
@@ -170,7 +238,11 @@ export function ScheduleGenerator({
         </Field>
         <Field
           label="Number of courts"
-          hint="How many courts run at the same time for this category. Courts are shared venue-wide, so coordinate start times across categories to avoid double-booking a court."
+          hint={
+            wholeTournament
+              ? "How many courts run at the same time. Courts are shared venue-wide, and a tournament-wide run spreads every category over them without double-booking."
+              : "How many courts run at the same time for this category. Courts are shared venue-wide, so coordinate start times across categories to avoid double-booking a court."
+          }
         >
           <Input
             type="number"
@@ -228,7 +300,7 @@ export function ScheduleGenerator({
         </Field>
       </div>
 
-      {groups.length > 1 && (
+      {groups.length > 1 && !wholeTournament && (
         <Field
           label="Groups"
           hint="Which groups this run schedules. Groups can be played on different days, so pick the ones sharing the date above and generate them together — every other group keeps the times and courts it already has."
@@ -258,13 +330,42 @@ export function ScheduleGenerator({
         </Field>
       )}
 
-      <Button onClick={generate} disabled={pending}>
+      <Button
+        onClick={() => (wholeTournament ? setConfirmAll(true) : generate())}
+        disabled={pending}
+      >
         {pending
           ? "Building schedule…"
-          : allGroups
-            ? "Generate schedule"
-            : `Generate ${groupIds.length} ${groupIds.length === 1 ? "group" : "groups"}`}
+          : wholeTournament
+            ? "Generate all categories"
+            : allGroups
+              ? "Generate schedule"
+              : `Generate ${groupIds.length} ${groupIds.length === 1 ? "group" : "groups"}`}
       </Button>
+
+      {/* A tournament-wide run replaces schedules the organiser can't see from
+          this tab, so it asks first and names what it will rebuild. */}
+      <Dialog open={confirmAll} onOpenChange={setConfirmAll}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rebuild every category&apos;s schedule?</DialogTitle>
+            <DialogDescription>
+              This replaces the match times and courts of{" "}
+              {draftCategories.map((c) => c.name).join(", ")}. Each category is
+              laid out after the last on the same courts. Categories that have
+              already started keep their locked schedule.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>
+              Cancel
+            </DialogClose>
+            <Button onClick={generate} disabled={pending}>
+              {pending ? "Building schedule…" : "Generate all categories"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

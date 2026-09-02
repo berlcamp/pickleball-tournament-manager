@@ -166,6 +166,13 @@ Public/live pages subscribe via the browser client (see `components/public/live-
   run with their own date. Groups outside the run keep their slots and are fed
   back to `buildSchedule` as `reserved`, so nothing is double-booked. After a
   run the category's `event_date` is set to the **earliest** scheduled day.
+- `generateSchedule` also takes a `scope`: `category` (the tab's category, the
+  default and the only scope `group_ids` applies to) or `tournament` (every
+  category still in `draft`, laid out one after another). Courts are shared
+  venue-wide, so a tournament-wide run feeds each finished category's slots
+  forward as `reserved` — including the knockout placeholders — and each
+  category keeps its own `event_date`, with the form's date only filling in the
+  ones that have none.
 
 ### Tournament format (one method, two stages)
 Every category runs the same Challonge-style format — there is no bracket type

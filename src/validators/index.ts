@@ -87,8 +87,13 @@ export const scheduleSchema = z.object({
   num_courts: z.coerce.number().int().min(1).max(20),
   schedule_mode: z.enum(["sequential", "distributed"]),
   knockout_rounds: z.enum(["none", "semifinals", "finals"]).default("none"),
+  // How far the run reaches: the category the page is on, or every category of
+  // the tournament that is still a draft. A tournament-wide run lays the
+  // categories out one after another on the shared courts.
+  scope: z.enum(["category", "tournament"]).default("category"),
   // Which of the category's groups to (re)schedule. Empty means all of them —
-  // groups left out keep the times and dates they already have.
+  // groups left out keep the times and dates they already have. Ignored by a
+  // tournament-wide run, which always takes whole categories.
   group_ids: z.array(z.string().uuid()).default([]),
 });
 export type ScheduleInput = z.infer<typeof scheduleSchema>;

@@ -61,6 +61,9 @@ export default async function SchedulePage({
           settings={active.settings}
           eventDate={active.event_date}
           groups={groups ?? []}
+          draftCategories={ctx.categories
+            .filter((c) => c.status === "draft")
+            .map((c) => ({ id: c.id, name: c.name }))}
         />
       )}
 
