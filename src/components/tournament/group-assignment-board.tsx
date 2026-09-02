@@ -3,8 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { addGroup, assignParticipantToGroup } from "@/actions/groups";
-import { Button } from "@/components/ui/button";
+import { assignParticipantToGroup } from "@/actions/groups";
 import {
   Select,
   SelectContent,
@@ -12,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Users } from "lucide-react";
+import { Users } from "lucide-react";
 
 const UNASSIGNED = "unassigned";
 
@@ -67,17 +66,6 @@ export function GroupAssignmentBoard({
       toast.success(
         target ? `${team.name} → ${target.name}` : `${team.name} unassigned`,
       );
-      router.refresh();
-    });
-  }
-
-  function add() {
-    startTransition(async () => {
-      const res = await addGroup(tournamentId, categoryId);
-      if (!res.ok) {
-        toast.error(res.error);
-        return;
-      }
       router.refresh();
     });
   }
@@ -146,16 +134,11 @@ export function GroupAssignmentBoard({
       <section className="glass rounded-2xl p-5">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-semibold">Groups</h3>
-          {canEdit && (
-            <Button size="sm" variant="outline" onClick={add} disabled={pending}>
-              <Plus className="size-4" /> Add group
-            </Button>
-          )}
         </div>
         {groups.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            No groups yet — assign them automatically, or add one and place
-            teams by hand.
+            No groups yet — generate them above, then move teams by hand if
+            you need to.
           </p>
         ) : (
           <div className="space-y-3">
