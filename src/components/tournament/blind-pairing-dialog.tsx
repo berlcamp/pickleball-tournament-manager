@@ -14,24 +14,22 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
+import { Shuffle } from "lucide-react";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Shuffle, UserX, X } from "lucide-react";
-import { drawBlindPairs, parseRoster } from "@/services/blindPairing";
+  drawCrossPairs,
+  drawSinglePairs,
+  parseRoster,
+} from "@/services/blindPairing";
 
-/** Placeholder value for the two "cannot partner" dropdowns. */
-const NONE = "__none";
+type Mode = "single" | "two";
 
 /**
- * Blind pairing: the organiser types the individual players, marks anyone who
- * must not end up together, and the draw hands out partners at random. The
- * teams are only written to the category once the draw is accepted, so an
- * unlucky draw can just be rolled again.
+ * Blind pairing: the organiser types the individual players and the draw hands
+ * out partners at random — either from one pot, or across two groups so that
+ * a team is always one player from each. The teams are only written to the
+ * category once the draw is accepted, so an unlucky draw can just be rolled
+ * again.
  */
 export function BlindPairingDialog({
   tournamentId,
@@ -41,50 +39,45 @@ export function BlindPairingDialog({
   categoryId: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [roster, setRoster] = useState("");
-  const [restrictions, setRestrictions] = useState<[string, string][]>([]);
-  const [left, setLeft] = useState(NONE);
-  const [right, setRight] = useState(NONE);
+  const [mode, setMode] = useState<Mode>("single");
+  const [rosterA, setRosterA] = useState("");
+  const [rosterB, setRosterB] = useState("");
   const [teams, setTeams] = useState<string[][] | null>(null);
-  const [unpaired, setUnpaired] = useState<string | null>(null);
+  const [unpaired, setUnpaired] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
 
-  const players = useMemo(() => parseRoster(roster), [roster]);
+  const playersA = useMemo(() => parseRoster(rosterA), [rosterA]);
+  // A name typed into both boxes belongs to the group it was listed in first.
+  const playersB = useMemo(() => {
+    const taken = new Set(playersA.map((p) => p.toLowerCase()));
+    return parseRoster(rosterB).filter((p) => !taken.has(p.toLowerCase()));
+  }, [rosterB, playersA]);
+
+  const ready =
+    mode === "single"
+      ? playersA.length >= 2
+      : playersA.length >= 1 && playersB.length >= 1;
 
   function reset() {
-    setRoster("");
-    setRestrictions([]);
-    setLeft(NONE);
-    setRight(NONE);
+    setRosterA("");
+    setRosterB("");
     setTeams(null);
-    setUnpaired(null);
+    setUnpaired([]);
   }
 
-  function addRestriction() {
-    if (left === NONE || right === NONE || left === right) return;
-    const exists = restrictions.some(
-      ([a, b]) =>
-        (a === left && b === right) || (a === right && b === left),
-    );
-    if (!exists) setRestrictions([...restrictions, [left, right]]);
-    setLeft(NONE);
-    setRight(NONE);
+  function edit(setter: (value: string) => void) {
+    return (value: string) => {
+      setter(value);
+      setTeams(null);
+    };
   }
 
   function draw() {
-    if (players.length < 2) {
-      toast.error("Enter at least two players.");
-      return;
-    }
-    // Restrictions naming players who were since deleted from the roster are
-    // simply ignored by the draw, so no need to prune them here.
-    const result = drawBlindPairs(players, restrictions);
-    if (!result) {
-      toast.error(
-        "No draw fits those restrictions. Remove one and try again.",
-      );
-      return;
-    }
+    if (!ready) return;
+    const result =
+      mode === "single"
+        ? drawSinglePairs(playersA)
+        : drawCrossPairs(playersA, playersB);
     setTeams(result.pairs.map(([a, b]) => [a, b]));
     setUnpaired(result.unpaired);
   }
@@ -127,79 +120,57 @@ export function BlindPairingDialog({
         </DialogHeader>
 
         <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-0.5">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">
-              Players ({players.length})
-            </label>
-            <Textarea
-              rows={7}
-              className="field-sizing-fixed h-36 resize-none overflow-y-auto"
-              placeholder={"Cesar\nHoney\nHizen\nTonix"}
-              value={roster}
-              onChange={(e) => {
-                setRoster(e.target.value);
+          <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
+            <ModeButton
+              active={mode === "single"}
+              onClick={() => {
+                setMode("single");
                 setTeams(null);
               }}
+              label="One group"
+              hint="Anyone with anyone"
+            />
+            <ModeButton
+              active={mode === "two"}
+              onClick={() => {
+                setMode("two");
+                setTeams(null);
+              }}
+              label="Two groups"
+              hint="One from each group"
             />
           </div>
 
-          <div className="space-y-2 rounded-xl border border-border/60 p-3">
-            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-              <UserX className="size-3.5" /> Cannot partner together
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <PlayerSelect
-                players={players}
-                value={left}
-                onChange={setLeft}
-                label="First player"
+          {mode === "single" ? (
+            <Roster
+              label={`Players (${playersA.length})`}
+              placeholder={"Cesar\nHoney\nHizen\nTonix"}
+              value={rosterA}
+              onChange={edit(setRosterA)}
+            />
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Roster
+                label={`Group A (${playersA.length})`}
+                placeholder={"Cesar\nHizen"}
+                value={rosterA}
+                onChange={edit(setRosterA)}
               />
-              <PlayerSelect
-                players={players}
-                value={right}
-                onChange={setRight}
-                label="Second player"
+              <Roster
+                label={`Group B (${playersB.length})`}
+                placeholder={"Honey\nTonix"}
+                value={rosterB}
+                onChange={edit(setRosterB)}
               />
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={addRestriction}
-                disabled={left === NONE || right === NONE || left === right}
-              >
-                Add
-              </Button>
             </div>
-            {restrictions.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                Nobody is barred yet — every partner is possible.
-              </p>
-            ) : (
-              <ul className="flex flex-wrap gap-1.5">
-                {restrictions.map(([a, b]) => (
-                  <li
-                    key={`${a}|${b}`}
-                    className="flex items-center gap-1 rounded-lg bg-muted px-2 py-1 text-xs"
-                  >
-                    <span className="font-medium">
-                      {a} <span className="text-muted-foreground">✕</span> {b}
-                    </span>
-                    <button
-                      type="button"
-                      className="text-muted-foreground hover:text-foreground"
-                      onClick={() =>
-                        setRestrictions(
-                          restrictions.filter(([x, y]) => !(x === a && y === b)),
-                        )
-                      }
-                      aria-label={`Allow ${a} and ${b} to partner`}
-                    >
-                      <X className="size-3" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          )}
+
+          {mode === "two" && (
+            <p className="text-xs text-muted-foreground">
+              Every team takes one player from each group — two players from the
+              same group are never partners.
+            </p>
+          )}
 
           {teams && (
             <div className="space-y-1.5">
@@ -221,10 +192,14 @@ export function BlindPairingDialog({
                   </li>
                 ))}
               </ul>
-              {unpaired && (
+              {unpaired.length > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  {unpaired} drew no partner — an odd number of players. Add one
-                  more and draw again, or pair them by hand afterwards.
+                  No partner for {unpaired.join(", ")}
+                  {mode === "single"
+                    ? " — an odd number of players."
+                    : " — the groups are uneven."}{" "}
+                  Add another player and draw again, or pair them by hand
+                  afterwards.
                 </p>
               )}
             </div>
@@ -232,12 +207,9 @@ export function BlindPairingDialog({
         </div>
 
         <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={draw}
-            disabled={pending || players.length < 2}
-          >
-            <Shuffle className="size-4" /> {teams ? "Draw again" : "Draw partners"}
+          <Button variant="outline" onClick={draw} disabled={pending || !ready}>
+            <Shuffle className="size-4" />{" "}
+            {teams ? "Draw again" : "Draw partners"}
           </Button>
           <Button onClick={save} disabled={pending || !teams?.length}>
             {teams?.length ? `Add ${teams.length} teams` : "Add teams"}
@@ -248,38 +220,58 @@ export function BlindPairingDialog({
   );
 }
 
-function PlayerSelect({
-  players,
+function ModeButton({
+  active,
+  onClick,
+  label,
+  hint,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  hint: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "rounded-lg px-3 py-2 text-left transition-colors",
+        active
+          ? "bg-background shadow-sm"
+          : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      <span className="block text-sm font-medium">{label}</span>
+      <span className="block text-xs text-muted-foreground">{hint}</span>
+    </button>
+  );
+}
+
+function Roster({
+  label,
+  placeholder,
   value,
   onChange,
-  label,
 }: {
-  players: string[];
+  label: string;
+  placeholder: string;
   value: string;
   onChange: (value: string) => void;
-  label: string;
 }) {
-  const items = [
-    { label, value: NONE },
-    ...players.map((p) => ({ label: p, value: p })),
-  ];
   return (
-    <Select
-      items={items}
-      value={value}
-      onValueChange={(v) => onChange(String(v))}
-      disabled={players.length < 2}
-    >
-      <SelectTrigger size="sm" className="w-full flex-1">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {items.map((item) => (
-          <SelectItem key={item.value} value={item.value}>
-            {item.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <div className="space-y-1.5">
+      <label className="text-xs font-medium text-muted-foreground">
+        {label}
+      </label>
+      <Textarea
+        rows={7}
+        className="field-sizing-fixed h-36 resize-none overflow-y-auto"
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
   );
 }
