@@ -227,6 +227,8 @@ export async function submitRegistration(form: FormData) {
       team_name: teamName,
       contact_number: payload.contact_number.trim(),
       contact_email: payload.contact_email?.trim() || null,
+      club_name: payload.club_name.trim(),
+      club_address: payload.club_address.trim(),
       status: "pending",
       payment_status: proof ? "submitted" : "unpaid",
       fee_amount: Number(category.registration_fee),

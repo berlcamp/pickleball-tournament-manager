@@ -57,6 +57,8 @@ export function RegistrationForm({
   );
   const [contactNumber, setContactNumber] = useState("");
   const [contactEmail, setContactEmail] = useState("");
+  const [clubName, setClubName] = useState("");
+  const [clubAddress, setClubAddress] = useState("");
   const [paymentReference, setPaymentReference] = useState("");
   const [proof, setProof] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -99,6 +101,20 @@ export function RegistrationForm({
       );
       if (!parsedEmail.success) next.contact_email = "Enter a valid email";
     }
+    const parsedClub = publicRegistrationSchema.shape.club_name.safeParse(
+      clubName,
+    );
+    if (!parsedClub.success) {
+      next.club_name =
+        parsedClub.error.issues[0]?.message ?? "Enter your club name";
+    }
+    const parsedAddress = publicRegistrationSchema.shape.club_address.safeParse(
+      clubAddress,
+    );
+    if (!parsedAddress.success) {
+      next.club_address =
+        parsedAddress.error.issues[0]?.message ?? "Enter your club address";
+    }
     if (proofRequired && !proof) {
       next.proof = "Upload your proof of payment";
     }
@@ -125,6 +141,8 @@ export function RegistrationForm({
         })),
         contact_number: contactNumber.trim(),
         contact_email: contactEmail.trim(),
+        club_name: clubName.trim(),
+        club_address: clubAddress.trim(),
         payment_reference: paymentReference.trim(),
       }),
     );
@@ -263,10 +281,10 @@ export function RegistrationForm({
         <header>
           <h2 className="flex items-center gap-2 font-semibold">
             <Phone className="size-4 text-primary" />
-            Contact
+            Contact &amp; club
           </h2>
           <p className="text-xs text-muted-foreground">
-            How the organizer reaches your team about schedules and results.
+            How the organizer reaches your team, and the club it represents.
           </p>
         </header>
 
@@ -302,6 +320,36 @@ export function RegistrationForm({
             />
             {errors.contact_email && (
               <p className="text-xs text-destructive">{errors.contact_email}</p>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="club-name">
+              Club name <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="club-name"
+              placeholder="e.g. Sunrise Pickleball Club"
+              value={clubName}
+              onChange={(e) => setClubName(e.target.value)}
+              aria-invalid={Boolean(errors.club_name)}
+            />
+            {errors.club_name && (
+              <p className="text-xs text-destructive">{errors.club_name}</p>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="club-address">
+              Club address <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="club-address"
+              placeholder="Barangay, City / Province"
+              value={clubAddress}
+              onChange={(e) => setClubAddress(e.target.value)}
+              aria-invalid={Boolean(errors.club_address)}
+            />
+            {errors.club_address && (
+              <p className="text-xs text-destructive">{errors.club_address}</p>
             )}
           </div>
         </div>

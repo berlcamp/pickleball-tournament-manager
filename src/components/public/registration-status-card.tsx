@@ -205,6 +205,14 @@ export function RegistrationStatusCard({
             value={registration.contact_email ?? "Not provided"}
           />
           <Field
+            label="Club"
+            value={registration.club_name ?? "Not provided"}
+          />
+          <Field
+            label="Club address"
+            value={registration.club_address ?? "Not provided"}
+          />
+          <Field
             label="Submitted"
             value={formatDateTime(registration.created_at)}
           />

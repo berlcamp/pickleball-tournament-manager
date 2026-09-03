@@ -78,6 +78,16 @@ export const publicRegistrationSchema = z.object({
     .max(160)
     .optional()
     .or(z.literal("")),
+  club_name: z
+    .string()
+    .trim()
+    .min(2, "Enter your club name")
+    .max(120),
+  club_address: z
+    .string()
+    .trim()
+    .min(5, "Enter your club address")
+    .max(200),
   payment_reference: z.string().trim().max(120).optional().or(z.literal("")),
 });
 export type PublicRegistrationInput = z.infer<typeof publicRegistrationSchema>;

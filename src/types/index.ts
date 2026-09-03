@@ -291,6 +291,9 @@ export type Registration = {
   team_name: string;
   contact_number: string;
   contact_email: string | null;
+  /** Club the team represents. Null only on rows taken before 0014. */
+  club_name: string | null;
+  club_address: string | null;
   status: RegistrationStatus;
   payment_status: PaymentStatus;
   /** Fee snapshot taken at submission time. */

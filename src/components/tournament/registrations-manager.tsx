@@ -109,6 +109,7 @@ export function RegistrationsManager({
         r.team_name.toLowerCase().includes(needle) ||
         r.reference_code.toLowerCase().includes(needle) ||
         r.contact_number.includes(needle) ||
+        (r.club_name?.toLowerCase().includes(needle) ?? false) ||
         r.players.some((p) => p.full_name.toLowerCase().includes(needle))
       );
     });
@@ -416,6 +417,8 @@ function RegistrationDetail({
           <div className="grid gap-3 text-sm sm:grid-cols-2">
             <Detail label="Contact" value={r.contact_number} />
             <Detail label="Email" value={r.contact_email ?? "—"} />
+            <Detail label="Club" value={r.club_name ?? "—"} />
+            <Detail label="Club address" value={r.club_address ?? "—"} />
             <Detail label="Fee" value={formatCurrency(Number(r.fee_amount))} />
             <Detail
               label="Payment reference"
