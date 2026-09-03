@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Trophy } from "lucide-react";
 import { requireUser, getProfile } from "@/lib/auth";
+import { isSuperAdmin } from "@/lib/super-admin";
 import { UserMenu } from "@/components/dashboard/user-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -42,7 +43,12 @@ export default async function DashboardLayout({
           </Link>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <UserMenu name={name} email={user.email ?? ""} avatarUrl={avatar} />
+            <UserMenu
+              name={name}
+              email={user.email ?? ""}
+              avatarUrl={avatar}
+              isSuperAdmin={isSuperAdmin(user.email)}
+            />
           </div>
         </div>
       </header>

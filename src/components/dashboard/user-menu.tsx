@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChevronDown, LogOut, Settings, Trophy } from "lucide-react";
+import { ChevronDown, LogOut, Settings, ShieldCheck, Trophy } from "lucide-react";
 import Link from "next/link";
 import { initials } from "@/lib/format";
 
@@ -23,10 +23,13 @@ export function UserMenu({
   name,
   email,
   avatarUrl,
+  isSuperAdmin = false,
 }: {
   name: string;
   email: string;
   avatarUrl: string | null;
+  /** Adds the system-wide, read-only tournament list to the menu. */
+  isSuperAdmin?: boolean;
 }) {
   const label = name || "Player";
 
@@ -72,6 +75,15 @@ export function UserMenu({
           <Settings className="size-4 text-muted-foreground" /> Profile &
           settings
         </DropdownMenuItem>
+        {isSuperAdmin && (
+          <DropdownMenuItem
+            render={<Link href="/dashboard/admin" />}
+            className="gap-2.5 rounded-lg px-2 py-2 text-sm"
+          >
+            <ShieldCheck className="size-4 text-muted-foreground" /> Super admin
+            dashboard
+          </DropdownMenuItem>
+        )}
 
         <DropdownMenuSeparator className="-mx-1.5" />
 
