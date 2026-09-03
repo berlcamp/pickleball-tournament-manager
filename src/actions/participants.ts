@@ -129,3 +129,27 @@ export async function renameParticipant(
     revalidatePath(`/dashboard/tournaments/${tournamentId}`, "layout");
   });
 }
+
+/** Wipe every team in a category. Draft-only, like the single-team delete. */
+export async function clearParticipants(
+  tournamentId: string,
+  categoryId: string,
+) {
+  return run(async () => {
+    const { supabase } = await assertRole(tournamentId, "admin");
+    await assertCategoryDraft(supabase, categoryId);
+
+    const { data, error } = await supabase
+      .from("participants")
+      .delete()
+      .eq("category_id", categoryId)
+      .select("id");
+    if (error) throw new ActionError(error.message);
+
+    const count = data?.length ?? 0;
+    await logAudit(tournamentId, "participant.clear_all", { count });
+    // Seeding and the public team pages list them too.
+    revalidatePath(`/dashboard/tournaments/${tournamentId}`, "layout");
+    return count;
+  });
+}
