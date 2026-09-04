@@ -143,6 +143,84 @@ export async function startGroupStage(
   });
 }
 
+/**
+ * Send a category back to `draft` after its group stage has started.
+ *
+ * The stage only ever moves forward on its own, so this is the escape hatch
+ * for a stage that was started by mistake. It wipes every group score — the
+ * matches themselves are kept, since the groups are unchanged — and recomputes
+ * the standings back to zero, so what the portal shows matches the reopened
+ * state. Only possible while the group stage is still running: once the finals
+ * are drawn the bracket depends on these standings.
+ */
+export async function reopenGroupStage(
+  tournamentId: string,
+  categoryId: string,
+) {
+  return run(async () => {
+    const { supabase } = await assertRole(tournamentId, "admin");
+
+    const { data: category } = await supabase
+      .from("categories")
+      .select("status")
+      .eq("id", categoryId)
+      .single();
+    if (!category) throw new ActionError("Category not found.");
+    if (category.status === "draft") {
+      throw new ActionError("This category is already a draft.");
+    }
+    if (category.status !== "group_stage") {
+      throw new ActionError(
+        "The finals have already been drawn. A category can only be reopened while its group stage is running.",
+      );
+    }
+
+    const { data: matches } = await supabase
+      .from("group_matches")
+      .select("id")
+      .eq("category_id", categoryId);
+    const matchIds = (matches ?? []).map((m) => m.id);
+
+    if (matchIds.length) {
+      // Scores cascade from group_matches, but the matches survive a reopen —
+      // so drop the scores directly and put every match back to pending.
+      const { error: sErr } = await supabase
+        .from("group_match_scores")
+        .delete()
+        .in("match_id", matchIds);
+      if (sErr) throw new ActionError(sErr.message);
+
+      const { error: mErr } = await supabase
+        .from("group_matches")
+        .update({ status: "pending", winner_id: null })
+        .eq("category_id", categoryId);
+      if (mErr) throw new ActionError(mErr.message);
+    }
+
+    // Zero the standings by recomputing them from the now-empty scores, so the
+    // ranks and qualifying highlights come from the same code path as scoring.
+    const { data: groups } = await supabase
+      .from("groups")
+      .select("id")
+      .eq("category_id", categoryId);
+    for (const g of groups ?? []) {
+      await recomputeGroup(supabase, tournamentId, g.id);
+    }
+
+    const { error } = await supabase
+      .from("categories")
+      .update({ status: "draft" })
+      .eq("id", categoryId);
+    if (error) throw new ActionError(error.message);
+
+    await logAudit(tournamentId, "groupStage.reopen", {
+      categoryId,
+      matchesCleared: matchIds.length,
+    });
+    revalidatePath(`/dashboard/tournaments/${tournamentId}`, "layout");
+  });
+}
+
 export async function submitGroupScore(
   tournamentId: string,
   matchId: string,
