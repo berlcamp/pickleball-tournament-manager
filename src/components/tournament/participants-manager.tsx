@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   addParticipant,
   bulkAddParticipants,
+  clearParticipants,
   deleteParticipant,
   renameParticipant,
 } from "@/actions/participants";
@@ -13,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -103,6 +105,13 @@ export function ParticipantsManager({
             tournamentId={tournamentId}
             categoryId={categoryId}
           />
+          {participants.length > 0 && (
+            <ClearTeamsButton
+              tournamentId={tournamentId}
+              categoryId={categoryId}
+              count={participants.length}
+            />
+          )}
         </div>
       )}
 
@@ -126,6 +135,61 @@ export function ParticipantsManager({
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * Wipe the whole list in one go — a mis-imported bulk paste is otherwise
+ * removed one row at a time. Confirmed in a dialog because it can't be undone.
+ */
+function ClearTeamsButton({
+  tournamentId,
+  categoryId,
+  count,
+}: {
+  tournamentId: string;
+  categoryId: string;
+  count: number;
+}) {
+  const [open, setOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
+
+  function clear() {
+    startTransition(async () => {
+      const res = await clearParticipants(tournamentId, categoryId);
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success(`${res.data} teams removed`);
+      setOpen(false);
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger render={<Button variant="outline" />}>
+        <Trash2 className="size-4" /> Clear all
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Clear all teams?</DialogTitle>
+          <DialogDescription>
+            This removes all {count} teams in this category, along with their
+            seeding and any groups and schedule drawn from them. Approved
+            registrations stay approved — to bring one of those teams back
+            you&apos;d set it to pending and approve it again. This
+            can&apos;t be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+          <Button variant="destructive" onClick={clear} disabled={pending}>
+            {pending ? "Clearing\u2026" : "Clear all teams"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

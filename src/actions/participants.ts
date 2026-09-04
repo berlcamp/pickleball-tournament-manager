@@ -129,3 +129,45 @@ export async function renameParticipant(
     revalidatePath(`/dashboard/tournaments/${tournamentId}`, "layout");
   });
 }
+
+/**
+ * Wipe every team in a category. Draft-only, like the single-team delete.
+ *
+ * Any groups already drawn go with them: `group_matches.participant1_id` is
+ * `on delete set null`, not a cascade, so a draw left behind would be a tab
+ * full of blank matchups. Schedule slots have no FK to the matches at all and
+ * are cleared explicitly, the same way `clearGroups` does it.
+ */
+export async function clearParticipants(
+  tournamentId: string,
+  categoryId: string,
+) {
+  return run(async () => {
+    const { supabase } = await assertRole(tournamentId, "admin");
+    await assertCategoryDraft(supabase, categoryId);
+
+    await supabase
+      .from("match_schedules")
+      .delete()
+      .eq("category_id", categoryId)
+      .eq("match_type", "group");
+    const { error: gErr } = await supabase
+      .from("groups")
+      .delete()
+      .eq("category_id", categoryId);
+    if (gErr) throw new ActionError(gErr.message);
+
+    const { data, error } = await supabase
+      .from("participants")
+      .delete()
+      .eq("category_id", categoryId)
+      .select("id");
+    if (error) throw new ActionError(error.message);
+
+    const count = data?.length ?? 0;
+    await logAudit(tournamentId, "participant.clear_all", { count });
+    // Seeding, groups, the schedule and the public team pages all list them.
+    revalidatePath(`/dashboard/tournaments/${tournamentId}`, "layout");
+    return count;
+  });
+}
