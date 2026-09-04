@@ -3,6 +3,11 @@
 import { useState } from "react";
 import { ScoreDialog, type SetScore } from "@/components/tournament/score-dialog";
 import { submitFinalScore } from "@/actions/finals";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Pencil } from "lucide-react";
 
@@ -93,7 +98,14 @@ function MatchCard({
                   {r.seed}
                 </span>
               )}
-              <span className="truncate">{r.name}</span>
+              {/* The card is a fixed width, so a long pairing is cut off —
+                  hovering the name spells it out in full. */}
+              <Tooltip>
+                <TooltipTrigger render={<span className="truncate" />}>
+                  {r.name}
+                </TooltipTrigger>
+                <TooltipContent>{r.name}</TooltipContent>
+              </Tooltip>
             </span>
             <span className="tabular-nums text-muted-foreground">
               {m.sets.length ? r.pts : "–"}
