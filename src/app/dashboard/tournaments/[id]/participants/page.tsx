@@ -38,6 +38,7 @@ export default async function ParticipantsPage({
         categoryId={active.id}
         participants={(data ?? []) as Participant[]}
         canEdit={roleAtLeast(ctx.role, "admin") && active.status === "draft"}
+        canRename={roleAtLeast(ctx.role, "admin")}
       />
     </div>
   );

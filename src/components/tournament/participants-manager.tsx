@@ -31,11 +31,15 @@ export function ParticipantsManager({
   categoryId,
   participants,
   canEdit,
+  canRename,
 }: {
   tournamentId: string;
   categoryId: string;
   participants: Participant[];
+  /** Admin on a category still in draft: the list itself can be changed. */
   canEdit: boolean;
+  /** Admin, at any stage — a typo is fixable once the stage has started. */
+  canRename: boolean;
 }) {
   const [name, setName] = useState("");
   const [bulk, setBulk] = useState("");
@@ -129,6 +133,7 @@ export function ParticipantsManager({
                 participant={p}
                 index={i}
                 canEdit={canEdit}
+                canRename={canRename}
               />
             ))}
           </ul>
@@ -194,20 +199,22 @@ function ClearTeamsButton({
 }
 
 /**
- * One team in the list. The name is editable in place while the category is
- * still a draft — a typo in a team name would otherwise be stuck there once the
- * group stage locks the list.
+ * One team in the list. Removing it is draft-only — groups and matches are
+ * drawn from the list — but the name stays editable in place afterwards, so a
+ * typo doesn't follow the team through the brackets and the public portal.
  */
 function TeamRow({
   tournamentId,
   participant,
   index,
   canEdit,
+  canRename,
 }: {
   tournamentId: string;
   participant: Participant;
   index: number;
   canEdit: boolean;
+  canRename: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(participant.name);
@@ -261,7 +268,7 @@ function TeamRow({
         )}
       </div>
 
-      {canEdit && (
+      {(canEdit || canRename) && (
         <div className="flex shrink-0 items-center gap-1">
           {editing ? (
             <>
@@ -289,31 +296,35 @@ function TeamRow({
             </>
           ) : (
             <>
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={startEditing}
-                title="Rename team"
-              >
-                <Pencil className="size-4" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                disabled={pending}
-                onClick={() =>
-                  startTransition(async () => {
-                    const res = await deleteParticipant(
-                      tournamentId,
-                      participant.id,
-                    );
-                    if (!res.ok) toast.error(res.error);
-                  })
-                }
-                title="Remove team"
-              >
-                <Trash2 className="size-4" />
-              </Button>
+              {canRename && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={startEditing}
+                  title="Rename team"
+                >
+                  <Pencil className="size-4" />
+                </Button>
+              )}
+              {canEdit && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  disabled={pending}
+                  onClick={() =>
+                    startTransition(async () => {
+                      const res = await deleteParticipant(
+                        tournamentId,
+                        participant.id,
+                      );
+                      if (!res.ok) toast.error(res.error);
+                    })
+                  }
+                  title="Remove team"
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              )}
             </>
           )}
         </div>

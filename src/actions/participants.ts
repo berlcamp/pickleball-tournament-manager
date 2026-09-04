@@ -107,6 +107,14 @@ export async function deleteParticipant(
   });
 }
 
+/**
+ * Rename a team. Unlike the rest of the team list this is *not* draft-only:
+ * a misspelled pairing would otherwise be stuck on the brackets and the public
+ * portal for the whole event. Nothing is derived from the name — matches,
+ * standings and the draw all reference the participant id — so a rename is
+ * safe at any stage. Admins only, and scoped to the tournament so the id alone
+ * can't reach another organiser's team.
+ */
 export async function renameParticipant(
   tournamentId: string,
   participantId: string,
@@ -115,12 +123,14 @@ export async function renameParticipant(
   return run(async () => {
     const parsed = participantSchema.parse({ name });
     const { supabase } = await assertRole(tournamentId, "admin");
-    await assertParticipantDraft(supabase, participantId);
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("participants")
       .update({ name: parsed.name })
-      .eq("id", participantId);
+      .eq("id", participantId)
+      .eq("tournament_id", tournamentId)
+      .select("id");
     if (error) throw new ActionError(error.message);
+    if (!data?.length) throw new ActionError("Team not found.");
     await logAudit(tournamentId, "participant.rename", {
       participantId,
       name: parsed.name,
