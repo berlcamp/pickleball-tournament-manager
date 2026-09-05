@@ -2,15 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { TournamentStatusBadge } from "@/components/status-badge";
+import { CategoryPills } from "@/components/category-pills";
 import { LoadingOverlay } from "@/components/loading-overlay";
+import { TournamentStatusBadge } from "@/components/status-badge";
 import { Layers } from "lucide-react";
 import type { Category } from "@/types";
 
@@ -30,14 +24,13 @@ export function CategorySwitcher({ categories }: { categories: Category[] }) {
   if (categories.length === 0) return null;
 
   const requested = searchParams.get("category");
-  const active =
-    categories.find((c) => c.id === requested) ?? categories[0];
+  const active = categories.find((c) => c.id === requested) ?? categories[0];
 
-  function select(id: string | null) {
-    if (!id || id === active.id) return;
+  function select(id: string, name: string) {
+    if (id === active.id) return;
     const params = new URLSearchParams(searchParams.toString());
     params.set("category", id);
-    setSwitchingTo(categories.find((c) => c.id === id)?.name ?? null);
+    setSwitchingTo(name);
     // Inside a transition so `pending` covers the whole navigation — the tab
     // below re-renders on the server, which is the part that takes a moment.
     startTransition(() => {
@@ -47,7 +40,7 @@ export function CategorySwitcher({ categories }: { categories: Category[] }) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="w-full space-y-2">
       {pending && switchingTo && (
         <LoadingOverlay
           icon={Layers}
@@ -55,25 +48,19 @@ export function CategorySwitcher({ categories }: { categories: Category[] }) {
           subtitle={switchingTo}
         />
       )}
-      <Layers className="size-4 text-muted-foreground" />
-      <span className="text-sm text-muted-foreground">Switch category:</span>
-      <Select
-        items={categories.map((c) => ({ label: c.name, value: c.id }))}
-        value={active.id}
-        onValueChange={select}
-      >
-        <SelectTrigger className="min-w-44">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {categories.map((c) => (
-            <SelectItem key={c.id} value={c.id}>
-              {c.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <TournamentStatusBadge status={active.status} />
+
+      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <Layers className="size-3.5" />
+        Category
+        <TournamentStatusBadge status={active.status} />
+      </div>
+
+      <CategoryPills
+        options={categories.map((c) => ({ id: c.id, name: c.name }))}
+        activeId={active.id}
+        disabled={pending}
+        onSelect={select}
+      />
     </div>
   );
 }
