@@ -39,6 +39,8 @@ export function ScheduleGenerator({
   eventDate: categoryDate,
   groups,
   draftCategories,
+  embedded = false,
+  onGenerated,
 }: {
   tournamentId: string;
   categoryId: string;
@@ -50,6 +52,10 @@ export function ScheduleGenerator({
   groups: { id: string; name: string }[];
   /** Every category still in draft — what a tournament-wide run would rebuild. */
   draftCategories: { id: string; name: string }[];
+  /** Inside a dialog: the surrounding card and its heading come from the host. */
+  embedded?: boolean;
+  /** Called once a run has been written, so a host dialog can close itself. */
+  onGenerated?: () => void;
 }) {
   const [venue, setVenue] = useState(settings.venue_name ?? "");
   const [eventDate, setEventDate] = useState(categoryDate ?? "");
@@ -100,6 +106,7 @@ export function ScheduleGenerator({
       });
       if (!res.ok) { toast.error(res.error); return; }
       setConfirmAll(false);
+      onGenerated?.();
       const d = res.data!;
       const koNote = d.knockoutReserved
         ? ` + ${d.knockoutReserved} knockout slots reserved`
@@ -125,13 +132,17 @@ export function ScheduleGenerator({
   }
 
   return (
-    <div className="glass space-y-4 rounded-2xl p-5">
+    <div className={cn("space-y-4", !embedded && "glass rounded-2xl p-5")}>
+      {/* In a dialog the title comes from the host, but the blurb stays: it
+          tracks the scope toggle and says what the run will actually rebuild. */}
       <div className="flex items-center gap-3">
-        <span className="grid size-10 place-items-center rounded-xl bg-primary/15 text-primary">
-          <CalendarClock className="size-5" />
-        </span>
+        {!embedded && (
+          <span className="grid size-10 place-items-center rounded-xl bg-primary/15 text-primary">
+            <CalendarClock className="size-5" />
+          </span>
+        )}
         <div>
-          <h3 className="font-semibold">Smart scheduling engine</h3>
+          {!embedded && <h3 className="font-semibold">Smart scheduling engine</h3>}
           <p className="text-sm text-muted-foreground">
             {wholeTournament ? (
               <>

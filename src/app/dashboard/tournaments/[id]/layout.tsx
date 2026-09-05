@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getTournamentContext } from "@/lib/data";
+import { createClient } from "@/lib/supabase/server";
 import { TabNav } from "@/components/tournament/tab-nav";
 import { CategorySwitcher } from "@/components/tournament/category-switcher";
+import { ScheduleGeneratorButton } from "@/components/tournament/schedule-generator-button";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ROLE_LABELS, roleAtLeast } from "@/lib/constants";
@@ -20,6 +22,22 @@ export default async function TournamentLayout({
   const ctx = await getTournamentContext(id);
   if (!ctx) notFound();
   const { tournament: t, role, categories } = ctx;
+  const canManage = roleAtLeast(role, "admin");
+
+  // The generator's group filter needs each category's groups. One query for
+  // the whole tournament, since the header doesn't know the active category.
+  const groupsByCategory: Record<string, { id: string; name: string }[]> = {};
+  if (canManage && categories.length > 0) {
+    const supabase = await createClient();
+    const { data: groupRows } = await supabase
+      .from("groups")
+      .select("id, name, category_id")
+      .in("category_id", categories.map((c) => c.id))
+      .order("position");
+    for (const g of groupRows ?? []) {
+      (groupsByCategory[g.category_id] ??= []).push({ id: g.id, name: g.name });
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -54,6 +72,13 @@ export default async function TournamentLayout({
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
+            {canManage && (
+              <ScheduleGeneratorButton
+                tournamentId={id}
+                categories={categories}
+                groupsByCategory={groupsByCategory}
+              />
+            )}
             <Button asChild variant="outline" size="sm">
               <Link href={`/${t.short_code}`} target="_blank">
                 <ExternalLink className="size-4" /> Public page
@@ -72,7 +97,7 @@ export default async function TournamentLayout({
         <CategorySwitcher categories={categories} />
       </div>
 
-      <TabNav id={id} canManage={roleAtLeast(role, "admin")} />
+      <TabNav id={id} canManage={canManage} />
 
       <div>{children}</div>
     </div>
