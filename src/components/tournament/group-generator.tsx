@@ -12,12 +12,10 @@ export function GroupGenerator({
   tournamentId,
   categoryId,
   participantCount,
-  hasGroups,
 }: {
   tournamentId: string;
   categoryId: string;
   participantCount: number;
-  hasGroups: boolean;
 }) {
   const suggested = Math.max(1, Math.min(4, Math.floor(participantCount / 4)));
   const [num, setNum] = useState(suggested || 1);
@@ -61,12 +59,6 @@ export function GroupGenerator({
           {pending ? "Assigning…" : "Automatically Assign to Group"}
         </Button>
       </div>
-      {hasGroups && (
-        <p className="text-xs text-amber-400/80">
-          Re-running this replaces the current groups, their matches and
-          standings — including any manual assignments.
-        </p>
-      )}
     </div>
   );
 }

@@ -2,13 +2,12 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getTournamentContext, resolveActiveCategory } from "@/lib/data";
 import { roleAtLeast } from "@/lib/constants";
-import { PageHeader } from "@/components/page-header";
-import { GroupGenerator } from "@/components/tournament/group-generator";
+import { PageHeader, EmptyState } from "@/components/page-header";
 import {
-  GroupAssignmentBoard,
+  SeedingGroupsBoard,
   type BoardGroup,
-} from "@/components/tournament/group-assignment-board";
-import { Lock } from "lucide-react";
+} from "@/components/tournament/seeding-groups-board";
+import { Lock, Users } from "lucide-react";
 
 export default async function GroupsPage({
   params,
@@ -70,7 +69,6 @@ export default async function GroupsPage({
   const teams = (participants ?? []).map((p) => ({
     id: p.id,
     name: p.name,
-    seed: p.seed,
     groupId: groupByParticipant.get(p.id) ?? null,
   }));
 
@@ -80,33 +78,33 @@ export default async function GroupsPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Groups"
-        description="Assign teams to groups automatically or by hand."
+        title="Seeding & Groups"
+        description="Set the seed order, then split the teams into groups."
       />
-
-      {canGenerate && (
-        <GroupGenerator
-          tournamentId={id}
-          categoryId={active.id}
-          participantCount={teams.length}
-          hasGroups={groups.length > 0}
-        />
-      )}
 
       {canEdit && !canGenerate && (
         <div className="glass flex items-center gap-2 rounded-2xl p-4 text-sm text-muted-foreground">
           <Lock className="size-4" />
-          Group stage has started — groups are locked.
+          Group stage has started — seeding and groups are locked.
         </div>
       )}
 
-      <GroupAssignmentBoard
-        tournamentId={id}
-        categoryId={active.id}
-        teams={teams}
-        groups={groups}
-        canEdit={canGenerate}
-      />
+      {teams.length === 0 ? (
+        <EmptyState
+          icon={Users}
+          title="No teams to seed"
+          description="Add teams first, then come back to seed them and draw the groups."
+        />
+      ) : (
+        <SeedingGroupsBoard
+          key={active.id}
+          tournamentId={id}
+          categoryId={active.id}
+          teams={teams}
+          groups={groups}
+          canEdit={canGenerate}
+        />
+      )}
     </div>
   );
 }

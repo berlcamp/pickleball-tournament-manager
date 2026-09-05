@@ -40,7 +40,7 @@ export default async function GroupStagePage({
         >
           <Button asChild>
             <Link href={`/dashboard/tournaments/${id}/groups`}>
-              Go to Groups
+              Go to Seeding & Groups
             </Link>
           </Button>
         </EmptyState>

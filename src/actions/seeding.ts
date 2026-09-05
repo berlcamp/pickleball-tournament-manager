@@ -29,7 +29,7 @@ export async function saveSeeding(
       ),
     );
     await logAudit(tournamentId, "seeding.save", { count: orderedIds.length });
-    revalidatePath(`/dashboard/tournaments/${tournamentId}/seeding`);
+    revalidatePath(`/dashboard/tournaments/${tournamentId}/groups`);
   });
 }
 
@@ -52,7 +52,7 @@ export async function randomizeSeeding(
       ),
     );
     await logAudit(tournamentId, "seeding.randomize", {});
-    revalidatePath(`/dashboard/tournaments/${tournamentId}/seeding`);
+    revalidatePath(`/dashboard/tournaments/${tournamentId}/groups`);
     return ids;
   });
 }
