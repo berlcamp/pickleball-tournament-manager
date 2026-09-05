@@ -143,6 +143,68 @@ export async function startGroupStage(
   });
 }
 
+/**
+ * Send a category back to `draft` after its group stage has started.
+ *
+ * The stage otherwise only moves forward, so this is the escape hatch for a
+ * stage that was started by mistake. It is refused as soon as a single score
+ * has been recorded: the matches, groups and schedule are kept untouched, and
+ * reopening is only ever a status flip, never a wipe. Once the finals are
+ * drawn it is refused too — the bracket is built from these standings.
+ */
+export async function reopenGroupStage(
+  tournamentId: string,
+  categoryId: string,
+) {
+  return run(async () => {
+    const { supabase } = await assertRole(tournamentId, "admin");
+
+    const { data: category } = await supabase
+      .from("categories")
+      .select("status")
+      .eq("id", categoryId)
+      .single();
+    if (!category) throw new ActionError("Category not found.");
+    if (category.status === "draft") {
+      throw new ActionError("This category is already a draft.");
+    }
+    if (category.status !== "group_stage") {
+      throw new ActionError(
+        "The finals have already been drawn. A category can only be reopened while its group stage is running.",
+      );
+    }
+
+    const { data: matches, error: mErr } = await supabase
+      .from("group_matches")
+      .select("id")
+      .eq("category_id", categoryId);
+    if (mErr) throw new ActionError(mErr.message);
+    const matchIds = (matches ?? []).map((m) => m.id);
+
+    if (matchIds.length) {
+      const { count, error: sErr } = await supabase
+        .from("group_match_scores")
+        .select("match_id", { count: "exact", head: true })
+        .in("match_id", matchIds);
+      if (sErr) throw new ActionError(sErr.message);
+      if ((count ?? 0) > 0) {
+        throw new ActionError(
+          "Scores have already been recorded. Clear every match score first, then reopen the category.",
+        );
+      }
+    }
+
+    const { error } = await supabase
+      .from("categories")
+      .update({ status: "draft" })
+      .eq("id", categoryId);
+    if (error) throw new ActionError(error.message);
+
+    await logAudit(tournamentId, "groupStage.reopen", { categoryId });
+    revalidatePath(`/dashboard/tournaments/${tournamentId}`, "layout");
+  });
+}
+
 export async function submitGroupScore(
   tournamentId: string,
   matchId: string,

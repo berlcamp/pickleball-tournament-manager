@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { startGroupStage } from "@/actions/groupStage";
+import { reopenGroupStage, startGroupStage } from "@/actions/groupStage";
 import { generateFinals } from "@/actions/finals";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/progress-bar";
@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { TournamentStatus } from "@/types";
-import { Flag, Play, Lock } from "lucide-react";
+import { Flag, Play, Lock, Undo2 } from "lucide-react";
 
 export function GroupStageControls({
   tournamentId,
@@ -35,6 +35,7 @@ export function GroupStageControls({
   const [pending, startTransition] = useTransition();
   const [confirmStart, setConfirmStart] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
+  const [confirmReopen, setConfirmReopen] = useState(false);
   const allScored = matchesTotal > 0 && matchesDone === matchesTotal;
   const progress =
     matchesTotal === 0 ? 0 : Math.round((matchesDone / matchesTotal) * 100);
@@ -60,6 +61,18 @@ export function GroupStageControls({
       }
       setConfirmEnd(false);
       toast.success("Group stage ended — finals bracket created");
+    });
+  }
+
+  function reopen() {
+    startTransition(async () => {
+      const res = await reopenGroupStage(tournamentId, categoryId);
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      setConfirmReopen(false);
+      toast.success("Group stage reopened — the category is a draft again");
     });
   }
 
@@ -100,14 +113,28 @@ export function GroupStageControls({
               ? "All matches scored. End the stage to lock scores and build the finals bracket."
               : "Score all matches to end the group stage."}
           </p>
-          <Button
-            onClick={() => setConfirmEnd(true)}
-            disabled={pending || !allScored}
-            variant={allScored ? "default" : "outline"}
-          >
-            <Flag className="size-4" />
-            End group stage & build finals
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            {/* Only before the first score: reopening is a plain status flip,
+                never a wipe of results that are already in. */}
+            {matchesDone === 0 && (
+              <Button
+                variant="ghost"
+                onClick={() => setConfirmReopen(true)}
+                disabled={pending}
+              >
+                <Undo2 className="size-4" />
+                Reopen as draft
+              </Button>
+            )}
+            <Button
+              onClick={() => setConfirmEnd(true)}
+              disabled={pending || !allScored}
+              variant={allScored ? "default" : "outline"}
+            >
+              <Flag className="size-4" />
+              End group stage & build finals
+            </Button>
+          </div>
         </div>
       )}
 
@@ -139,6 +166,32 @@ export function GroupStageControls({
             <Button onClick={start} disabled={pending}>
               <Play className="size-4" />
               {pending ? "Starting…" : "Start group stage"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmReopen} onOpenChange={setConfirmReopen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reopen as draft?</DialogTitle>
+            <DialogDescription>
+              Teams, seeding, and groups become editable again. No scores have
+              been entered, so nothing is lost — the groups, matches, and
+              schedule are all kept.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmReopen(false)}
+              disabled={pending}
+            >
+              Cancel
+            </Button>
+            <Button onClick={reopen} disabled={pending}>
+              <Undo2 className="size-4" />
+              {pending ? "Reopening…" : "Reopen as draft"}
             </Button>
           </DialogFooter>
         </DialogContent>
