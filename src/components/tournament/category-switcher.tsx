@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   Select,
@@ -9,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TournamentStatusBadge } from "@/components/status-badge";
+import { LoadingOverlay } from "@/components/loading-overlay";
 import { Layers } from "lucide-react";
 import type { Category } from "@/types";
 
@@ -22,6 +24,8 @@ export function CategorySwitcher({ categories }: { categories: Category[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [pending, startTransition] = useTransition();
+  const [switchingTo, setSwitchingTo] = useState<string | null>(null);
 
   if (categories.length === 0) return null;
 
@@ -30,15 +34,27 @@ export function CategorySwitcher({ categories }: { categories: Category[] }) {
     categories.find((c) => c.id === requested) ?? categories[0];
 
   function select(id: string | null) {
-    if (!id) return;
+    if (!id || id === active.id) return;
     const params = new URLSearchParams(searchParams.toString());
     params.set("category", id);
-    router.push(`${pathname}?${params.toString()}`);
-    router.refresh();
+    setSwitchingTo(categories.find((c) => c.id === id)?.name ?? null);
+    // Inside a transition so `pending` covers the whole navigation — the tab
+    // below re-renders on the server, which is the part that takes a moment.
+    startTransition(() => {
+      router.push(`${pathname}?${params.toString()}`);
+      router.refresh();
+    });
   }
 
   return (
     <div className="flex flex-wrap items-center gap-2">
+      {pending && switchingTo && (
+        <LoadingOverlay
+          icon={Layers}
+          title="Switching category"
+          subtitle={switchingTo}
+        />
+      )}
       <Layers className="size-4 text-muted-foreground" />
       <span className="text-sm text-muted-foreground">Switch category:</span>
       <Select
