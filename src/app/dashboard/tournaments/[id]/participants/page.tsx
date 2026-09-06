@@ -26,17 +26,32 @@ export default async function ParticipantsPage({
     .select("*")
     .eq("category_id", active.id)
     .order("seed", { ascending: true });
+  const participants = (data ?? []) as Participant[];
+
+  // How many approved registrations have no team here yet. Ids and status
+  // only — no registrant PII on this tab.
+  const { data: regs } = await supabase
+    .from("registrations")
+    .select("id, status, participant_id")
+    .eq("category_id", active.id);
+  const participantIds = new Set(participants.map((p) => p.id));
+  const importable = (regs ?? []).filter(
+    (r) =>
+      r.status === "approved" &&
+      (!r.participant_id || !participantIds.has(r.participant_id)),
+  ).length;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Teams"
-        description={`${data?.length ?? 0} teams in ${active.name}. Add individually or bulk import.`}
+        description={`${participants.length} teams in ${active.name}. Add individually, bulk import, or pull in approved registrations.`}
       />
       <ParticipantsManager
         tournamentId={id}
         categoryId={active.id}
-        participants={(data ?? []) as Participant[]}
+        participants={participants}
+        importableCount={importable}
         canEdit={roleAtLeast(ctx.role, "admin") && active.status === "draft"}
         canRename={roleAtLeast(ctx.role, "admin")}
       />

@@ -91,6 +91,99 @@ export async function bulkAddParticipants(
   });
 }
 
+/**
+ * Pull every approved registration that has no team in this category.
+ *
+ * Approving a registration already creates its team, so this is the repair
+ * path: teams removed from this tab (or wiped with Clear all) leave their
+ * registrations approved but no longer competing. A registration whose team
+ * name already exists in the list is linked to that team rather than adding a
+ * second row with the same name.
+ */
+export async function importApprovedRegistrations(
+  tournamentId: string,
+  categoryId: string,
+) {
+  return run(async () => {
+    const { supabase } = await assertRole(tournamentId, "admin");
+    await assertCategoryDraft(supabase, categoryId);
+
+    const { data: approved, error: rErr } = await supabase
+      .from("registrations")
+      .select("id, team_name, participant_id")
+      .eq("category_id", categoryId)
+      .eq("status", "approved")
+      .order("created_at", { ascending: true });
+    if (rErr) throw new ActionError(rErr.message);
+
+    const { data: existing, error: pErr } = await supabase
+      .from("participants")
+      .select("id, name")
+      .eq("category_id", categoryId);
+    if (pErr) throw new ActionError(pErr.message);
+
+    const existingIds = new Set((existing ?? []).map((p) => p.id));
+    const byName = new Map(
+      (existing ?? []).map((p) => [p.name.trim().toLowerCase(), p.id]),
+    );
+
+    // A stale `participant_id` counts as missing: the team it pointed at was
+    // deleted, and the column is `on delete set null` only for fresh rows.
+    const missing = (approved ?? []).filter(
+      (r) => !r.participant_id || !existingIds.has(r.participant_id),
+    );
+    if (missing.length === 0) {
+      throw new ActionError(
+        "Every approved registration is already in the team list.",
+      );
+    }
+
+    let seed = existingIds.size;
+    let imported = 0;
+    let linked = 0;
+
+    for (const reg of missing) {
+      const key = reg.team_name.trim().toLowerCase();
+      let participantId = byName.get(key) ?? null;
+
+      if (participantId) {
+        linked++;
+      } else {
+        seed++;
+        const { data, error } = await supabase
+          .from("participants")
+          .insert({
+            tournament_id: tournamentId,
+            category_id: categoryId,
+            name: reg.team_name,
+            seed,
+          })
+          .select("id")
+          .single();
+        if (error) throw new ActionError(error.message);
+        participantId = data.id;
+        byName.set(key, participantId);
+        imported++;
+      }
+
+      const { error: uErr } = await supabase
+        .from("registrations")
+        .update({ participant_id: participantId })
+        .eq("id", reg.id);
+      if (uErr) throw new ActionError(uErr.message);
+    }
+
+    await logAudit(tournamentId, "participant.import_registrations", {
+      categoryId,
+      imported,
+      linked,
+    });
+    // Seeding and the groups board list them too.
+    revalidatePath(`/dashboard/tournaments/${tournamentId}`, "layout");
+    return { imported, linked };
+  });
+}
+
 export async function deleteParticipant(
   tournamentId: string,
   participantId: string,

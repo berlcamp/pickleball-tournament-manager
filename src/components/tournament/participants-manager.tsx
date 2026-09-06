@@ -7,6 +7,7 @@ import {
   bulkAddParticipants,
   clearParticipants,
   deleteParticipant,
+  importApprovedRegistrations,
   renameParticipant,
 } from "@/actions/participants";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Check, Pencil, Plus, Trash2, Upload, X } from "lucide-react";
+import {
+  Check,
+  ClipboardCheck,
+  Pencil,
+  Plus,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 import { BlindPairingDialog } from "./blind-pairing-dialog";
 import type { Participant } from "@/types";
 
@@ -30,12 +39,15 @@ export function ParticipantsManager({
   tournamentId,
   categoryId,
   participants,
+  importableCount,
   canEdit,
   canRename,
 }: {
   tournamentId: string;
   categoryId: string;
   participants: Participant[];
+  /** Approved registrations with no team in this category yet. */
+  importableCount: number;
   /** Admin on a category still in draft: the list itself can be changed. */
   canEdit: boolean;
   /** Admin, at any stage — a typo is fixable once the stage has started. */
@@ -53,6 +65,19 @@ export function ParticipantsManager({
       if (!res.ok) { toast.error(res.error); return; }
       setName("");
       toast.success("Team added");
+    });
+  }
+
+  function importApproved() {
+    startTransition(async () => {
+      const res = await importApprovedRegistrations(tournamentId, categoryId);
+      if (!res.ok) { toast.error(res.error); return; }
+      const { imported, linked } = res.data!;
+      toast.success(
+        linked > 0
+          ? `${imported} teams imported · ${linked} matched a team already here`
+          : `${imported} teams imported from approved registrations`,
+      );
     });
   }
 
@@ -105,6 +130,17 @@ export function ParticipantsManager({
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          {importableCount > 0 && (
+            <Button
+              variant="outline"
+              onClick={importApproved}
+              disabled={pending}
+              title="Add the approved registrations that have no team here yet"
+            >
+              <ClipboardCheck className="size-4" />
+              Import {importableCount} approved
+            </Button>
+          )}
           <BlindPairingDialog
             tournamentId={tournamentId}
             categoryId={categoryId}
