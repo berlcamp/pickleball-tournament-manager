@@ -428,9 +428,13 @@ export async function updateCategoryRegistration(
 // ---------------------------------------------------------------------------
 
 /**
- * Keep `participants` in step with the approval decision: approving a team
- * puts it in the bracket, reversing that takes it back out. Both directions
- * require the category to still be a draft, because groups and matches are
+ * Keep `participants` in step with the approval decision — one way only.
+ *
+ * Approving no longer puts a team in the bracket: the organiser pulls approved
+ * registrations across from the Teams tab, so the team list is theirs to
+ * decide. Taking an approval back still removes the team, because a
+ * disqualified or cancelled entry must not stay in a draw. That direction
+ * needs the category to still be a draft, since groups and matches are
  * generated from the participant list.
  */
 async function syncParticipant(
@@ -438,6 +442,9 @@ async function syncParticipant(
   registration: Registration,
   nextStatus: RegistrationStatus,
 ): Promise<string | null> {
+  if (nextStatus === "approved") return registration.participant_id;
+  if (!registration.participant_id) return null;
+
   const { data: categoryRow } = await supabase
     .from("categories")
     .select("*")
@@ -446,53 +453,44 @@ async function syncParticipant(
   if (!categoryRow) throw new ActionError("Category not found.");
   const category = categoryRow as Category;
 
-  const shouldCompete = nextStatus === "approved";
-  const alreadyCompeting = Boolean(registration.participant_id);
-  if (shouldCompete === alreadyCompeting) return registration.participant_id;
-
   if (category.status !== "draft") {
     throw new ActionError(
-      "The group stage has started, so the team list for this category is locked. Approve or remove teams before generating groups.",
+      "The group stage has started, so the team list for this category is locked. Remove teams before generating groups.",
     );
-  }
-
-  if (shouldCompete) {
-    if (category.max_teams !== null) {
-      const { count } = await supabase
-        .from("registrations")
-        .select("id", { count: "exact", head: true })
-        .eq("category_id", category.id)
-        .eq("status", "approved");
-      if ((count ?? 0) >= category.max_teams) {
-        throw new ActionError(
-          `This category is full (${category.max_teams} teams). Raise the team limit to approve more.`,
-        );
-      }
-    }
-    const { count: seedCount } = await supabase
-      .from("participants")
-      .select("id", { count: "exact", head: true })
-      .eq("category_id", category.id);
-    const { data, error } = await supabase
-      .from("participants")
-      .insert({
-        tournament_id: registration.tournament_id,
-        category_id: category.id,
-        name: registration.team_name,
-        seed: (seedCount ?? 0) + 1,
-      })
-      .select("id")
-      .single();
-    if (error) throw new ActionError(error.message);
-    return data.id;
   }
 
   const { error } = await supabase
     .from("participants")
     .delete()
-    .eq("id", registration.participant_id!);
+    .eq("id", registration.participant_id);
   if (error) throw new ActionError(error.message);
   return null;
+}
+
+/** Refuse an approval that would take the category past its team cap. */
+async function assertCapacity(
+  supabase: SupabaseClient<Database>,
+  registration: Registration,
+) {
+  const { data: categoryRow } = await supabase
+    .from("categories")
+    .select("*")
+    .eq("id", registration.category_id)
+    .maybeSingle();
+  if (!categoryRow) throw new ActionError("Category not found.");
+  const category = categoryRow as Category;
+  if (category.max_teams === null) return;
+
+  const { count } = await supabase
+    .from("registrations")
+    .select("id", { count: "exact", head: true })
+    .eq("category_id", category.id)
+    .eq("status", "approved");
+  if ((count ?? 0) >= category.max_teams) {
+    throw new ActionError(
+      `This category is full (${category.max_teams} teams). Raise the team limit to approve more.`,
+    );
+  }
 }
 
 export async function decideRegistration(
@@ -513,6 +511,10 @@ export async function decideRegistration(
     if (fetchError) throw new ActionError(fetchError.message);
     if (!row) throw new ActionError("Registration not found.");
     const registration = row as Registration;
+
+    if (parsed.status === "approved" && registration.status !== "approved") {
+      await assertCapacity(supabase, registration);
+    }
 
     const participantId = await syncParticipant(
       supabase,

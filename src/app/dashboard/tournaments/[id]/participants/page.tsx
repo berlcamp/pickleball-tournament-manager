@@ -45,7 +45,7 @@ export default async function ParticipantsPage({
     <div className="space-y-6">
       <PageHeader
         title="Teams"
-        description={`${participants.length} teams in ${active.name}. Add individually, bulk import, or pull in approved registrations.`}
+        description={`${participants.length} teams in ${active.name}. Add individually, in bulk, or from the approved registrations.`}
       />
       <ParticipantsManager
         tournamentId={id}

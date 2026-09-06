@@ -68,24 +68,24 @@ export function ParticipantsManager({
     });
   }
 
-  function importApproved() {
+  function addFromRegistrations() {
     startTransition(async () => {
       const res = await importApprovedRegistrations(tournamentId, categoryId);
       if (!res.ok) { toast.error(res.error); return; }
       const { imported, linked } = res.data!;
       toast.success(
         linked > 0
-          ? `${imported} teams imported · ${linked} matched a team already here`
-          : `${imported} teams imported from approved registrations`,
+          ? `${imported} teams added · ${linked} matched a team already here`
+          : `${imported} teams added from approved registrations`,
       );
     });
   }
 
-  function importBulk() {
+  function bulkAdd() {
     startTransition(async () => {
       const res = await bulkAddParticipants(tournamentId, categoryId, bulk);
       if (!res.ok) { toast.error(res.error); return; }
-      toast.success(`${res.data} teams imported`);
+      toast.success(`${res.data} teams added`);
       setBulk("");
       setBulkOpen(false);
     });
@@ -107,11 +107,11 @@ export function ParticipantsManager({
           </Button>
           <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
             <DialogTrigger render={<Button variant="outline" />}>
-              <Upload className="size-4" /> Bulk import
+              <Upload className="size-4" /> Bulk add
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Bulk import teams</DialogTitle>
+                <DialogTitle>Bulk add teams</DialogTitle>
                 <DialogDescription>
                   One team per line.
                 </DialogDescription>
@@ -124,23 +124,28 @@ export function ParticipantsManager({
                 onChange={(e) => setBulk(e.target.value)}
               />
               <DialogFooter>
-                <Button onClick={importBulk} disabled={pending || !bulk.trim()}>
-                  Import teams
+                <Button onClick={bulkAdd} disabled={pending || !bulk.trim()}>
+                  Add teams
                 </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
-          {importableCount > 0 && (
-            <Button
-              variant="outline"
-              onClick={importApproved}
-              disabled={pending}
-              title="Add the approved registrations that have no team here yet"
-            >
-              <ClipboardCheck className="size-4" />
-              Import {importableCount} approved
-            </Button>
-          )}
+          {/* Approving a registration no longer adds its team on its own —
+              the organiser decides when they come across. */}
+          <Button
+            variant="outline"
+            onClick={addFromRegistrations}
+            disabled={pending || importableCount === 0}
+            title={
+              importableCount === 0
+                ? "Every approved registration is already in this list"
+                : `Add ${importableCount} approved ${importableCount === 1 ? "registration" : "registrations"} to the team list`
+            }
+          >
+            <ClipboardCheck className="size-4" />
+            Add from Registrations
+            {importableCount > 0 && ` (${importableCount})`}
+          </Button>
           <BlindPairingDialog
             tournamentId={tournamentId}
             categoryId={categoryId}
@@ -218,9 +223,8 @@ function ClearTeamsButton({
           <DialogDescription>
             This removes all {count} teams in this category, along with their
             seeding and any groups and schedule drawn from them. Approved
-            registrations stay approved — to bring one of those teams back
-            you&apos;d set it to pending and approve it again. This
-            can&apos;t be undone.
+            registrations stay approved — bring those teams back with
+            &ldquo;Add from Registrations&rdquo;. This can&apos;t be undone.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

@@ -135,9 +135,11 @@ tournament-level. A submission produces a `registrations` row (+
 the status-page URL, where the team can upload payment later.
 - `status` (pending/approved/disqualified/cancelled) and `payment_status`
   (unpaid/submitted/verified/refunded) move independently.
-- **Approving creates the `participants` row**, so an approved team flows
-  straight into seeding — and reversing an approval removes it again. Both
-  directions require the category to still be `draft`.
+- **Approving does not create the `participants` row.** The organiser pulls
+  approved registrations across from the Teams tab ("Add from Registrations" →
+  `importApprovedRegistrations`), so the team list stays theirs to decide.
+  Reversing an approval still removes the team, since a disqualified entry must
+  not sit in a draw; that direction requires the category to still be `draft`.
 - ID photos and receipts live in the **private** `pickleball-registrations`
   bucket and are only ever served through short-lived signed URLs
   (`lib/registration-data.ts`). Never move them to the public banner bucket.

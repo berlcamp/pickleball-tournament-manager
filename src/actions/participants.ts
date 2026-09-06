@@ -94,11 +94,11 @@ export async function bulkAddParticipants(
 /**
  * Pull every approved registration that has no team in this category.
  *
- * Approving a registration already creates its team, so this is the repair
- * path: teams removed from this tab (or wiped with Clear all) leave their
- * registrations approved but no longer competing. A registration whose team
- * name already exists in the list is linked to that team rather than adding a
- * second row with the same name.
+ * This is how an approved team joins the draw: approving one only decides that
+ * it may play, and the organiser adds them here when the list is settled. It
+ * doubles as the way back for teams removed from this tab, whose registrations
+ * stay approved. A registration whose team name is already in the list is
+ * linked to that team rather than adding a second row with the same name.
  */
 export async function importApprovedRegistrations(
   tournamentId: string,
