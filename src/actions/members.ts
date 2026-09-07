@@ -14,11 +14,15 @@ export async function inviteMember(tournamentId: string, input: unknown) {
   return run(async () => {
     const parsed = inviteSchema.parse(input);
     const { supabase } = await assertRole(tournamentId, "admin");
+    // Emails are compared case-insensitively everywhere else (the accept
+    // trigger lowercases both sides), so normalise here too — otherwise
+    // "Foo@gmail.com" misses an existing profile and sits pending forever.
+    const email = parsed.email.trim().toLowerCase();
 
     const { data: existing } = await supabase
       .from("profiles")
       .select("id")
-      .eq("email", parsed.email)
+      .ilike("email", email)
       .maybeSingle();
 
     if (existing) {
@@ -35,7 +39,7 @@ export async function inviteMember(tournamentId: string, input: unknown) {
       const { error } = await supabase.from("tournament_invites").upsert(
         {
           tournament_id: tournamentId,
-          email: parsed.email,
+          email,
           role: parsed.role,
           invited_by: (await supabase.auth.getUser()).data.user?.id ?? null,
           status: "pending",
@@ -46,7 +50,7 @@ export async function inviteMember(tournamentId: string, input: unknown) {
     }
 
     await logAudit(tournamentId, "member.invite", {
-      email: parsed.email,
+      email,
       role: parsed.role,
     });
     revalidatePath(`/dashboard/tournaments/${tournamentId}`);

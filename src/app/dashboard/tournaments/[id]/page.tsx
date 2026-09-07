@@ -75,27 +75,42 @@ export default async function TournamentOverviewPage({
     ? createServiceClient()
     : supabase;
 
+  // `tournament_members.user_id` points at `auth.users`, not `pickleball.profiles`,
+  // so PostgREST cannot embed the profile — asking it to would fail the whole
+  // query and blank the list. Read the profiles separately and join here.
   const { data: memberDataRaw } = await admin
     .from("tournament_members")
-    .select("id, user_id, role, profiles(full_name, email, avatar_url)")
+    .select("id, user_id, role")
     .eq("tournament_id", id);
 
   const memberData = (memberDataRaw ?? []) as unknown as {
     id: string;
     user_id: string;
     role: MemberRow["role"];
-    profiles: {
+  }[];
+
+  const { data: profileData } = memberData.length
+    ? await admin
+        .from("profiles")
+        .select("id, full_name, email, avatar_url")
+        .in(
+          "id",
+          memberData.map((m) => m.user_id),
+        )
+    : { data: [] };
+
+  const profiles = new Map(
+    ((profileData ?? []) as unknown as {
+      id: string;
       full_name: string | null;
       email: string;
       avatar_url: string | null;
-    } | null;
-  }[];
+    }[]).map((p) => [p.id, p]),
+  );
 
   const members: MemberRow[] = memberData
     .map((m) => {
-      const p = m.profiles as unknown as
-        | { full_name: string | null; email: string; avatar_url: string | null }
-        | null;
+      const p = profiles.get(m.user_id);
       return {
         id: m.id,
         user_id: m.user_id,
