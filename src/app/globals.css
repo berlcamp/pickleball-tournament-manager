@@ -169,3 +169,40 @@
     transform: translateX(100%);
   }
 }
+
+/*
+ * Marketing marquee — one row of cards drifting sideways forever.
+ *
+ * The track holds two identical copies of the list, so sliding it left by
+ * exactly one copy lands on the second copy in the position the first
+ * started in: seamless. One copy is half the track (`-50%`) plus half the
+ * gap that separates the two copies.
+ */
+@keyframes marquee-x {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-50% - var(--marquee-gap) / 2));
+  }
+}
+
+.marquee-track {
+  --marquee-gap: 1.25rem;
+  display: flex;
+  width: max-content;
+  gap: var(--marquee-gap);
+  animation: marquee-x var(--marquee-duration, 60s) linear infinite;
+}
+
+/* Let a reader stop the row to actually read a card, keyboard users included. */
+.marquee:hover .marquee-track,
+.marquee:focus-within .marquee-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+}

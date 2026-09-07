@@ -201,3 +201,139 @@ export async function getCategory(categoryId: string): Promise<Category | null> 
     .maybeSingle();
   return (data as Category) ?? null;
 }
+
+/** A finished tournament worth showing off on the marketing page. */
+export interface ShowcaseTournament {
+  id: string;
+  name: string;
+  short_code: string;
+  location: string | null;
+  banner: string | null;
+  /** The day it was played: the tournament date, else the earliest category date. */
+  date: string | null;
+  /** `final_stage` or `completed` — never anything earlier. */
+  status: Extract<TournamentStatus, "final_stage" | "completed">;
+  teams: number;
+  categories: number;
+}
+
+/** A tournament has to be at least this big to make the showcase. */
+const SHOWCASE_MIN_TEAMS = 30;
+/** How many make it onto the home page. */
+const SHOWCASE_SIZE = 5;
+/**
+ * How many of the most recent finished tournaments we bother counting teams
+ * for. Team counts cost one query each, so the list is trimmed by date first —
+ * an older tournament that would have qualified is not "recent" anyway.
+ */
+const SHOWCASE_CANDIDATES = 24;
+
+/** Newest first, by the day it was played (falling back to when it was made). */
+const showcaseDate = (t: { start_date: string | null; created_at: string }) =>
+  t.start_date ?? t.created_at;
+
+/**
+ * The five most recent sizeable tournaments that have reached their finals,
+ * for the marquee on the marketing page. Public data only — it runs on the
+ * public client so a logged-out visitor sees the same list.
+ *
+ * Returns an empty list on any failure: the marquee is decoration, and the
+ * home page must never 500 because of it.
+ */
+export const loadShowcaseTournaments = cache(
+  async function (): Promise<ShowcaseTournament[]> {
+    try {
+      const supabase = await publicClient();
+
+      // Tournaments that got at least one category as far as the knockout.
+      const { data: finished } = await supabase
+        .from("categories")
+        .select("tournament_id")
+        .in("status", ["final_stage", "completed"]);
+      const candidateIds = [
+        ...new Set((finished ?? []).map((c) => c.tournament_id)),
+      ];
+      if (candidateIds.length === 0) return [];
+
+      const { data: rows } = await supabase
+        .from("tournaments")
+        .select("id, name, short_code, location, start_date, banner, created_at")
+        .in("id", candidateIds);
+
+      const recent = ((rows ?? []) as {
+        id: string;
+        name: string;
+        short_code: string;
+        location: string | null;
+        start_date: string | null;
+        banner: string | null;
+        created_at: string;
+      }[])
+        .sort((a, b) => showcaseDate(b).localeCompare(showcaseDate(a)))
+        .slice(0, SHOWCASE_CANDIDATES);
+      if (recent.length === 0) return [];
+
+      // Every category of the candidates, so the badge reads "Completed" only
+      // when the whole tournament is done and the date can fall back to them.
+      const { data: cats } = await supabase
+        .from("categories")
+        .select("tournament_id, status, event_date")
+        .in(
+          "tournament_id",
+          recent.map((t) => t.id),
+        );
+      const byTournament = new Map<
+        string,
+        { status: TournamentStatus; event_date: string | null }[]
+      >();
+      for (const c of (cats ?? []) as {
+        tournament_id: string;
+        status: TournamentStatus;
+        event_date: string | null;
+      }[]) {
+        const list = byTournament.get(c.tournament_id) ?? [];
+        list.push({ status: c.status, event_date: c.event_date });
+        byTournament.set(c.tournament_id, list);
+      }
+
+      // One head-count per candidate; `participants` rows are the teams.
+      const counts = await Promise.all(
+        recent.map(async (t) => {
+          const { count } = await supabase
+            .from("participants")
+            .select("id", { count: "exact", head: true })
+            .eq("tournament_id", t.id);
+          return count ?? 0;
+        }),
+      );
+
+      return recent
+        .map((t, i) => {
+          const cats = byTournament.get(t.id) ?? [];
+          const dates = cats
+            .map((c) => c.event_date)
+            .filter((d): d is string => Boolean(d))
+            .sort();
+          const status = aggregateStatus(cats.map((c) => c.status));
+          return {
+            id: t.id,
+            name: t.name,
+            short_code: t.short_code,
+            location: t.location,
+            banner: t.banner,
+            date: t.start_date ?? dates[0] ?? null,
+            status:
+              status === "completed"
+                ? ("completed" as const)
+                : ("final_stage" as const),
+            teams: counts[i],
+            categories: cats.length,
+          };
+        })
+        .filter((t) => t.teams >= SHOWCASE_MIN_TEAMS)
+        .slice(0, SHOWCASE_SIZE);
+    } catch {
+      return [];
+    }
+  },
+);

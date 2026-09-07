@@ -3,6 +3,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getUser } from "@/lib/auth";
+import { loadShowcaseTournaments } from "@/lib/data";
+import { TournamentMarquee } from "@/components/marketing/tournament-marquee";
 import { requestOrigin } from "@/lib/site-url";
 import { SITE_NAME, SITE_TITLE, SITE_DESCRIPTION } from "@/lib/seo";
 import {
@@ -140,6 +142,7 @@ function structuredData(origin: string) {
 export default async function Home() {
   const user = await getUser();
   const origin = await requestOrigin();
+  const showcase = await loadShowcaseTournaments();
   return (
     <div className="flex min-h-screen flex-col">
       <script
@@ -200,6 +203,8 @@ export default async function Home() {
             </Button>
           </div>
         </section>
+
+        <TournamentMarquee tournaments={showcase} />
 
         <section className="grid w-full gap-5 pb-24 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((f) => (
