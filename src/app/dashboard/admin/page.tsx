@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ExternalLink, ShieldCheck } from "lucide-react";
+import { ExternalLink, ShieldCheck, Star } from "lucide-react";
 import { requireSuperAdmin } from "@/lib/super-admin";
 import { getAllTournaments } from "@/lib/admin-data";
 import { PageHeader, EmptyState } from "@/components/page-header";
@@ -14,12 +14,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDate } from "@/lib/format";
+import { FeatureToggle } from "@/components/dashboard/feature-toggle";
 
 /**
- * System-wide, read-only view of every tournament on PicklePro. There is no
- * action on this page by design: the super admin can see what organisers have
- * created, and reaches anything further through the public portal — editing
- * still requires being a member of the tournament.
+ * System-wide view of every tournament on PicklePro.
+ *
+ * Deliberately near read-only: the super admin can see what organisers have
+ * created and reaches anything further through the public portal — editing a
+ * tournament still requires being a member of it. The single exception is the
+ * homepage feature flag, which is an install-wide editorial call that belongs
+ * to nobody else.
  */
 export default async function SuperAdminPage({
   searchParams,
@@ -48,17 +52,17 @@ export default async function SuperAdminPage({
       ).length,
     },
     { label: "Completed", value: all.filter((t) => t.status === "completed").length },
-    { label: "Teams", value: all.reduce((n, t) => n + t.participantCount, 0) },
+    { label: "Featured", value: all.filter((t) => t.featured).length },
   ];
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Super admin dashboard"
-        description="Every tournament on PicklePro. View only — nothing here can be edited."
+        description="Every tournament on PicklePro. Flip a switch to feature one on the homepage."
       >
         <span className="flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-          <ShieldCheck className="size-3.5" /> Read only
+          <ShieldCheck className="size-3.5" /> Super admin
         </span>
       </PageHeader>
 
@@ -102,6 +106,11 @@ export default async function SuperAdminPage({
                 <TableHead className="text-right">Categories</TableHead>
                 <TableHead className="text-right">Teams</TableHead>
                 <TableHead>Created</TableHead>
+                <TableHead className="whitespace-nowrap">
+                  <span className="flex items-center gap-1.5">
+                    <Star className="size-3.5" /> Homepage
+                  </span>
+                </TableHead>
                 <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
@@ -132,6 +141,13 @@ export default async function SuperAdminPage({
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {formatDate(t.created_at)}
+                  </TableCell>
+                  <TableCell>
+                    <FeatureToggle
+                      tournamentId={t.id}
+                      name={t.name}
+                      featured={t.featured}
+                    />
                   </TableCell>
                   <TableCell>
                     <Link

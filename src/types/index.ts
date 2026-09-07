@@ -100,6 +100,8 @@ export type Tournament = {
   banner: string | null;
   settings: TournamentSettings;
   show_public_schedule: boolean;
+  /** Curated by the super admin: shows in the marketing page's marquee. */
+  featured: boolean;
   /** GCash (or other) account collecting registration fees, tournament-wide. */
   payment_name: string | null;
   payment_number: string | null;

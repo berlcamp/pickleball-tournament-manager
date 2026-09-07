@@ -1,14 +1,22 @@
 import Link from "next/link";
-import { CalendarDays, MapPin, Trophy, Users } from "lucide-react";
-import { formatDate } from "@/lib/format";
+import { Trophy, Users } from "lucide-react";
 import type { ShowcaseTournament } from "@/lib/data";
+import type { TournamentStatus } from "@/types";
 
 /** Seconds each card spends crossing the row — slow enough to actually read. */
 const SECONDS_PER_CARD = 12;
 
+/** What the pill on a card reads, per rolled-up tournament status. */
+const STAGE_LABEL: Record<TournamentStatus, string> = {
+  draft: "Coming up",
+  group_stage: "Group stage",
+  final_stage: "In the finals",
+  completed: "Champion crowned",
+};
+
 /**
- * The "recently played" row on the marketing page: the newest sizeable
- * tournaments that reached their finals, drifting sideways forever.
+ * The showcase row on the marketing page: the tournaments the super admin has
+ * featured, drifting sideways forever.
  *
  * Pure CSS (see `.marquee-track` in globals.css), so it needs no client
  * component. The list is rendered twice — the animation slides the track by
@@ -36,14 +44,13 @@ export function TournamentMarquee({
       <div className="mb-7 flex flex-col items-center text-center">
         <span className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-card/50 px-4 py-1.5 text-xs font-medium text-muted-foreground">
           <Trophy className="size-4 text-primary" />
-          Recently played
+          Featured tournaments
         </span>
         <h2 className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">
           Real tournaments, <span className="text-gradient">already run</span>
         </h2>
         <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-          Big draws that made it all the way to the knockout stage. Tap one to
-          browse its public standings and bracket.
+          Tap one to browse its public standings, schedule and bracket.
         </p>
       </div>
 
@@ -117,7 +124,7 @@ function ShowcaseCard({
                 : "bg-chart-4/85 text-background"
             }`}
           >
-            {done ? "Champion crowned" : "In the finals"}
+            {STAGE_LABEL[t.status]}
           </span>
         </div>
 
@@ -125,19 +132,6 @@ function ShowcaseCard({
           <h3 className="line-clamp-2 font-semibold leading-snug tracking-tight">
             {t.name}
           </h3>
-          <div className="mt-2 mb-4 space-y-1 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <CalendarDays className="size-3.5 shrink-0" />
-              {formatDate(t.date)}
-            </div>
-            {t.location && (
-              <div className="flex items-center gap-1.5">
-                <MapPin className="size-3.5 shrink-0" />
-                <span className="truncate">{t.location}</span>
-              </div>
-            )}
-          </div>
-
           <div className="mt-auto flex items-end justify-between border-t border-border/60 pt-4">
             <div>
               <div className="flex items-center gap-1.5 text-xl font-bold leading-none">

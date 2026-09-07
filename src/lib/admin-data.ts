@@ -73,6 +73,9 @@ export async function getAllTournaments(): Promise<AdminTournament[]> {
     const owner = profiles.get(ownerByTournament.get(t.id) ?? "");
     return {
       ...t,
+      // Defaulted rather than trusted: the column arrives with migration 0015,
+      // and the table should still render on a database that predates it.
+      featured: t.featured ?? false,
       status: aggregateStatus(statuses.get(t.id) ?? []),
       categoryCount: statuses.get(t.id)?.length ?? 0,
       participantCount: teams.get(t.id) ?? 0,
