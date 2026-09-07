@@ -195,7 +195,8 @@
   animation: marquee-x var(--marquee-duration, 60s) linear infinite;
 }
 
-/* Let a reader stop the row to actually read a card, keyboard users included. */
+/* Let a reader stop the row to actually read a card. The cards hold nothing
+   focusable today; `focus-within` keeps this true if one ever does again. */
 .marquee:hover .marquee-track,
 .marquee:focus-within .marquee-track {
   animation-play-state: paused;

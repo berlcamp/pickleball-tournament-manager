@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Trophy, Users } from "lucide-react";
 import type { ShowcaseTournament } from "@/lib/data";
 import type { TournamentStatus } from "@/types";
@@ -20,7 +19,8 @@ const STAGE_LABEL: Record<TournamentStatus, string> = {
  *
  * Pure CSS (see `.marquee-track` in globals.css), so it needs no client
  * component. The list is rendered twice — the animation slides the track by
- * exactly one copy, and the duplicate is hidden from assistive tech.
+ * exactly one copy, and the duplicate is hidden from assistive tech. The cards
+ * are display only: nothing on them is clickable or focusable.
  */
 export function TournamentMarquee({
   tournaments,
@@ -75,7 +75,7 @@ export function TournamentMarquee({
           </ul>
           <ul className="flex shrink-0 gap-5" aria-hidden="true">
             {cards.map((t, i) => (
-              <ShowcaseCard key={`b-${t.id}-${i}`} tournament={t} tabbable={false} />
+              <ShowcaseCard key={`b-${t.id}-${i}`} tournament={t} />
             ))}
           </ul>
         </div>
@@ -86,19 +86,13 @@ export function TournamentMarquee({
 
 function ShowcaseCard({
   tournament: t,
-  tabbable = true,
 }: {
   tournament: ShowcaseTournament;
-  tabbable?: boolean;
 }) {
   const done = t.status === "completed";
   return (
     <li className="shrink-0">
-      <Link
-        href={`/${t.short_code}`}
-        tabIndex={tabbable ? undefined : -1}
-        className="glass group flex h-full w-72 flex-col overflow-hidden rounded-3xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl sm:w-80"
-      >
+      <div className="glass flex h-full w-72 flex-col overflow-hidden rounded-3xl sm:w-80">
         <div
           className="relative h-28 bg-gradient-to-br from-primary/35 via-chart-2/25 to-chart-4/20"
           style={
@@ -149,7 +143,7 @@ function ShowcaseCard({
             </div>
           </div>
         </div>
-      </Link>
+      </div>
     </li>
   );
 }
