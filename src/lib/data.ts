@@ -210,8 +210,6 @@ export interface ShowcaseTournament {
   banner: string | null;
   /** Rolled up from its categories, same as the dashboard. */
   status: TournamentStatus;
-  teams: number;
-  categories: number;
 }
 
 /** How many featured tournaments the homepage marquee shows. */
@@ -250,24 +248,14 @@ export const loadShowcaseTournaments = cache(
       }[];
       if (featured.length === 0) return [];
 
-      const ids = featured.map((t) => t.id);
-
-      const [{ data: cats }, counts] = await Promise.all([
-        supabase
-          .from("categories")
-          .select("tournament_id, status")
-          .in("tournament_id", ids),
-        // One head-count per tournament; `participants` rows are the teams.
-        Promise.all(
-          featured.map(async (t) => {
-            const { count } = await supabase
-              .from("participants")
-              .select("id", { count: "exact", head: true })
-              .eq("tournament_id", t.id);
-            return count ?? 0;
-          }),
-        ),
-      ]);
+      // The card shows the rolled-up stage, so the categories are all we need.
+      const { data: cats } = await supabase
+        .from("categories")
+        .select("tournament_id, status")
+        .in(
+          "tournament_id",
+          featured.map((t) => t.id),
+        );
 
       const statuses = new Map<string, TournamentStatus[]>();
       for (const c of (cats ?? []) as {
@@ -279,18 +267,13 @@ export const loadShowcaseTournaments = cache(
         statuses.set(c.tournament_id, list);
       }
 
-      return featured.map((t, i) => {
-        const list = statuses.get(t.id) ?? [];
-        return {
-          id: t.id,
-          name: t.name,
-          short_code: t.short_code,
-          banner: t.banner,
-          status: aggregateStatus(list),
-          teams: counts[i],
-          categories: list.length,
-        };
-      });
+      return featured.map((t) => ({
+        id: t.id,
+        name: t.name,
+        short_code: t.short_code,
+        banner: t.banner,
+        status: aggregateStatus(statuses.get(t.id) ?? []),
+      }));
     } catch {
       return [];
     }

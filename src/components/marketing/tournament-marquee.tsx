@@ -1,4 +1,4 @@
-import { Trophy, Users } from "lucide-react";
+import { Trophy } from "lucide-react";
 import type { ShowcaseTournament } from "@/lib/data";
 import type { TournamentStatus } from "@/types";
 
@@ -42,11 +42,7 @@ export function TournamentMarquee({
   return (
     <section className="w-full pb-20">
       <div className="mb-7 flex flex-col items-center text-center">
-        <span className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-card/50 px-4 py-1.5 text-xs font-medium text-muted-foreground">
-          <Trophy className="size-4 text-primary" />
-          Featured tournaments
-        </span>
-        <h2 className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">
+        <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
           Real tournaments, <span className="text-gradient">already run</span>
         </h2>
       </div>
@@ -94,7 +90,7 @@ function ShowcaseCard({
     <li className="shrink-0">
       <div className="glass flex h-full w-72 flex-col overflow-hidden rounded-3xl sm:w-80">
         <div
-          className="relative h-28 bg-gradient-to-br from-primary/35 via-chart-2/25 to-chart-4/20"
+          className="relative h-36 bg-gradient-to-br from-primary/35 via-chart-2/25 to-chart-4/20"
           style={
             t.banner
               ? {
@@ -119,29 +115,10 @@ function ShowcaseCard({
           </span>
         </div>
 
-        <div className="flex flex-1 flex-col p-5">
+        <div className="flex flex-1 flex-col justify-center p-5">
           <h3 className="line-clamp-2 font-semibold leading-snug tracking-tight">
             {t.name}
           </h3>
-          <div className="mt-auto flex items-end justify-between border-t border-border/60 pt-4">
-            <div>
-              <div className="flex items-center gap-1.5 text-xl font-bold leading-none">
-                <Users className="size-4 text-primary" />
-                {t.teams}
-              </div>
-              <div className="mt-1 text-[11px] uppercase tracking-wide text-muted-foreground">
-                Teams
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-xl font-bold leading-none">
-                {t.categories}
-              </div>
-              <div className="mt-1 text-[11px] uppercase tracking-wide text-muted-foreground">
-                {t.categories === 1 ? "Category" : "Categories"}
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </li>
