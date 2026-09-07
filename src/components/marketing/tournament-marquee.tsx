@@ -49,9 +49,6 @@ export function TournamentMarquee({
         <h2 className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">
           Real tournaments, <span className="text-gradient">already run</span>
         </h2>
-        <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-          Tap one to browse its public standings, schedule and bracket.
-        </p>
       </div>
 
       <div

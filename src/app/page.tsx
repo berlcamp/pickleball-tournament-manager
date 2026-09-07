@@ -186,11 +186,6 @@ export default async function Home() {
             Round robin groups, finals brackets, smart court scheduling and live
             public standings. Built for organizers, loved by players.
           </p>
-          <p className="mt-4 max-w-2xl text-base text-muted-foreground">
-            The bracket format you already know, plus what a general tool leaves
-            you to do by hand: court scheduling, pickleball tie-breakers, and
-            paid registrations.
-          </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <Button
               asChild
