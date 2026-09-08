@@ -5,12 +5,23 @@ import type { TournamentStatus } from "@/types";
 /** Seconds each card spends crossing the row — slow enough to actually read. */
 const SECONDS_PER_CARD = 12;
 
-/** What the pill on a card reads, per rolled-up tournament status. */
+/** Cards in one copy of the row, repeating the list if it is shorter. */
+const MIN_CARDS = 6;
+
+/** What the footer of a card reads, per rolled-up tournament status. */
 const STAGE_LABEL: Record<TournamentStatus, string> = {
   draft: "Coming up",
   group_stage: "Group stage",
   final_stage: "In the finals",
   completed: "Champion crowned",
+};
+
+/** The dot beside that label. */
+const STAGE_DOT: Record<TournamentStatus, string> = {
+  draft: "bg-muted-foreground",
+  group_stage: "bg-chart-2",
+  final_stage: "bg-chart-4",
+  completed: "bg-primary",
 };
 
 /**
@@ -29,18 +40,13 @@ export function TournamentMarquee({
 }) {
   if (tournaments.length === 0) return null;
 
-  // Short lists would otherwise leave a gap: repeat until the row is wide
-  // enough that the duplicate copy always covers the viewport.
-  const cards =
-    tournaments.length >= 4
-      ? tournaments
-      : [...tournaments, ...tournaments, ...tournaments].slice(
-          0,
-          Math.max(4, tournaments.length * 2),
-        );
+  // One copy of the row has to be at least as wide as the viewport, or the
+  // seam shows as empty space. Short lists repeat until they are.
+  const cards = [...tournaments];
+  while (cards.length < MIN_CARDS) cards.push(...tournaments);
 
   return (
-    <section className="w-full pb-20">
+    <section className="w-full pb-24">
       <div className="mb-7 flex flex-col items-center text-center">
         <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
           Real tournaments, <span className="text-gradient">already run</span>
@@ -85,12 +91,11 @@ function ShowcaseCard({
 }: {
   tournament: ShowcaseTournament;
 }) {
-  const done = t.status === "completed";
   return (
     <li className="shrink-0">
-      <div className="glass flex h-full w-72 flex-col overflow-hidden rounded-3xl sm:w-80">
+      <article className="glass flex h-full w-56 flex-col overflow-hidden rounded-2xl sm:w-60">
         <div
-          className="relative h-36 bg-gradient-to-br from-primary/35 via-chart-2/25 to-chart-4/20"
+          className="relative h-24 bg-gradient-to-br from-primary/35 via-chart-2/25 to-chart-4/20"
           style={
             t.banner
               ? {
@@ -101,26 +106,22 @@ function ShowcaseCard({
               : undefined
           }
         >
+          {/* Tournaments without a banner get the gradient and a watermark. */}
           {!t.banner && (
-            <Trophy className="absolute -bottom-3 -right-2 size-24 text-primary/20" />
+            <Trophy className="absolute -bottom-2 -right-1 size-16 text-primary/20" />
           )}
-          <span
-            className={`absolute left-3 top-3 rounded-full px-2.5 py-1 text-[11px] font-semibold backdrop-blur-md ${
-              done
-                ? "bg-primary/85 text-primary-foreground"
-                : "bg-chart-4/85 text-background"
-            }`}
-          >
-            {STAGE_LABEL[t.status]}
-          </span>
         </div>
 
-        <div className="flex flex-1 flex-col justify-center p-5">
-          <h3 className="line-clamp-2 font-semibold leading-snug tracking-tight">
+        <div className="flex flex-1 flex-col gap-3 p-4">
+          <h3 className="line-clamp-2 text-sm font-semibold leading-snug tracking-tight">
             {t.name}
           </h3>
+          <footer className="mt-auto flex items-center gap-1.5 text-[9px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+            <span className={`size-1.5 rounded-full ${STAGE_DOT[t.status]}`} />
+            {STAGE_LABEL[t.status]}
+          </footer>
         </div>
-      </div>
+      </article>
     </li>
   );
 }

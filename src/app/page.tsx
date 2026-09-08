@@ -199,9 +199,7 @@ export default async function Home() {
           </div>
         </section>
 
-        <TournamentMarquee tournaments={showcase} />
-
-        <section className="grid w-full gap-5 pb-24 sm:grid-cols-2 lg:grid-cols-3">
+        <section className="grid w-full gap-5 pb-20 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((f) => (
             <div
               key={f.title}
@@ -221,6 +219,8 @@ export default async function Home() {
             </div>
           ))}
         </section>
+
+        <TournamentMarquee tournaments={showcase} />
       </main>
 
       <footer className="border-t border-border/50 py-12 text-center">
