@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { TournamentStatusBadge } from "@/components/status-badge";
 import { ROLE_LABELS } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
-import { Plus, Trophy, MapPin, Calendar } from "lucide-react";
+import { Plus, Trophy, MapPin, Calendar, Ticket } from "lucide-react";
 
 /**
  * The dashboard IS the tournament list — there is no side nav to hang an
@@ -21,6 +21,11 @@ export default async function DashboardPage() {
         title="Tournaments"
         description="All tournaments you own or collaborate on."
       >
+        <Button asChild variant="outline">
+          <Link href="/dashboard/raffle">
+            <Ticket className="size-4" /> Raffle
+          </Link>
+        </Button>
         <Button asChild>
           <Link href="/dashboard/tournaments/new">
             <Plus className="size-4" /> New Tournament

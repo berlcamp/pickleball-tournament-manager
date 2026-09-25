@@ -14,6 +14,10 @@ import type {
   Profile,
   Registration,
   RegistrationPlayer,
+  Raffle,
+  RaffleDepartment,
+  RaffleEntry,
+  RaffleWinner,
   Standing,
   Tournament,
   TournamentInvite,
@@ -86,6 +90,22 @@ export type Database = {
       registration_players: TableShape<
         RegistrationPlayer,
         "registration_id" | "position" | "full_name"
+      >;
+      raffles: TableShape<Raffle, "name">;
+      raffle_departments: TableShape<RaffleDepartment, "raffle_id" | "name">;
+      raffle_entries: TableShape<
+        RaffleEntry,
+        "raffle_id" | "department_id" | "name"
+      >;
+      raffle_winners: TableShape<
+        RaffleWinner,
+        | "raffle_id"
+        | "department_id"
+        | "entry_id"
+        | "entry_name"
+        | "department_name"
+        | "session_id"
+        | "draw_index"
       >;
     };
     Views: Record<string, never>;
