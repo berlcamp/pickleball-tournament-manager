@@ -71,7 +71,7 @@ interface Props {
 
 const DEFAULT_SETTINGS: DrawSettings = {
   totalWinners: 5,
-  spinDurationSeconds: 5,
+  spinDurationSeconds: 10,
   departmentId: "ALL",
   prizeLabel: "",
   autoSpin: false,
