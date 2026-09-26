@@ -33,19 +33,18 @@ export function WaterwheelSpinner({
   suspense = true,
 }: Props) {
   // When a winner with a designation lands, hold on the designation alone for
-  // a beat before revealing the name. The phase resets whenever `winner`
-  // changes (new spin clears it back to null).
-  const [revealPhase, setRevealPhase] = useState<"designation" | "name">("name");
+  // a beat before revealing the name. The phase is derived: a winner teases
+  // until the timer marks that exact winner as revealed, so a new spin (a new
+  // `winner` object) starts teasing again without resetting any state.
+  const [revealedWinner, setRevealedWinner] = useState<SpinnerEntry | null>(null);
   const hasDesignation = !!winner?.designation?.trim();
   const teaseLandedPaddle = suspense && hasDesignation;
+  const revealPhase: "designation" | "name" =
+    winner && teaseLandedPaddle && revealedWinner !== winner ? "designation" : "name";
 
   useEffect(() => {
-    if (!winner || !teaseLandedPaddle) {
-      setRevealPhase("name");
-      return;
-    }
-    setRevealPhase("designation");
-    const t = setTimeout(() => setRevealPhase("name"), DESIGNATION_TEASE_MS);
+    if (!winner || !teaseLandedPaddle) return;
+    const t = setTimeout(() => setRevealedWinner(winner), DESIGNATION_TEASE_MS);
     return () => clearTimeout(t);
   }, [winner, teaseLandedPaddle]);
 

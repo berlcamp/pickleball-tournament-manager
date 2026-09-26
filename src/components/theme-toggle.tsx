@@ -19,12 +19,19 @@ const OPTIONS = [
   { value: "system", label: "Auto", icon: Monitor },
 ] as const;
 
+function subscribeNothing() {
+  return () => {};
+}
+
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
-
-  // Avoid hydration mismatch: theme is only known on the client.
-  React.useEffect(() => setMounted(true), []);
+  // Avoid hydration mismatch: theme is only known on the client. False on the
+  // server and during hydration, true once the client takes over.
+  const mounted = React.useSyncExternalStore(
+    subscribeNothing,
+    () => true,
+    () => false,
+  );
 
   return (
     <DropdownMenu>

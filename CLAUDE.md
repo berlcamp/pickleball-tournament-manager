@@ -144,6 +144,17 @@ the status-page URL, where the team can upload payment later.
   bucket and are only ever served through short-lived signed URLs
   (`lib/registration-data.ts`). Never move them to the public banner bucket.
 
+### Raffle (offline-capable)
+A standalone module, not tied to tournaments: managed at `/dashboard/raffle`,
+drawn full-screen at `/raffle-draw/[raffleId]`. The draw screen keeps working
+without internet. When a draw can't reach the server it picks the winner on the
+device, queues it in localStorage (`components/raffle/draw/offline-store.ts`)
+and uploads it later through `syncOfflineWinners`. The device generates the row
+`id`, so sending the same queue again is ignored rather than duplicated.
+`public/raffle-sw.js` (scope `/raffle-draw/`, production only) caches the
+page and its `_next/static` files so it can be reopened offline. Bump its
+`CACHE` name when you change how it caches.
+
 ### Realtime
 Enabled on `standings`, `group_matches`, `final_matches`, `match_schedules`.
 `registrations` is deliberately excluded (PII).

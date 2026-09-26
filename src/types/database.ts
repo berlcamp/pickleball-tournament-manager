@@ -26,7 +26,9 @@ import type {
 
 type TableShape<Row, Required extends keyof Row = never> = {
   Row: Row;
-  Insert: Partial<Omit<Row, "id" | "created_at">> &
+  // `id` is optional: the database generates one, but a caller may supply its
+  // own (offline raffle draws do, so a resend can't insert the row twice).
+  Insert: Partial<Omit<Row, "created_at">> &
     Pick<Row, Required & keyof Row>;
   Update: Partial<Row>;
   Relationships: [];

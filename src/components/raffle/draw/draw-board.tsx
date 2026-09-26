@@ -1,13 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import {
+  CloudOff,
   Maximize2,
   Minimize2,
   Play,
   RotateCcw,
   Settings,
   Square,
+  Wifi,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -27,8 +36,23 @@ import {
 } from "./waterwheel-spinner";
 import { WinnersPanel } from "./winners-panel";
 import { SettingsDialog, type DrawSettings } from "./settings-dialog";
-import { useSpinEngine } from "./use-spin-engine";
-import type { DrawWinnerResult } from "@/actions/raffle";
+import { useSpinEngine, type DrawOutcome } from "./use-spin-engine";
+import {
+  addPendingWinner,
+  readPendingWinners,
+  removePendingWinners,
+  saveKnownWinners,
+  useBrowserOnline,
+  useKnownWinners,
+  usePendingWinners,
+  type PendingWinner,
+} from "./offline-store";
+import {
+  drawWinner,
+  getRaffleWinners,
+  syncOfflineWinners,
+  type DrawWinnerResult,
+} from "@/actions/raffle";
 
 type Entry = {
   id: string;
@@ -55,6 +79,58 @@ const DEFAULT_SETTINGS: DrawSettings = {
   designationSuspense: false,
 };
 
+// Picked once per page load. Module scope, not render, so rendering stays pure.
+const CLIENT_SHUFFLE_SEED =
+  typeof window === "undefined" ? 0 : Math.floor(Math.random() * 2 ** 31) + 1;
+
+function subscribeNothing() {
+  return () => {};
+}
+
+/** Appends each winner not already in the list, by id. */
+function mergeWinners(...lists: DrawWinnerResult[][]): DrawWinnerResult[] {
+  const seen = new Set<string>();
+  const out: DrawWinnerResult[] = [];
+  for (const list of lists) {
+    for (const w of list) {
+      if (seen.has(w.id)) continue;
+      seen.add(w.id);
+      out.push(w);
+    }
+  }
+  return out;
+}
+
+/** Unbiased index in [0, n) from the browser's CSPRNG. */
+function randomIndex(n: number): number {
+  const limit = Math.floor(2 ** 32 / n) * n;
+  const buf = new Uint32Array(1);
+  do {
+    crypto.getRandomValues(buf);
+  } while (buf[0] >= limit);
+  return buf[0] % n;
+}
+
+// How often a board with queued offline winners retries the connection.
+const SYNC_RETRY_MS = 20_000;
+
+/** Fisher–Yates driven by mulberry32, so a given seed always gives one order. */
+function seededShuffle<T>(items: T[], seed: number): T[] {
+  let a = seed;
+  const random = () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 export function DrawBoard({
   raffle,
   departments,
@@ -65,9 +141,30 @@ export function DrawBoard({
   // has a clean local winners list.
   const [sessionId, setSessionId] = useState<string>(() => crypto.randomUUID());
   const [settings, setSettings] = useState<DrawSettings>(DEFAULT_SETTINGS);
-  // All persisted winners for this raffle. Drives pool exclusion so prior
-  // winners can never be drawn again until an admin runs "Clear winners".
-  const [winners, setWinners] = useState<DrawWinnerResult[]>(initialWinners);
+  // Winners the server has told us about, plus every draw made on this page.
+  const [drawnWinners, setDrawnWinners] = useState<DrawWinnerResult[]>(initialWinners);
+  // Offline mode. The browser's own flag covers a dropped network; a failed
+  // server call (connected to Wi-Fi with no internet behind it) or the
+  // operator's toggle sets `forcedOffline`.
+  const browserOnline = useBrowserOnline();
+  const [forcedOffline, setForcedOffline] = useState(false);
+  const offline = !browserOnline || forcedOffline;
+  const pendingWinners = usePendingWinners(raffle.id);
+  const knownWinners = useKnownWinners(raffle.id);
+  // Until the server confirms the winners list, the page may be a cached copy
+  // (reloaded offline), so the device's remembered list is folded in too.
+  const [serverConfirmed, setServerConfirmed] = useState(false);
+  // All winners for this raffle. Drives pool exclusion so prior winners can
+  // never be drawn again until an admin runs "Clear winners".
+  const winners = useMemo(
+    () =>
+      mergeWinners(
+        drawnWinners,
+        pendingWinners,
+        serverConfirmed ? [] : knownWinners,
+      ),
+    [drawnWinners, pendingWinners, knownWinners, serverConfirmed],
+  );
   const [winnerForWheel, setWinnerForWheel] = useState<SpinnerEntry | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [autoSpinPending, setAutoSpinPending] = useState(false);
@@ -123,6 +220,110 @@ export function DrawBoard({
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
 
+  // Remember the full list so a reload without internet still excludes them.
+  useEffect(() => {
+    saveKnownWinners(raffle.id, winners);
+  }, [raffle.id, winners]);
+
+  // Writes queued offline winners to the server, then refreshes the winners
+  // list from it. Throws only when the network is still down.
+  const reconnect = useCallback(async () => {
+    const queue = readPendingWinners(raffle.id);
+    if (queue.length > 0) {
+      const res = await syncOfflineWinners({
+        raffle_id: raffle.id,
+        winners: queue.map((w) => ({
+          id: w.id,
+          entry_id: w.entry_id,
+          entry_name: w.entry_name,
+          entry_designation: w.entry_designation,
+          department_name: w.department_name,
+          prize_label: w.prize_label,
+          session_id: w.session_id,
+          draw_index: w.draw_index,
+          drawn_at: w.drawn_at,
+        })),
+      });
+      if (!res.ok || !res.data) {
+        toast.error("Couldn't upload offline winners", {
+          id: "raffle-offline-sync",
+          description: res.ok ? undefined : res.error,
+        });
+        return;
+      }
+      const { synced, dropped } = res.data;
+      const syncedIds = new Set(synced);
+      setDrawnWinners((prev) =>
+        mergeWinners(prev, queue.filter((w) => syncedIds.has(w.id))),
+      );
+      removePendingWinners(raffle.id, [...synced, ...dropped]);
+      if (synced.length > 0) {
+        toast.success(
+          `Uploaded ${synced.length} winner${synced.length === 1 ? "" : "s"} drawn offline`,
+        );
+      }
+      if (dropped.length > 0) {
+        toast.warning(
+          `${dropped.length} offline winner${dropped.length === 1 ? " was" : "s were"} not saved — the entry was deleted from the raffle.`,
+        );
+      }
+    }
+
+    const fresh = await getRaffleWinners(raffle.id);
+    if (!fresh.ok || !fresh.data) return;
+    const serverWinners = fresh.data;
+    setDrawnWinners((prev) =>
+      mergeWinners(
+        serverWinners
+          .slice()
+          .sort((a, b) => a.draw_index - b.draw_index)
+          .map((w) => ({
+            id: w.id,
+            entry_id: w.entry_id,
+            entry_name: w.entry_name,
+            entry_designation: w.entry_designation,
+            department_id: w.department_id,
+            department_name: w.department_name,
+            draw_index: w.draw_index,
+            session_id: w.session_id,
+          })),
+        prev,
+      ),
+    );
+    setServerConfirmed(true);
+    setForcedOffline(false);
+  }, [raffle.id]);
+
+  // Reach the server on load and whenever the browser comes back online, then
+  // keep retrying while offline winners are waiting to be uploaded.
+  const needsServer = !serverConfirmed || pendingWinners.length > 0;
+  useEffect(() => {
+    if (!browserOnline || !needsServer) return;
+    const attempt = () => void reconnect().catch(() => {});
+    attempt();
+    const timer = setInterval(attempt, SYNC_RETRY_MS);
+    return () => clearInterval(timer);
+  }, [browserOnline, needsServer, reconnect]);
+
+  // The service worker keeps a copy of this page and its scripts so it can be
+  // reopened with no connection. Production only — in dev it would cache
+  // stale bundles.
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
+    navigator.serviceWorker
+      .register("/raffle-sw.js", { scope: "/raffle-draw/" })
+      .then(() => navigator.serviceWorker.ready)
+      .then((reg) => {
+        // Files this page loaded before the worker took control.
+        const urls = performance
+          .getEntriesByType("resource")
+          .map((e) => e.name)
+          .filter((u) => u.startsWith(`${location.origin}/_next/static/`));
+        reg.active?.postMessage({ type: "precache", urls: [location.href, ...urls] });
+      })
+      .catch(() => {});
+  }, []);
+
   const eligibleEntries = useMemo(() => {
     const wonIds = new Set(winners.map((w) => w.entry_id));
     return entries.filter((e) => {
@@ -140,20 +341,23 @@ export function DrawBoard({
     [eligibleEntries],
   );
   // Shuffle the pool for the wheel so repeated or clustered names (duplicate
-  // tickets, names added in blocks) don't appear grouped as it spins. Shuffling
-  // happens client-side after mount (Math.random can't run during SSR without a
-  // mismatch); the wheel is static at that point, so the reorder is invisible.
-  // Display-only — the winner is chosen server-side, independent of this order.
-  const [eligibleSpinnerEntries, setEligibleSpinnerEntries] =
-    useState<SpinnerEntry[]>(baseSpinnerEntries);
-  useEffect(() => {
-    const arr = [...baseSpinnerEntries];
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    setEligibleSpinnerEntries(arr);
-  }, [baseSpinnerEntries]);
+  // tickets, names added in blocks) don't appear grouped as it spins. The seed
+  // is 0 (no shuffle) on the server and during hydration, then the page-load
+  // seed on the client, so the HTML matches and the reorder happens while the
+  // wheel is still static. Display-only — the winner is chosen server-side,
+  // independent of this order.
+  const shuffleSeed = useSyncExternalStore(
+    subscribeNothing,
+    () => CLIENT_SHUFFLE_SEED,
+    () => 0,
+  );
+  const eligibleSpinnerEntries = useMemo(
+    () =>
+      shuffleSeed === 0
+        ? baseSpinnerEntries
+        : seededShuffle(baseSpinnerEntries, shuffleSeed),
+    [baseSpinnerEntries, shuffleSeed],
+  );
 
   // Visible "this draw" list — filtered to the current session.
   const sessionWinners = useMemo(
@@ -180,6 +384,10 @@ export function DrawBoard({
         : "No eligible entries for this department."
       : null;
 
+  // Lets the auto-spin timer call the latest onSpin rather than the one it
+  // was scheduled from.
+  const onSpinRef = useRef<(() => Promise<void>) | null>(null);
+
   const onSpin = useCallback(async () => {
     if (!canSpin) return;
 
@@ -198,19 +406,62 @@ export function DrawBoard({
     // Clear the previous winner-on-wheel so the new spin streams names again.
     setWinnerForWheel(null);
 
+    // Picks from the pool on this device and queues the winner for upload.
+    const drawLocally = (): DrawOutcome => {
+      if (eligibleEntries.length === 0) {
+        return { ok: false, error: "No eligible entries to draw." };
+      }
+      const pick = eligibleEntries[randomIndex(eligibleEntries.length)];
+      const winner: PendingWinner = {
+        id: crypto.randomUUID(),
+        raffle_id: raffle.id,
+        entry_id: pick.id,
+        entry_name: pick.name,
+        entry_designation: pick.designation ?? null,
+        department_id: pick.department_id,
+        department_name:
+          departments.find((d) => d.id === pick.department_id)?.name ?? "—",
+        prize_label: settings.prizeLabel.trim() || null,
+        session_id: sessionId,
+        draw_index: Math.max(0, ...sessionWinners.map((w) => w.draw_index)) + 1,
+        drawn_at: new Date().toISOString(),
+      };
+      addPendingWinner(raffle.id, winner);
+      return { ok: true, data: winner };
+    };
+
+    const draw = async (): Promise<DrawOutcome> => {
+      if (offline) return drawLocally();
+      try {
+        // Upload anything drawn offline first so the server numbers this
+        // draw after them.
+        if (readPendingWinners(raffle.id).length > 0) await reconnect();
+        const res = await drawWinner({
+          raffle_id: raffle.id,
+          session_id: sessionId,
+          department_id:
+            settings.departmentId === "ALL" ? undefined : settings.departmentId,
+          prize_label: settings.prizeLabel.trim() || undefined,
+          excluded_entry_ids: winners.map((w) => w.entry_id),
+        });
+        if (!res.ok) return res;
+        return res.data ? { ok: true, data: res.data } : { ok: false, error: "Draw failed." };
+      } catch {
+        // The request never reached the server — carry on offline.
+        setForcedOffline(true);
+        toast.warning("Connection lost — drawing offline", {
+          description: "Winners are saved on this device and uploaded when you're back online.",
+        });
+        return drawLocally();
+      }
+    };
+
     const result = await spin(
       {
-        raffleId: raffle.id,
-        sessionId,
         durationSeconds: settings.spinDurationSeconds,
         spinsCount: 6,
       },
-      {
-        departmentId:
-          settings.departmentId === "ALL" ? undefined : settings.departmentId,
-        prizeLabel: settings.prizeLabel.trim() || undefined,
-        excludedEntryIds: winners.map((w) => w.entry_id),
-      },
+      draw,
       undefined,
       // Stage the winner on the wheel the moment the draw resolves (mid-spin),
       // so paddle 0 already holds the winner when the wheel lands — the name
@@ -227,7 +478,7 @@ export function DrawBoard({
       return;
     }
 
-    setWinners((prev) => [...prev, result.winner]);
+    setDrawnWinners((prev) => mergeWinners(prev, [result.winner]));
 
     const winnerHasDesignation = !!result.winner.entry_designation?.trim();
     if (settings.designationSuspense && winnerHasDesignation) {
@@ -271,10 +522,13 @@ export function DrawBoard({
     sessionId,
     settings,
     winners,
-    sessionWinners.length,
+    offline,
+    reconnect,
+    departments,
+    eligibleEntries,
+    sessionWinners,
     batchStartCount,
     batchComplete,
-    eligibleEntries.length,
     flashSidebarLanded,
   ]);
 
@@ -302,17 +556,15 @@ export function DrawBoard({
     }
   }
 
-  const onSpinRef = useRef<typeof onSpin | null>(null);
   useEffect(() => {
     onSpinRef.current = onSpin;
   }, [onSpin]);
 
-  // If auto-spin gets disabled while a timer is pending, cancel the queued spin.
-  useEffect(() => {
-    if (!settings.autoSpin && autoSpinPending) {
-      clearAutoSpinTimer();
-    }
-  }, [settings.autoSpin, autoSpinPending, clearAutoSpinTimer]);
+  function changeSettings(next: DrawSettings) {
+    // Turning auto-spin off cancels a spin that is already queued.
+    if (!next.autoSpin) clearAutoSpinTimer();
+    setSettings(next);
+  }
 
   function toggleFullscreen() {
     if (document.fullscreenElement) {
@@ -371,9 +623,35 @@ export function DrawBoard({
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => browserOnline && setForcedOffline((v) => !v)}
+            disabled={!browserOnline}
+            className={[
+              "flex h-9 items-center gap-2 rounded-md border px-3 font-mono text-[10px] uppercase tracking-[0.18em] transition-colors",
+              offline
+                ? "border-amber-400/50 bg-amber-400/10 text-amber-300"
+                : "border-white/15 bg-white/[0.04] text-white/60 hover:bg-white/10",
+            ].join(" ")}
+            title={
+              !browserOnline
+                ? "No connection. Draws are saved on this device and uploaded when it returns."
+                : forcedOffline
+                  ? "Drawing offline. Click to go back online."
+                  : "Connected. Click to draw offline."
+            }
+          >
+            {offline ? <CloudOff className="size-3.5" /> : <Wifi className="size-3.5" />}
+            {offline ? "Offline" : "Online"}
+            {pendingWinners.length > 0 && (
+              <span className="rounded-full bg-amber-400 px-1.5 text-[#0a1740]">
+                {pendingWinners.length} to upload
+              </span>
+            )}
+          </button>
           <SettingsDialog
             settings={settings}
-            onChange={setSettings}
+            onChange={changeSettings}
             departments={departments}
             trigger={
               <Button

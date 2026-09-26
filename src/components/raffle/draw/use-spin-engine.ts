@@ -1,7 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { drawWinner, type DrawWinnerResult } from "@/actions/raffle";
+import type { DrawWinnerResult } from "@/actions/raffle";
+
+// What a draw hands back: the server action's result shape, whether the winner
+// came from the server or was drawn on this device while offline.
+export type DrawOutcome =
+  | { ok: true; data: DrawWinnerResult }
+  | { ok: false; error: string };
 
 // Easing: ease-out cubic — a stronger deceleration than quad. Most of the
 // glide distance is covered early, so the tail slows hard and the final ~2
@@ -13,8 +19,6 @@ function easeOutCubic(t: number): number {
 }
 
 export type SpinEngineConfig = {
-  raffleId: string;
-  sessionId: string;
   durationSeconds: number;
   spinsCount: number; // total rotations during the spin (e.g. 6 means ~6 full turns)
 };
@@ -47,19 +51,16 @@ export function useSpinEngine() {
 
   // Performs one spin:
   //   1. Starts rotating the wheel at constant velocity immediately.
-  //   2. In parallel, calls drawWinner() to fetch the persisted winner.
-  //   3. Once the server responds, decelerates into a landing where paddle 0
+  //   2. In parallel, runs `draw` to get the winner (from the server, or
+  //      picked locally when offline).
+  //   3. Once it resolves, decelerates into a landing where paddle 0
   //      sits at the front (angle ≡ 0 mod 360).
   // Running the server call in parallel keeps the wheel visibly moving the
   // whole time, so chained spins flow into each other.
   const spin = useCallback(
     async (
       config: SpinEngineConfig,
-      drawArgs: {
-        departmentId?: string;
-        prizeLabel?: string;
-        excludedEntryIds: string[];
-      },
+      draw: () => Promise<DrawOutcome>,
       onTick?: (angle: number) => void,
       // Fires the moment the server-chosen winner is known (mid-spin). Lets the
       // caller stage the winner on the wheel before it lands, so the paddle
@@ -71,20 +72,16 @@ export function useSpinEngine() {
 
       setState((s) => ({ ...s, spinning: true, landed: false }));
 
-      const drawPromise = drawWinner({
-        raffle_id: config.raffleId,
-        session_id: config.sessionId,
-        department_id: drawArgs.departmentId,
-        prize_label: drawArgs.prizeLabel,
-        excluded_entry_ids: drawArgs.excludedEntryIds,
-      });
+      const drawPromise = draw().catch(
+        (): DrawOutcome => ({ ok: false, error: "Draw failed." }),
+      );
 
       // Reduced motion: skip animation, snap to landing once we have a winner.
       if (prefersReducedMotion()) {
         const result = await drawPromise;
-        if (!result.ok || !result.data) {
+        if (!result.ok) {
           setState((s) => ({ ...s, spinning: false }));
-          return { error: result.ok ? "Draw failed." : result.error };
+          return { error: result.error };
         }
         const winner = result.data;
         onWinnerKnown?.(winner);
@@ -111,8 +108,8 @@ export function useSpinEngine() {
         value: { winner: DrawWinnerResult } | { error: string } | null;
       } = { value: null };
       drawPromise.then((res) => {
-        if (!res.ok || !res.data) {
-          drawSlot.value = { error: res.ok ? "Draw failed." : res.error };
+        if (!res.ok) {
+          drawSlot.value = { error: res.error };
           return;
         }
         drawSlot.value = { winner: res.data };

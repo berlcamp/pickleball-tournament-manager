@@ -69,6 +69,28 @@ export const drawWinnerSchema = z.object({
 });
 export type DrawWinnerInput = z.infer<typeof drawWinnerSchema>;
 
+// Winners drawn on the draw screen while it had no connection. The ids are
+// generated on the device, which makes re-sending the same queue harmless.
+export const syncOfflineWinnersSchema = z.object({
+  raffle_id: z.string().uuid(),
+  winners: z
+    .array(
+      z.object({
+        id: z.string().uuid(),
+        entry_id: z.string().uuid(),
+        entry_name: z.string().trim().min(1).max(500),
+        entry_designation: z.string().max(500).nullable(),
+        department_name: z.string().trim().min(1).max(500),
+        prize_label: z.string().trim().max(200).nullable(),
+        session_id: z.string().uuid(),
+        draw_index: z.number().int().min(1),
+        drawn_at: z.string().datetime(),
+      }),
+    )
+    .min(1)
+    .max(1000),
+});
+
 export const resetSessionSchema = z.object({
   raffle_id: z.string().uuid(),
   session_id: z.string().uuid(),

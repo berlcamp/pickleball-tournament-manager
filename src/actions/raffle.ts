@@ -14,6 +14,7 @@ import {
   deleteRaffleSchema,
   drawWinnerSchema,
   resetSessionSchema,
+  syncOfflineWinnersSchema,
   updateDepartmentSchema,
   updateEntrySchema,
   updateRaffleSchema,
@@ -453,6 +454,64 @@ export async function drawWinner(input: unknown) {
       department_name: dept.name,
       draw_index: drawIndex,
       session_id: parsed.data.session_id,
+    };
+  });
+}
+
+/**
+ * Records winners the draw screen picked while offline. Safe to call with the
+ * same queue twice: rows are keyed by the id the device generated, so a
+ * resend after a lost response is ignored rather than duplicated. An entry
+ * that has since been deleted can't be recorded (its foreign key is gone), so
+ * it comes back in `dropped` for the device to discard.
+ */
+export async function syncOfflineWinners(input: unknown) {
+  return run<{ synced: string[]; dropped: string[] }>(async () => {
+    const { supabase, user } = await getSessionUser();
+    const parsed = syncOfflineWinnersSchema.safeParse(input);
+    if (!parsed.success) throw new ActionError(firstIssue(parsed.error));
+    const { raffle_id, winners } = parsed.data;
+
+    const { data: entries, error: entriesError } = await supabase
+      .from("raffle_entries")
+      .select("id, department_id")
+      .eq("raffle_id", raffle_id)
+      .in(
+        "id",
+        winners.map((w) => w.entry_id),
+      );
+    if (entriesError) throw new ActionError(entriesError.message);
+    const departmentOf = new Map((entries ?? []).map((e) => [e.id, e.department_id]));
+
+    const rows = winners
+      .filter((w) => departmentOf.has(w.entry_id))
+      .map((w) => ({
+        id: w.id,
+        raffle_id,
+        department_id: departmentOf.get(w.entry_id)!,
+        entry_id: w.entry_id,
+        entry_name: w.entry_name,
+        entry_designation: w.entry_designation,
+        department_name: w.department_name,
+        prize_label: w.prize_label,
+        session_id: w.session_id,
+        draw_index: w.draw_index,
+        drawn_by: user.id,
+        drawn_at: w.drawn_at,
+      }));
+
+    if (rows.length > 0) {
+      const { error } = await supabase
+        .from("raffle_winners")
+        .upsert(rows, { onConflict: "id", ignoreDuplicates: true });
+      if (error) throw new ActionError(error.message);
+      revalidatePath(detailPath(raffle_id));
+    }
+
+    const synced = new Set(rows.map((r) => r.id));
+    return {
+      synced: [...synced],
+      dropped: winners.filter((w) => !synced.has(w.id)).map((w) => w.id),
     };
   });
 }
