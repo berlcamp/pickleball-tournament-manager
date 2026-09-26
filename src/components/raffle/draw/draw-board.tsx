@@ -359,10 +359,13 @@ export function DrawBoard({
     [baseSpinnerEntries, shuffleSeed],
   );
 
-  // Visible "this draw" list — filtered to the current session.
+  // Visible "this draw" list — filtered to the current session. Built from
+  // `drawnWinners`, which only gains a draw once its spin has landed; the
+  // offline queue holds a winner from the moment it is picked, which would put
+  // it in the sidebar while the wheel is still turning.
   const sessionWinners = useMemo(
-    () => winners.filter((w) => w.session_id === sessionId),
-    [winners, sessionId],
+    () => drawnWinners.filter((w) => w.session_id === sessionId),
+    [drawnWinners, sessionId],
   );
   // What the sidebar actually renders — drops winners still mid-tease.
   const visibleSessionWinners = useMemo(
@@ -463,8 +466,8 @@ export function DrawBoard({
       },
       draw,
       undefined,
-      // Stage the winner on the wheel the moment the draw resolves (mid-spin),
-      // so paddle 0 already holds the winner when the wheel lands — the name
+      // Stage the winner on paddle 0 on the final half-turn, while it is out
+      // of sight, so it holds the winner when the wheel lands — the name
       // under the selector matches the announced winner, with no swap.
       (winner) =>
         setWinnerForWheel({
@@ -704,11 +707,11 @@ export function DrawBoard({
           <WaterwheelSpinner
             angle={engine.angle}
             entries={eligibleSpinnerEntries}
-            // `winnerForWheel` is null during the fast constant phase (names
-            // stream) and gets set the moment the draw resolves — i.e. as
-            // deceleration begins — so the winner rides paddle 0 down to rest
-            // under the selector. Gating on `spinning` instead would keep it
-            // hidden through the whole slowdown and swap the name in at rest.
+            // `winnerForWheel` is null while names stream past and is set on
+            // the final half-turn of the slowdown, while paddle 0 is on the
+            // hidden back of the wheel, so the winner comes round once and
+            // rests under the selector. Setting it at rest instead would swap
+            // the name in visibly.
             winner={winnerForWheel}
             spinning={engine.spinning}
             suspense={settings.designationSuspense}

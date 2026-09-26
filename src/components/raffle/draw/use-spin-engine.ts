@@ -62,9 +62,10 @@ export function useSpinEngine() {
       config: SpinEngineConfig,
       draw: () => Promise<DrawOutcome>,
       onTick?: (angle: number) => void,
-      // Fires the moment the server-chosen winner is known (mid-spin). Lets the
-      // caller stage the winner on the wheel before it lands, so the paddle
-      // under the selector already shows the winner when it stops — no swap.
+      // Fires on the final approach, while the winner's paddle is still on the
+      // hidden back of the wheel. Lets the caller stage the winner there, so
+      // the paddle under the selector already shows the winner when it stops
+      // (no swap) without the name riding round the wheel before that.
       onWinnerKnown?: (winner: DrawWinnerResult) => void,
     ): Promise<{ winner: DrawWinnerResult } | { error: string }> => {
       // Cancel any in-flight animation.
@@ -113,9 +114,6 @@ export function useSpinEngine() {
           return;
         }
         drawSlot.value = { winner: res.data };
-        // Stage the winner now, while the wheel is still decelerating, so it's
-        // already on paddle 0 by the time the wheel comes to rest.
-        onWinnerKnown?.(res.data);
       });
 
       const t0 = performance.now();
@@ -125,6 +123,7 @@ export function useSpinEngine() {
       let decelTargetAngle = 0;
       let decelStartTime = 0;
       let decelDurationMs = 0;
+      let winnerStaged = false;
 
       await new Promise<void>((resolve) => {
         const tick = (now: number) => {
@@ -173,6 +172,15 @@ export function useSpinEngine() {
             const t = Math.min(1, elapsed / decelDurationMs);
             const eased = easeOutCubic(t);
             const angle = decelStartAngle + (decelTargetAngle - decelStartAngle) * eased;
+            // Paddle 0 faces the selector at every whole rotation, and its back
+            // face is hidden for the half-turn before that. Staging the winner
+            // once half a turn remains puts the name on it out of sight.
+            if (!winnerStaged && decelTargetAngle - angle <= 180) {
+              winnerStaged = true;
+              if (drawSlot.value && "winner" in drawSlot.value) {
+                onWinnerKnown?.(drawSlot.value.winner);
+              }
+            }
             angleRef.current = angle;
             setState((s) => ({ ...s, angle }));
             onTick?.(angle);
