@@ -33,6 +33,7 @@ export const categoryRegistrationSchema = z
     registration_fee: z.coerce.number().min(0).max(1_000_000).default(0),
     require_payment_upfront: z.boolean(),
     collect_shirt_sizes: z.boolean(),
+    shirt_price: z.coerce.number().min(0).max(100_000).default(400),
     require_player_id: z.boolean(),
   })
   .refine(
@@ -65,7 +66,7 @@ const playerSchema = z.object({
 export const publicRegistrationSchema = z.object({
   category_id: z.string().uuid("Choose a category"),
   players: z.array(playerSchema).min(1).max(2),
-  /** Opt-in shirt for every player, at `SHIRT_PRICE` each. Sizes are only
+  /** Opt-in shirt for every player, at the category's `shirt_price` each. Sizes are only
    *  collected when this is on. */
   include_shirt: z.boolean().default(false),
   contact_number: z

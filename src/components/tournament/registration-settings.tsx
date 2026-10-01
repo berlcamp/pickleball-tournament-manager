@@ -21,7 +21,6 @@ import { formatCurrency } from "@/lib/format";
 import {
   registrationAvailability,
   CLOSED_MESSAGES,
-  SHIRT_PRICE,
   feeUnit,
 } from "@/services/registration";
 import { FORMAT_LABELS } from "@/lib/constants";
@@ -98,6 +97,9 @@ function CategoryRegistrationRow({
   const [fee, setFee] = useState(String(Number(category.registration_fee)));
   const [upfront, setUpfront] = useState(category.require_payment_upfront);
   const [shirts, setShirts] = useState(category.collect_shirt_sizes);
+  const [shirtPrice, setShirtPrice] = useState(
+    String(Number(category.shirt_price)),
+  );
   const [needsId, setNeedsId] = useState(category.require_player_id);
 
   // Once the group stage starts the bracket is fixed, so entries are closed.
@@ -118,6 +120,7 @@ function CategoryRegistrationRow({
         registration_fee: Number(fee || 0),
         require_payment_upfront: upfront,
         collect_shirt_sizes: shirts,
+        shirt_price: Number(shirtPrice || 0),
         require_player_id: needsId,
       });
       if (!res.ok) {
@@ -268,11 +271,31 @@ function CategoryRegistrationRow({
             />
             <Toggle
               id={`shirts-${category.id}`}
-              label={`Offer t-shirts (${formatCurrency(SHIRT_PRICE)} per player)`}
+              label="Offer t-shirts"
               hint="Registrants can add a shirt for each player; sizes are asked only if they do."
               checked={shirts}
               onChange={setShirts}
             />
+            {shirts && (
+              <div className="space-y-1.5 rounded-xl border border-border/50 p-3">
+                <Label htmlFor={`shirt-price-${category.id}`}>
+                  T-shirt price (₱ per player)
+                </Label>
+                <Input
+                  id={`shirt-price-${category.id}`}
+                  type="number"
+                  min={0}
+                  step="1"
+                  value={shirtPrice}
+                  onChange={(e) => setShirtPrice(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {Number(shirtPrice || 0) > 0
+                    ? `Added to the registration for each player who takes a shirt — ${formatCurrency(Number(shirtPrice))} per player.`
+                    : "Shirts are included at no extra cost."}
+                </p>
+              </div>
+            )}
             <Toggle
               id={`id-${category.id}`}
               label="Require a valid ID photo"

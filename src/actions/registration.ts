@@ -185,6 +185,7 @@ export async function submitRegistration(form: FormData) {
       Number(category.registration_fee),
       payload.players.length,
       includeShirt,
+      Number(category.shirt_price),
     );
 
     const idPhotos = payload.players.map((_, i) => fileFrom(form, `id_photo_${i}`));
@@ -415,6 +416,7 @@ export async function updateCategoryRegistration(
         registration_fee: parsed.registration_fee,
         require_payment_upfront: parsed.require_payment_upfront,
         collect_shirt_sizes: parsed.collect_shirt_sizes,
+        shirt_price: parsed.shirt_price,
         require_player_id: parsed.require_player_id,
       })
       .eq("id", categoryId)

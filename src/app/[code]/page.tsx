@@ -58,6 +58,7 @@ export default async function PublicRegisterPage({
       fee: Number(c.registration_fee),
       requirePaymentUpfront: c.require_payment_upfront,
       collectShirtSizes: c.collect_shirt_sizes,
+      shirtPrice: Number(c.shirt_price),
       requirePlayerId: c.require_player_id,
       deadline: c.registration_deadline,
       eventDate: c.event_date,

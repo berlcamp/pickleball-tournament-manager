@@ -13,7 +13,6 @@ import { publicRegistrationSchema } from "@/validators/registration";
 import {
   playersPerTeam,
   registrationTotal,
-  SHIRT_PRICE,
   feePerPlayer,
 } from "@/services/registration";
 import { FORMAT_LABELS } from "@/lib/constants";
@@ -73,7 +72,13 @@ export function RegistrationForm({
 
   const shirtOffered = category.collectShirtSizes;
   const wantsShirt = shirtOffered && includeShirt;
-  const total = registrationTotal(category.fee, players.length, wantsShirt);
+  const shirtPrice = category.shirtPrice;
+  const total = registrationTotal(
+    category.fee,
+    players.length,
+    wantsShirt,
+    shirtPrice,
+  );
   const feeDue = total > 0;
   // Quoted per player: a doubles fee is split across the pair, and a shirt
   // is added on top for each player.
@@ -81,7 +86,9 @@ export function RegistrationForm({
   const perPlayerLabel = [
     [
       perPlayerFee > 0 ? formatCurrency(perPlayerFee) : null,
-      wantsShirt ? `${formatCurrency(SHIRT_PRICE)} shirt` : null,
+      wantsShirt && shirtPrice > 0
+        ? `${formatCurrency(shirtPrice)} shirt`
+        : null,
     ]
       .filter(Boolean)
       .join(" + "),
@@ -237,13 +244,16 @@ export function RegistrationForm({
             />
             <span className="space-y-0.5">
               <span className="block text-sm font-medium">
-                Include t-shirt (additional {formatCurrency(SHIRT_PRICE)} per
-                player)
+                {shirtPrice > 0
+                  ? `Include t-shirt (additional ${formatCurrency(shirtPrice)} per player)`
+                  : "Include t-shirt (free)"}
               </span>
               <span className="block text-xs text-muted-foreground">
-                {players.length > 1
-                  ? `Adds ${formatCurrency(SHIRT_PRICE * players.length)} for both players.`
-                  : `Adds ${formatCurrency(SHIRT_PRICE)} to your registration.`}
+                {shirtPrice <= 0
+                  ? "One for each player, at no extra cost."
+                  : players.length > 1
+                    ? `Adds ${formatCurrency(shirtPrice * players.length)} for both players.`
+                    : `Adds ${formatCurrency(shirtPrice)} to your registration.`}
               </span>
             </span>
           </label>

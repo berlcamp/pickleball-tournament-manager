@@ -133,7 +133,10 @@ export type Category = {
   registration_fee: number;
   /** true → proof of payment required to submit; false → pay later via link. */
   require_payment_upfront: boolean;
+  /** Whether registrants are offered a shirt (and asked its size). */
   collect_shirt_sizes: boolean;
+  /** Price of one shirt, charged per player who opts in. */
+  shirt_price: number;
   require_player_id: boolean;
 }
 

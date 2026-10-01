@@ -129,7 +129,8 @@ overrides. Changing the homepage thumbnail means replacing that PNG — keep it
 ### Public registration
 Teams sign up from the portal without logging in. Settings are per category
 (`format`, `registration_open`, deadline, `max_teams`, fee, whether proof of
-payment is required upfront, shirt sizes, player IDs); the GCash account is
+payment is required upfront, optional t-shirts and their per-player
+`shirt_price`, player IDs); the GCash account is
 tournament-level. A submission produces a `registrations` row (+
 `registration_players`) and a `PKL-XXXX-XXXX` reference code that doubles as
 the status-page URL, where the team can upload payment later.

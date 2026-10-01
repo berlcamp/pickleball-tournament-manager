@@ -9,6 +9,8 @@ export type RegistrationCategory = {
   fee: number;
   requirePaymentUpfront: boolean;
   collectShirtSizes: boolean;
+  /** Per player, added when the team opts into shirts. */
+  shirtPrice: number;
   requirePlayerId: boolean;
   deadline: string | null;
   /** The day this category is played ("2026-07-03"), or null if undecided. */
