@@ -5,8 +5,10 @@ import { RaffleFormDialog } from "@/components/raffle/raffle-form-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { getRaffles } from "@/actions/raffle";
+import { requireSuperAdmin } from "@/lib/super-admin";
 
 export default async function RaffleListPage() {
+  await requireSuperAdmin();
   const result = await getRaffles();
   const raffles = result.ok ? result.data ?? [] : [];
 

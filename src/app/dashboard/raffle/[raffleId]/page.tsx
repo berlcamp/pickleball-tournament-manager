@@ -7,6 +7,7 @@ import { DepartmentFormDialog } from "@/components/raffle/department-form-dialog
 import { DepartmentCard } from "@/components/raffle/department-card";
 import { WinnersTable } from "@/components/raffle/winners-table";
 import { getRaffle, getRaffleWinners } from "@/actions/raffle";
+import { requireSuperAdmin } from "@/lib/super-admin";
 
 export default async function RaffleDetailPage({
   params,
@@ -14,6 +15,7 @@ export default async function RaffleDetailPage({
   params: Promise<{ raffleId: string }>;
 }) {
   const { raffleId } = await params;
+  await requireSuperAdmin();
 
   const [detail, winnersResult] = await Promise.all([
     getRaffle(raffleId),

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { getMyTournaments } from "@/lib/data";
+import { requireUser } from "@/lib/auth";
+import { isSuperAdmin } from "@/lib/super-admin";
 import { PageHeader, EmptyState } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +15,10 @@ import { Plus, Trophy, MapPin, Calendar, Ticket } from "lucide-react";
  * overview off, and every other screen is reached through a tournament.
  */
 export default async function DashboardPage() {
-  const tournaments = await getMyTournaments();
+  const [tournaments, user] = await Promise.all([
+    getMyTournaments(),
+    requireUser(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -21,11 +26,13 @@ export default async function DashboardPage() {
         title="Tournaments"
         description="All tournaments you own or collaborate on."
       >
-        <Button asChild variant="outline">
-          <Link href="/dashboard/raffle">
-            <Ticket className="size-4" /> Raffle
-          </Link>
-        </Button>
+        {isSuperAdmin(user.email) && (
+          <Button asChild variant="outline">
+            <Link href="/dashboard/raffle">
+              <Ticket className="size-4" /> Raffle
+            </Link>
+          </Button>
+        )}
         <Button asChild>
           <Link href="/dashboard/tournaments/new">
             <Plus className="size-4" /> New Tournament

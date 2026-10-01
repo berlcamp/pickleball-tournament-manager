@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Fraunces } from "next/font/google";
-import { requireUser } from "@/lib/auth";
+import { requireSuperAdmin } from "@/lib/super-admin";
 import { DrawBoard } from "@/components/raffle/draw/draw-board";
 import {
   getRaffle,
@@ -21,7 +21,7 @@ export default async function RaffleDrawPage({
   params: Promise<{ raffleId: string }>;
 }) {
   const { raffleId } = await params;
-  await requireUser();
+  await requireSuperAdmin();
 
   const [detail, entries, winners] = await Promise.all([
     getRaffle(raffleId),
