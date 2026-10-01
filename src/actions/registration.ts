@@ -172,7 +172,7 @@ export async function submitRegistration(form: FormData) {
     if (payload.players.length !== expectedPlayers) {
       throw new ActionError(
         expectedPlayers === 1
-          ? "This is a singles category — enter one player."
+          ? "This category takes one player per registration."
           : "This is a doubles category — enter both players.",
       );
     }

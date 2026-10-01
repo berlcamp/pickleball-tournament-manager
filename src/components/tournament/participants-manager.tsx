@@ -40,6 +40,8 @@ export function ParticipantsManager({
   categoryId,
   participants,
   importableCount,
+  blindPairing,
+  unpairedPlayers,
   canEdit,
   canRename,
 }: {
@@ -48,6 +50,10 @@ export function ParticipantsManager({
   participants: Participant[];
   /** Approved registrations with no team in this category yet. */
   importableCount: number;
+  /** Players register alone and are drawn into teams with Blind pairing. */
+  blindPairing: boolean;
+  /** Blind pairing only: approved registrants not yet in a team. */
+  unpairedPlayers: string[];
   /** Admin on a category still in draft: the list itself can be changed. */
   canEdit: boolean;
   /** Admin, at any stage — a typo is fixable once the stage has started. */
@@ -132,23 +138,28 @@ export function ParticipantsManager({
           </Dialog>
           {/* Approving a registration no longer adds its team on its own —
               the organiser decides when they come across. */}
-          <Button
-            variant="outline"
-            onClick={addFromRegistrations}
-            disabled={pending || importableCount === 0}
-            title={
-              importableCount === 0
-                ? "Every approved registration is already in this list"
-                : `Add ${importableCount} approved ${importableCount === 1 ? "registration" : "registrations"} to the team list`
-            }
-          >
-            <ClipboardCheck className="size-4" />
-            Add from Registrations
-            {importableCount > 0 && ` (${importableCount})`}
-          </Button>
+          {/* In a blind pairing category a registration is one player, not a
+              team — those go through the draw below instead. */}
+          {!blindPairing && (
+            <Button
+              variant="outline"
+              onClick={addFromRegistrations}
+              disabled={pending || importableCount === 0}
+              title={
+                importableCount === 0
+                  ? "Every approved registration is already in this list"
+                  : `Add ${importableCount} approved ${importableCount === 1 ? "registration" : "registrations"} to the team list`
+              }
+            >
+              <ClipboardCheck className="size-4" />
+              Add from Registrations
+              {importableCount > 0 && ` (${importableCount})`}
+            </Button>
+          )}
           <BlindPairingDialog
             tournamentId={tournamentId}
             categoryId={categoryId}
+            registrants={blindPairing ? unpairedPlayers : undefined}
           />
           {participants.length > 0 && (
             <ClearTeamsButton

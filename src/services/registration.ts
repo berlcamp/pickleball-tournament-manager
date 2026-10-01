@@ -16,9 +16,15 @@ export type RegistrationAvailability =
   | { open: true }
   | { open: false; reason: ClosedReason };
 
-/** Number of players a category collects. */
+/** Number of players a category collects. Blind pairing takes one player
+ *  per registration — partners are drawn afterwards on the Teams tab. */
 export function playersPerTeam(format: CategoryFormat): number {
-  return format === "singles" ? 1 : 2;
+  return format === "doubles" ? 2 : 1;
+}
+
+/** Whether the fee is charged per player rather than per team. */
+export function feeUnit(format: CategoryFormat): "player" | "team" {
+  return format === "blind_pairing" ? "player" : "team";
 }
 
 /** Price of the optional tournament shirt, charged per player (₱). */

@@ -13,7 +13,7 @@ export type PaymentSettingsInput = z.infer<typeof paymentSettingsSchema>;
 /** Per-category registration configuration set by the tournament manager. */
 export const categoryRegistrationSchema = z
   .object({
-    format: z.enum(["singles", "doubles"]),
+    format: z.enum(["singles", "doubles", "blind_pairing"]),
     registration_open: z.boolean(),
     /**
      * Absolute ISO instant, converted from the manager's `datetime-local`

@@ -1,4 +1,4 @@
-import type { Role } from "@/types";
+import type { CategoryFormat, Role } from "@/types";
 
 export const MATCH_INTERVALS = [5, 10, 15, 20, 30] as const;
 
@@ -14,6 +14,19 @@ export const ROLE_LABELS: Record<Role, string> = {
   admin: "Admin",
   scorekeeper: "Scorekeeper",
   viewer: "Viewer",
+};
+
+export const FORMAT_LABELS: Record<CategoryFormat, string> = {
+  doubles: "Doubles",
+  singles: "Singles",
+  blind_pairing: "Blind pairing",
+};
+
+/** Format plus who signs up, for pickers and cards. */
+export const FORMAT_DESCRIPTIONS: Record<CategoryFormat, string> = {
+  doubles: "Doubles · 2 players",
+  singles: "Singles · 1 player",
+  blind_pairing: "Blind pairing · 1 player, partner drawn",
 };
 
 // Permission ranking — higher can do everything a lower can.

@@ -22,7 +22,9 @@ import {
   registrationAvailability,
   CLOSED_MESSAGES,
   SHIRT_PRICE,
+  feeUnit,
 } from "@/services/registration";
+import { FORMAT_LABELS } from "@/lib/constants";
 import type { Category, CategoryFormat } from "@/types";
 import { ChevronDown, ClipboardList, Lock } from "lucide-react";
 
@@ -143,9 +145,9 @@ function CategoryRegistrationRow({
         <span className="min-w-0 flex-1">
           <span className="block truncate font-medium">{category.name}</span>
           <span className="text-xs text-muted-foreground">
-            {category.format === "singles" ? "Singles" : "Doubles"}
+            {FORMAT_LABELS[category.format]}
             {Number(category.registration_fee) > 0
-              ? ` · ₱${Number(category.registration_fee)} per team`
+              ? ` · ₱${Number(category.registration_fee)} per ${feeUnit(category.format)}`
               : " · Free"}
             {category.max_teams !== null &&
               ` · ${approvedCount}/${category.max_teams} approved`}
@@ -193,6 +195,7 @@ function CategoryRegistrationRow({
                 items={[
                   { label: "Doubles (2 players)", value: "doubles" },
                   { label: "Singles (1 player)", value: "singles" },
+                  { label: "Blind pairing (1 player)", value: "blind_pairing" },
                 ]}
                 value={format}
                 onValueChange={(v) => setFormat(v as CategoryFormat)}
@@ -203,13 +206,16 @@ function CategoryRegistrationRow({
                 <SelectContent>
                   <SelectItem value="doubles">Doubles (2 players)</SelectItem>
                   <SelectItem value="singles">Singles (1 player)</SelectItem>
+                  <SelectItem value="blind_pairing">
+                    Blind pairing (1 player)
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor={`fee-${category.id}`}>
-                Registration fee (₱ per team)
+                Registration fee (₱ per {feeUnit(format)})
               </Label>
               <Input
                 id={`fee-${category.id}`}

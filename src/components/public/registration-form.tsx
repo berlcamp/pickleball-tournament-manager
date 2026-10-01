@@ -14,7 +14,9 @@ import {
   playersPerTeam,
   registrationTotal,
   SHIRT_PRICE,
+  feeUnit,
 } from "@/services/registration";
+import { FORMAT_LABELS } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { SHIRT_SIZES, type ShirtSize } from "@/types";
 import { cn } from "@/lib/utils";
@@ -186,7 +188,7 @@ export function RegistrationForm({
             <Badge variant="secondary">{formatDate(category.eventDate)}</Badge>
           )}
           <Badge variant="secondary">
-            {category.format === "singles" ? "Singles" : "Doubles"}
+            {FORMAT_LABELS[category.format]}
           </Badge>
           <Badge>{category.name}</Badge>
         </div>
@@ -197,10 +199,12 @@ export function RegistrationForm({
         <header>
           <h2 className="flex items-center gap-2 font-semibold">
             <UserRound className="size-4 text-primary" />
-            {category.format === "singles" ? "Player" : "Players"}
+            {players.length === 1 ? "Player" : "Players"}
           </h2>
           <p className="text-xs text-muted-foreground">
-            Enter names exactly as they should appear in the brackets.
+            {category.format === "blind_pairing"
+              ? "Register on your own — the organizer draws your partner at random."
+              : "Enter names exactly as they should appear in the brackets."}
           </p>
         </header>
 
@@ -240,7 +244,7 @@ export function RegistrationForm({
                 {i + 1}
               </span>
               <span className="text-sm font-medium">
-                {category.format === "singles"
+                {players.length === 1
                   ? "Player details"
                   : `Player ${i + 1}`}
               </span>
@@ -413,7 +417,7 @@ export function RegistrationForm({
               <div className="text-[0.7rem] text-muted-foreground">
                 {wantsShirt
                   ? `${category.fee > 0 ? `${formatCurrency(category.fee)} fee + ` : ""}${players.length} × ${formatCurrency(SHIRT_PRICE)} shirt`
-                  : "per team"}
+                  : `per ${feeUnit(category.format)}`}
               </div>
             </div>
           </header>

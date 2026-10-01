@@ -133,6 +133,11 @@ payment is required upfront, shirt sizes, player IDs); the GCash account is
 tournament-level. A submission produces a `registrations` row (+
 `registration_players`) and a `PKL-XXXX-XXXX` reference code that doubles as
 the status-page URL, where the team can upload payment later.
+- Formats: `doubles` (2 players), `singles` and `blind_pairing` (1 player).
+  A blind pairing registration is one player, not a team: on the Teams tab
+  its approved registrants load into the Blind pairing draw instead of
+  "Add from Registrations", and a player counts as drawn once their name
+  appears in a team.
 - `status` (pending/approved/disqualified/cancelled) and `payment_status`
   (unpaid/submitted/verified/refunded) move independently.
 - **Approving does not create the `participants` row.** The organiser pulls

@@ -1,6 +1,8 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { FORMAT_DESCRIPTIONS } from "@/lib/constants";
+import { feeUnit } from "@/services/registration";
 import { formatCurrency, formatDate, formatDeadline } from "@/lib/format";
 import type { RegistrationCategory } from "@/components/public/registration-types";
 import { CalendarDays, ChevronRight, Clock3, User, Users } from "lucide-react";
@@ -34,8 +36,7 @@ export function CategoryPicker({
     <ul className="grid gap-3 sm:grid-cols-2">
       {categories.map((category, index) => {
         const accent = ACCENTS[index % ACCENTS.length];
-        const singles = category.format === "singles";
-        const Icon = singles ? User : Users;
+        const Icon = category.format === "doubles" ? Users : User;
 
         return (
           <li key={category.id}>
@@ -72,7 +73,7 @@ export function CategoryPicker({
                       {category.name}
                     </h3>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      {singles ? "Singles · 1 player" : "Doubles · 2 players"}
+                      {FORMAT_DESCRIPTIONS[category.format]}
                     </p>
                     {category.eventDate && (
                       <p className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold text-foreground">
@@ -94,7 +95,7 @@ export function CategoryPicker({
                         {formatCurrency(category.fee)}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        per team
+                        per {feeUnit(category.format)}
                       </span>
                     </span>
                   ) : (

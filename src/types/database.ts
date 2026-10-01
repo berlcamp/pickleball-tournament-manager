@@ -116,7 +116,7 @@ export type Database = {
       role: "owner" | "admin" | "scorekeeper" | "viewer";
       tournament_status: "draft" | "group_stage" | "final_stage" | "completed";
       match_status: "pending" | "in_progress" | "completed";
-      category_format: "singles" | "doubles";
+      category_format: "singles" | "doubles" | "blind_pairing";
       registration_status:
         | "pending"
         | "approved"

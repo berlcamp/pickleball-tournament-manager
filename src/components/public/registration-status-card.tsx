@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { FORMAT_LABELS } from "@/lib/constants";
 import { ImageUploadField } from "@/components/public/image-upload-field";
 import { uploadPaymentProof } from "@/actions/registration";
 import { formatCurrency, formatDateTime } from "@/lib/format";
@@ -162,7 +163,7 @@ export function RegistrationStatusCard({
           <div className="flex items-center gap-2">
             <Badge variant="secondary">{category.name}</Badge>
             <Badge variant="outline">
-              {category.format === "singles" ? "Singles" : "Doubles"}
+              {FORMAT_LABELS[category.format]}
             </Badge>
           </div>
         </header>

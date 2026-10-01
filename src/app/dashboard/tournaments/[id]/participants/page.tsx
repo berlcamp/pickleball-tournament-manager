@@ -28,18 +28,32 @@ export default async function ParticipantsPage({
     .order("seed", { ascending: true });
   const participants = (data ?? []) as Participant[];
 
-  // How many approved registrations have no team here yet. Ids and status
-  // only — no registrant PII on this tab.
+  // How many approved registrations have no team here yet. Names, ids and
+  // status only — no other registrant PII on this tab.
   const { data: regs } = await supabase
     .from("registrations")
-    .select("id, status, participant_id")
-    .eq("category_id", active.id);
+    .select("id, status, participant_id, team_name")
+    .eq("category_id", active.id)
+    .order("created_at", { ascending: true });
   const participantIds = new Set(participants.map((p) => p.id));
-  const importable = (regs ?? []).filter(
-    (r) =>
-      r.status === "approved" &&
-      (!r.participant_id || !participantIds.has(r.participant_id)),
+  const approved = (regs ?? []).filter((r) => r.status === "approved");
+  const importable = approved.filter(
+    (r) => !r.participant_id || !participantIds.has(r.participant_id),
   ).length;
+
+  // Blind pairing: each registration is one player waiting for a partner.
+  // Anyone whose name already sits in a team here has been drawn.
+  const blindPairing = active.format === "blind_pairing";
+  const drawn = new Set(
+    participants.flatMap((p) =>
+      p.name.split("/").map((n) => n.trim().toLowerCase()),
+    ),
+  );
+  const unpairedPlayers = blindPairing
+    ? approved
+        .map((r) => r.team_name.trim())
+        .filter((n) => n && !drawn.has(n.toLowerCase()))
+    : [];
 
   return (
     <div className="space-y-6">
@@ -52,6 +66,8 @@ export default async function ParticipantsPage({
         categoryId={active.id}
         participants={participants}
         importableCount={importable}
+        blindPairing={blindPairing}
+        unpairedPlayers={unpairedPlayers}
         canEdit={roleAtLeast(ctx.role, "admin") && active.status === "draft"}
         canRename={roleAtLeast(ctx.role, "admin")}
       />

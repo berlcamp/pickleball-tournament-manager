@@ -8,7 +8,8 @@ export type TournamentStatus =
 
 /** A category is contested either 1-v-1 or 2-v-2. Drives the player fields
  * shown on the public registration form. */
-export type CategoryFormat = "singles" | "doubles";
+/** `blind_pairing`: players register alone and are drawn into teams later. */
+export type CategoryFormat = "singles" | "doubles" | "blind_pairing";
 
 /** Admin decision on a submitted registration. */
 export type RegistrationStatus =
@@ -317,7 +318,7 @@ export type Registration = {
 export type RegistrationPlayer = {
   id: string;
   registration_id: string;
-  /** 1 for singles; 1 and 2 for doubles. */
+  /** 1 for singles and blind pairing; 1 and 2 for doubles. */
   position: number;
   full_name: string;
   shirt_size: string | null;

@@ -15,7 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { Shuffle } from "lucide-react";
+import { ClipboardCheck, Shuffle } from "lucide-react";
 import {
   drawCrossPairs,
   drawSinglePairs,
@@ -34,9 +34,13 @@ type Mode = "single" | "two";
 export function BlindPairingDialog({
   tournamentId,
   categoryId,
+  registrants,
 }: {
   tournamentId: string;
   categoryId: string;
+  /** Blind pairing categories: approved registrants still without a team,
+   *  offered as a one-click roster. */
+  registrants?: string[];
 }) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("single");
@@ -163,6 +167,25 @@ export function BlindPairingDialog({
                 onChange={edit(setRosterB)}
               />
             </div>
+          )}
+
+          {registrants && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full"
+              disabled={registrants.length === 0}
+              onClick={() => {
+                setRosterA(registrants.join("\n"));
+                setTeams(null);
+              }}
+            >
+              <ClipboardCheck className="size-4" />
+              {registrants.length === 0
+                ? "No approved registrants waiting for a partner"
+                : `Load ${registrants.length} approved ${registrants.length === 1 ? "registrant" : "registrants"}${mode === "two" ? " into Group A" : ""}`}
+            </Button>
           )}
 
           {mode === "two" && (
