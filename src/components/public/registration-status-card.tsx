@@ -245,7 +245,15 @@ export function RegistrationStatusCard({
                 {formatCurrency(Number(registration.fee_amount))}
               </div>
               <div className="text-[0.7rem] text-muted-foreground">
-                registration fee
+                {/* The stored amount is the team's total, shirts included —
+                    split evenly it is what each player pays. */}
+                {formatCurrency(
+                  Number(registration.fee_amount) /
+                    Math.max(registration.players.length, 1),
+                )}{" "}
+                per player
+                {registration.players.length > 1 &&
+                  ` × ${registration.players.length}`}
               </div>
             </div>
           </header>
