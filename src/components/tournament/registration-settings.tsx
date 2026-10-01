@@ -17,7 +17,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { registrationAvailability, CLOSED_MESSAGES } from "@/services/registration";
+import { formatCurrency } from "@/lib/format";
+import {
+  registrationAvailability,
+  CLOSED_MESSAGES,
+  SHIRT_PRICE,
+} from "@/services/registration";
 import type { Category, CategoryFormat } from "@/types";
 import { ChevronDown, ClipboardList, Lock } from "lucide-react";
 
@@ -257,8 +262,8 @@ function CategoryRegistrationRow({
             />
             <Toggle
               id={`shirts-${category.id}`}
-              label="Ask for t-shirt sizes"
-              hint="Collected per player, for shirt ordering."
+              label={`Offer t-shirts (${formatCurrency(SHIRT_PRICE)} per player)`}
+              hint="Registrants can add a shirt for each player; sizes are asked only if they do."
               checked={shirts}
               onChange={setShirts}
             />

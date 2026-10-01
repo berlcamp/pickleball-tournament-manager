@@ -24,6 +24,7 @@ import {
 import {
   CLOSED_MESSAGES,
   playersPerTeam,
+  registrationTotal,
   registrationAvailability,
 } from "@/services/registration";
 import type { Database } from "@/types/database";
@@ -175,11 +176,16 @@ export async function submitRegistration(form: FormData) {
           : "This is a doubles category — enter both players.",
       );
     }
-    if (category.collect_shirt_sizes) {
-      if (payload.players.some((p) => !p.shirt_size)) {
-        throw new ActionError("Choose a t-shirt size for every player.");
-      }
+    // Shirts are only on offer where the organizer asks for sizes.
+    const includeShirt = category.collect_shirt_sizes && payload.include_shirt;
+    if (includeShirt && payload.players.some((p) => !p.shirt_size)) {
+      throw new ActionError("Choose a t-shirt size for every player.");
     }
+    const feeAmount = registrationTotal(
+      Number(category.registration_fee),
+      payload.players.length,
+      includeShirt,
+    );
 
     const idPhotos = payload.players.map((_, i) => fileFrom(form, `id_photo_${i}`));
     if (category.require_player_id) {
@@ -196,7 +202,7 @@ export async function submitRegistration(form: FormData) {
     });
 
     const proof = fileFrom(form, "payment_proof");
-    const feeDue = Number(category.registration_fee) > 0;
+    const feeDue = feeAmount > 0;
     if (category.require_payment_upfront && feeDue && !proof) {
       throw new ActionError("Upload your proof of payment to continue.");
     }
@@ -231,7 +237,7 @@ export async function submitRegistration(form: FormData) {
       club_address: payload.club_address.trim(),
       status: "pending",
       payment_status: proof ? "submitted" : "unpaid",
-      fee_amount: Number(category.registration_fee),
+      fee_amount: feeAmount,
       payment_reference: payload.payment_reference?.trim() || null,
       payment_proof_path: null,
       payment_submitted_at: proof ? new Date().toISOString() : null,
@@ -260,7 +266,7 @@ export async function submitRegistration(form: FormData) {
             registration_id: registration.id,
             position: i + 1,
             full_name: player.full_name.trim(),
-            shirt_size: player.shirt_size ?? null,
+            shirt_size: includeShirt ? (player.shirt_size ?? null) : null,
             id_photo_path: path,
           };
         }),

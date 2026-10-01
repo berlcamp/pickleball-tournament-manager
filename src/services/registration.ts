@@ -21,6 +21,22 @@ export function playersPerTeam(format: CategoryFormat): number {
   return format === "singles" ? 1 : 2;
 }
 
+/** Price of the optional tournament shirt, charged per player (₱). */
+export const SHIRT_PRICE = 400;
+
+/**
+ * What a team owes: the category's per-team fee, plus a shirt for every
+ * player when they opted in. The form shows this and the server stores it as
+ * the registration's `fee_amount`, so both read it from here.
+ */
+export function registrationTotal(
+  fee: number,
+  players: number,
+  includeShirt: boolean,
+): number {
+  return fee + (includeShirt ? SHIRT_PRICE * players : 0);
+}
+
 /**
  * Whether `category` is currently accepting entries.
  *

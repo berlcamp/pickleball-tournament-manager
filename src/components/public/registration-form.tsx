@@ -10,7 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { ImageUploadField } from "@/components/public/image-upload-field";
 import { submitRegistration } from "@/actions/registration";
 import { publicRegistrationSchema } from "@/validators/registration";
-import { playersPerTeam } from "@/services/registration";
+import {
+  playersPerTeam,
+  registrationTotal,
+  SHIRT_PRICE,
+} from "@/services/registration";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { SHIRT_SIZES, type ShirtSize } from "@/types";
 import { cn } from "@/lib/utils";
@@ -49,7 +53,8 @@ export function RegistrationForm({
   category: RegistrationCategory;
   payment: PaymentDetails;
   onBack: () => void;
-  onSuccess: (referenceCode: string) => void;
+  /** `amountDue` is the team's total, shirts included. */
+  onSuccess: (referenceCode: string, amountDue: number) => void;
 }) {
   const [pending, startTransition] = useTransition();
   const [players, setPlayers] = useState<PlayerDraft[]>(() =>
@@ -61,9 +66,13 @@ export function RegistrationForm({
   const [clubAddress, setClubAddress] = useState("");
   const [paymentReference, setPaymentReference] = useState("");
   const [proof, setProof] = useState<File | null>(null);
+  const [includeShirt, setIncludeShirt] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const feeDue = category.fee > 0;
+  const shirtOffered = category.collectShirtSizes;
+  const wantsShirt = shirtOffered && includeShirt;
+  const total = registrationTotal(category.fee, players.length, wantsShirt);
+  const feeDue = total > 0;
   const proofRequired = feeDue && category.requirePaymentUpfront;
 
   function updatePlayer(index: number, patch: Partial<PlayerDraft>) {
@@ -80,7 +89,7 @@ export function RegistrationForm({
       if (player.full_name.trim().length < 2) {
         next[`player_${i}_name`] = "Enter the player's full name";
       }
-      if (category.collectShirtSizes && !player.shirt_size) {
+      if (wantsShirt && !player.shirt_size) {
         next[`player_${i}_shirt`] = "Choose a size";
       }
       if (category.requirePlayerId && !player.id_photo) {
@@ -137,8 +146,9 @@ export function RegistrationForm({
         category_id: category.id,
         players: players.map((p) => ({
           full_name: p.full_name.trim(),
-          ...(p.shirt_size ? { shirt_size: p.shirt_size } : {}),
+          ...(wantsShirt && p.shirt_size ? { shirt_size: p.shirt_size } : {}),
         })),
+        include_shirt: wantsShirt,
         contact_number: contactNumber.trim(),
         contact_email: contactEmail.trim(),
         club_name: clubName.trim(),
@@ -159,7 +169,7 @@ export function RegistrationForm({
         toast.error(res.error);
         return;
       }
-      onSuccess(res.data as string);
+      onSuccess(res.data as string, total);
     });
   }
 
@@ -193,6 +203,32 @@ export function RegistrationForm({
             Enter names exactly as they should appear in the brackets.
           </p>
         </header>
+
+        {shirtOffered && (
+          <label
+            htmlFor="include-shirt"
+            className="flex cursor-pointer items-start gap-3 rounded-xl border border-border p-4 transition hover:border-primary/50"
+          >
+            <input
+              id="include-shirt"
+              type="checkbox"
+              checked={includeShirt}
+              onChange={(e) => setIncludeShirt(e.target.checked)}
+              className="mt-0.5 size-4 shrink-0 accent-primary"
+            />
+            <span className="space-y-0.5">
+              <span className="block text-sm font-medium">
+                Include t-shirt (additional {formatCurrency(SHIRT_PRICE)} per
+                player)
+              </span>
+              <span className="block text-xs text-muted-foreground">
+                {players.length > 1
+                  ? `Adds ${formatCurrency(SHIRT_PRICE * players.length)} for both players.`
+                  : `Adds ${formatCurrency(SHIRT_PRICE)} to your registration.`}
+              </span>
+            </span>
+          </label>
+        )}
 
         {players.map((player, i) => (
           <div
@@ -231,7 +267,7 @@ export function RegistrationForm({
               )}
             </div>
 
-            {category.collectShirtSizes && (
+            {wantsShirt && (
               <div className="space-y-1.5">
                 <Label>
                   T-shirt size <span className="text-destructive">*</span>
@@ -372,9 +408,13 @@ export function RegistrationForm({
             </div>
             <div className="text-right">
               <div className="text-xl font-bold text-primary">
-                {formatCurrency(category.fee)}
+                {formatCurrency(total)}
               </div>
-              <div className="text-[0.7rem] text-muted-foreground">per team</div>
+              <div className="text-[0.7rem] text-muted-foreground">
+                {wantsShirt
+                  ? `${category.fee > 0 ? `${formatCurrency(category.fee)} fee + ` : ""}${players.length} × ${formatCurrency(SHIRT_PRICE)} shirt`
+                  : "per team"}
+              </div>
             </div>
           </header>
 

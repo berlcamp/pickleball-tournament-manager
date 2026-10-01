@@ -42,6 +42,7 @@ export function RegistrationFlow({
   const [selected, setSelected] = useState<RegistrationCategory | null>(null);
   const [referenceCode, setReferenceCode] = useState<string | null>(null);
   const [paidUpfront, setPaidUpfront] = useState(false);
+  const [amountDue, setAmountDue] = useState(0);
 
   return (
     <div className="space-y-6">
@@ -89,8 +90,9 @@ export function RegistrationFlow({
           category={selected}
           payment={payment}
           onBack={() => setStep("category")}
-          onSuccess={(code) => {
+          onSuccess={(code, amount) => {
             setReferenceCode(code);
+            setAmountDue(amount);
             setPaidUpfront(selected.requirePaymentUpfront);
             setStep("done");
           }}
@@ -102,6 +104,7 @@ export function RegistrationFlow({
           referenceCode={referenceCode}
           category={selected}
           paidUpfront={paidUpfront}
+          amountDue={amountDue}
         />
       )}
     </div>

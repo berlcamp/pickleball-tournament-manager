@@ -65,6 +65,9 @@ const playerSchema = z.object({
 export const publicRegistrationSchema = z.object({
   category_id: z.string().uuid("Choose a category"),
   players: z.array(playerSchema).min(1).max(2),
+  /** Opt-in shirt for every player, at `SHIRT_PRICE` each. Sizes are only
+   *  collected when this is on. */
+  include_shirt: z.boolean().default(false),
   contact_number: z
     .string()
     .trim()

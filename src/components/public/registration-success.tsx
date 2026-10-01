@@ -15,10 +15,13 @@ export function RegistrationSuccess({
   referenceCode,
   category,
   paidUpfront,
+  amountDue,
 }: {
   referenceCode: string;
   category: RegistrationCategory;
   paidUpfront: boolean;
+  /** Category fee plus any shirts the team added. */
+  amountDue: number;
 }) {
   const statusPath = `/r/${referenceCode}`;
 
@@ -35,7 +38,7 @@ export function RegistrationSuccess({
     }
   }
 
-  const owesPayment = category.fee > 0 && !paidUpfront;
+  const owesPayment = amountDue > 0 && !paidUpfront;
 
   return (
     <div className="space-y-5">
@@ -95,7 +98,7 @@ export function RegistrationSuccess({
           </Step>
           <Step n={2}>
             The organizer reviews your entry
-            {category.fee > 0 ? " and confirms your payment" : ""}.
+            {amountDue > 0 ? " and confirms your payment" : ""}.
           </Step>
           <Step n={3}>
             Once approved, your team appears in the brackets and schedule.
@@ -104,7 +107,7 @@ export function RegistrationSuccess({
 
         {owesPayment && (
           <p className="mt-4 rounded-xl border border-border bg-background/40 p-3 text-xs text-muted-foreground">
-            Fee due: <span className="font-semibold text-foreground">{formatCurrency(category.fee)}</span>.
+            Fee due: <span className="font-semibold text-foreground">{formatCurrency(amountDue)}</span>.
             Pay anytime and upload your receipt from your status link above.
           </p>
         )}
