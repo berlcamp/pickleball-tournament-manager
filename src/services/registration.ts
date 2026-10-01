@@ -22,7 +22,16 @@ export function playersPerTeam(format: CategoryFormat): number {
   return format === "doubles" ? 2 : 1;
 }
 
-/** Whether the fee is charged per player rather than per team. */
+/**
+ * The category fee split across a team's players. Organizers set a doubles
+ * fee per team, but the public site quotes everything per player — ₱1,000 a
+ * team reads as ₱500 a player. Singles and blind pairing are already one.
+ */
+export function feePerPlayer(fee: number, format: CategoryFormat): number {
+  return fee / playersPerTeam(format);
+}
+
+/** Whether the organizer's fee setting is per player rather than per team. */
 export function feeUnit(format: CategoryFormat): "player" | "team" {
   return format === "blind_pairing" ? "player" : "team";
 }

@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { FORMAT_DESCRIPTIONS } from "@/lib/constants";
-import { feeUnit } from "@/services/registration";
+import { feePerPlayer } from "@/services/registration";
 import { formatCurrency, formatDate, formatDeadline } from "@/lib/format";
 import type { RegistrationCategory } from "@/components/public/registration-types";
 import { CalendarDays, ChevronRight, Clock3, User, Users } from "lucide-react";
@@ -92,10 +92,12 @@ export function CategoryPicker({
                   {category.fee > 0 ? (
                     <span className="inline-flex items-baseline gap-1.5">
                       <span className="text-xl font-bold">
-                        {formatCurrency(category.fee)}
+                        {formatCurrency(
+                          feePerPlayer(category.fee, category.format),
+                        )}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        per {feeUnit(category.format)}
+                        per player
                       </span>
                     </span>
                   ) : (

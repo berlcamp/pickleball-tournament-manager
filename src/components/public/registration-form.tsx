@@ -14,7 +14,7 @@ import {
   playersPerTeam,
   registrationTotal,
   SHIRT_PRICE,
-  feeUnit,
+  feePerPlayer,
 } from "@/services/registration";
 import { FORMAT_LABELS } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -75,6 +75,21 @@ export function RegistrationForm({
   const wantsShirt = shirtOffered && includeShirt;
   const total = registrationTotal(category.fee, players.length, wantsShirt);
   const feeDue = total > 0;
+  // Quoted per player: a doubles fee is split across the pair, and a shirt
+  // is added on top for each player.
+  const perPlayerFee = feePerPlayer(category.fee, category.format);
+  const perPlayerLabel = [
+    [
+      perPlayerFee > 0 ? formatCurrency(perPlayerFee) : null,
+      wantsShirt ? `${formatCurrency(SHIRT_PRICE)} shirt` : null,
+    ]
+      .filter(Boolean)
+      .join(" + "),
+    "per player",
+    players.length > 1 ? `× ${players.length}` : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
   const proofRequired = feeDue && category.requirePaymentUpfront;
 
   function updatePlayer(index: number, patch: Partial<PlayerDraft>) {
@@ -415,9 +430,7 @@ export function RegistrationForm({
                 {formatCurrency(total)}
               </div>
               <div className="text-[0.7rem] text-muted-foreground">
-                {wantsShirt
-                  ? `${category.fee > 0 ? `${formatCurrency(category.fee)} fee + ` : ""}${players.length} × ${formatCurrency(SHIRT_PRICE)} shirt`
-                  : `per ${feeUnit(category.format)}`}
+                {perPlayerLabel}
               </div>
             </div>
           </header>
