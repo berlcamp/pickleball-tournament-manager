@@ -8,7 +8,7 @@ import { downscaleImage } from "@/lib/image-resize";
 import { cn } from "@/lib/utils";
 import { Camera, Loader2, X } from "lucide-react";
 
-const MAX_BYTES = 5 * 1024 * 1024;
+const MAX_BYTES = 15 * 1024 * 1024;
 
 /**
  * Tap-to-upload image field used for ID photos and payment receipts. Shows a
@@ -38,14 +38,14 @@ export function ImageUploadField({
       toast.error("Please choose an image file.");
       return;
     }
+    if (file.size > MAX_BYTES) {
+      toast.error("That photo is too large (max 15MB).");
+      if (inputRef.current) inputRef.current.value = "";
+      return;
+    }
     setBusy(true);
     try {
       const { file: resized, previewUrl } = await downscaleImage(file);
-      if (resized.size > MAX_BYTES) {
-        toast.error("That image is too large even after resizing (max 5MB).");
-        URL.revokeObjectURL(previewUrl);
-        return;
-      }
       setPreview((old) => {
         if (old) URL.revokeObjectURL(old);
         return previewUrl;
@@ -81,7 +81,6 @@ export function ImageUploadField({
         ref={inputRef}
         type="file"
         accept="image/*"
-        capture="environment"
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
@@ -145,7 +144,7 @@ export function ImageUploadField({
             <>
               <Camera className="size-5" />
               <span className="text-sm">Tap to upload a photo</span>
-              <span className="text-xs">JPG or PNG, up to 5MB</span>
+              <span className="text-xs">JPG or PNG, up to 15MB</span>
             </>
           )}
         </button>

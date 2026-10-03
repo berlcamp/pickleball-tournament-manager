@@ -30,7 +30,7 @@ import {
 import type { Database } from "@/types/database";
 import type { Category, Registration, RegistrationStatus } from "@/types";
 
-const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic"];
 /** Submissions allowed from one IP per hour. */
 const IP_HOURLY_LIMIT = 8;
@@ -43,7 +43,7 @@ const IP_HOURLY_LIMIT = 8;
 function assertValidImage(file: File, label: string) {
   if (file.size === 0) throw new ActionError(`${label} is empty.`);
   if (file.size > MAX_UPLOAD_BYTES) {
-    throw new ActionError(`${label} must be 5MB or smaller.`);
+    throw new ActionError(`${label} must be 15MB or smaller.`);
   }
   if (!ALLOWED_TYPES.includes(file.type)) {
     throw new ActionError(`${label} must be a JPG, PNG or WEBP image.`);
