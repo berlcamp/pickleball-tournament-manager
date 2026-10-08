@@ -106,3 +106,14 @@ export const paymentDecisionSchema = z.object({
   payment_status: z.enum(["unpaid", "submitted", "verified", "refunded"]),
   admin_note: z.string().trim().max(500).optional().or(z.literal("")),
 });
+
+/** Move a registration to another category. The note is mandatory — it is
+ *  shown to the team on their status page so they know why they moved. */
+export const registrationCategoryChangeSchema = z.object({
+  category_id: z.string().uuid("Choose a category"),
+  admin_note: z
+    .string()
+    .trim()
+    .min(3, "Add a note explaining the change")
+    .max(500),
+});

@@ -9,6 +9,7 @@ import {
   paymentSettingsSchema,
   publicRegistrationSchema,
   registrationDecisionSchema,
+  registrationCategoryChangeSchema,
   paymentDecisionSchema,
 } from "@/validators/registration";
 import {
@@ -478,7 +479,7 @@ async function syncParticipant(
 /** Refuse an approval that would take the category past its team cap. */
 async function assertCapacity(
   supabase: SupabaseClient<Database>,
-  registration: Registration,
+  registration: Pick<Registration, "category_id">,
 ) {
   const { data: categoryRow } = await supabase
     .from("categories")
@@ -550,6 +551,86 @@ export async function decideRegistration(
     });
     revalidatePath(`/dashboard/tournaments/${tournamentId}/registrations`);
     revalidatePath(`/dashboard/tournaments/${tournamentId}/participants`);
+    revalidatePath(`/r/${registration.reference_code}`);
+  });
+}
+
+/**
+ * Move a registration to another category of the same tournament — a team
+ * that signed up for the wrong level, or one the organiser regrades. The note
+ * is required and replaces the stored note, so the team sees on their status
+ * page why they were moved.
+ *
+ * The fee snapshot is left alone: what the team was quoted (and may already
+ * have paid) does not change behind their back.
+ */
+export async function changeRegistrationCategory(
+  tournamentId: string,
+  registrationId: string,
+  input: unknown,
+) {
+  return run(async () => {
+    const parsed = registrationCategoryChangeSchema.parse(input);
+    const { supabase } = await assertRole(tournamentId, "admin");
+
+    const { data: row, error: fetchError } = await supabase
+      .from("registrations")
+      .select("*")
+      .eq("id", registrationId)
+      .eq("tournament_id", tournamentId)
+      .maybeSingle();
+    if (fetchError) throw new ActionError(fetchError.message);
+    if (!row) throw new ActionError("Registration not found.");
+    const registration = row as Registration;
+
+    if (registration.category_id === parsed.category_id) {
+      throw new ActionError("The registration is already in that category.");
+    }
+    // The team row belongs to the old category's draw; moving the
+    // registration underneath it would leave the two out of step.
+    if (registration.participant_id) {
+      throw new ActionError(
+        "This team is already on the Teams list. Remove it there before changing its category.",
+      );
+    }
+
+    const { data: categoryRow } = await supabase
+      .from("categories")
+      .select("*")
+      .eq("id", parsed.category_id)
+      .eq("tournament_id", tournamentId)
+      .maybeSingle();
+    if (!categoryRow) throw new ActionError("Category not found.");
+    const target = categoryRow as Category;
+
+    const { count: playerCount } = await supabase
+      .from("registration_players")
+      .select("id", { count: "exact", head: true })
+      .eq("registration_id", registrationId);
+    const needed = playersPerTeam(target.format);
+    if ((playerCount ?? 0) !== needed) {
+      throw new ActionError(
+        `${target.name} takes ${needed} player${needed === 1 ? "" : "s"} per entry, but this registration has ${playerCount ?? 0}.`,
+      );
+    }
+
+    if (registration.status === "approved") {
+      await assertCapacity(supabase, { category_id: target.id });
+    }
+
+    const { error } = await supabase
+      .from("registrations")
+      .update({ category_id: target.id, admin_note: parsed.admin_note })
+      .eq("id", registrationId);
+    if (error) throw new ActionError(error.message);
+
+    await logAudit(tournamentId, "registration.change_category", {
+      registrationId,
+      from: registration.category_id,
+      to: target.id,
+      note: parsed.admin_note,
+    });
+    revalidatePath(`/dashboard/tournaments/${tournamentId}/registrations`);
     revalidatePath(`/r/${registration.reference_code}`);
   });
 }

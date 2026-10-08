@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { toast } from "sonner";
 import {
+  changeRegistrationCategory,
   decideRegistration,
   setPaymentStatus,
 } from "@/actions/registration";
@@ -19,8 +20,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatDateTime } from "@/lib/format";
+import { playersPerTeam } from "@/services/registration";
 import type {
   Category,
   PaymentStatus,
@@ -32,6 +41,7 @@ import {
   Ban,
   Clock,
   Download,
+  ArrowRightLeft,
   ExternalLink,
   Search,
   Users,
@@ -287,6 +297,7 @@ export function RegistrationsManager({
         categoryName={
           openRow ? (categoryName.get(openRow.category_id) ?? "—") : ""
         }
+        categories={categories}
         canManage={canManage}
         onClose={() => setOpenRow(null)}
       />
@@ -300,12 +311,14 @@ function RegistrationDetail({
   tournamentId,
   registration,
   categoryName,
+  categories,
   canManage,
   onClose,
 }: {
   tournamentId: string;
   registration: RegistrationView | null;
   categoryName: string;
+  categories: Category[];
   canManage: boolean;
   onClose: () => void;
 }) {
@@ -538,6 +551,16 @@ function RegistrationDetail({
                 </Button>
               </div>
 
+              <ChangeCategory
+                tournamentId={tournamentId}
+                registration={r}
+                categories={categories}
+                onDone={() => {
+                  onClose();
+                  router.refresh();
+                }}
+              />
+
               <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
                 <Button asChild variant="ghost" size="sm">
                   <a href={`/r/${r.reference_code}`} target="_blank">
@@ -550,6 +573,110 @@ function RegistrationDetail({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+/**
+ * Move the entry to another category. Only categories that take the same
+ * number of players are offered, and a note is required — it replaces the
+ * team's status-page note so they can see why they were moved.
+ */
+function ChangeCategory({
+  tournamentId,
+  registration: r,
+  categories,
+  onDone,
+}: {
+  tournamentId: string;
+  registration: RegistrationView;
+  categories: Category[];
+  onDone: () => void;
+}) {
+  const [pending, startTransition] = useTransition();
+  const [target, setTarget] = useState("");
+  const [note, setNote] = useState("");
+
+  const options = categories.filter(
+    (c) =>
+      c.id !== r.category_id && playersPerTeam(c.format) === r.players.length,
+  );
+  const canSubmit = Boolean(target) && note.trim().length >= 3;
+
+  function submit() {
+    startTransition(async () => {
+      const res = await changeRegistrationCategory(tournamentId, r.id, {
+        category_id: target,
+        admin_note: note,
+      });
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      const name = categories.find((c) => c.id === target)?.name;
+      toast.success(`Moved to ${name ?? "the new category"}`);
+      onDone();
+    });
+  }
+
+  return (
+    <div className="space-y-2 rounded-xl border border-border p-3">
+      <span className="flex items-center gap-1.5 text-sm font-medium">
+        <ArrowRightLeft className="size-4" /> Change category
+      </span>
+      {r.participant_id ? (
+        <p className="text-xs text-muted-foreground">
+          This team is already on the Teams list. Remove it there before
+          moving it to another category.
+        </p>
+      ) : options.length === 0 ? (
+        <p className="text-xs text-muted-foreground">
+          No other category takes{" "}
+          {r.players.length === 1 ? "one player" : `${r.players.length} players`}{" "}
+          per entry.
+        </p>
+      ) : (
+        <>
+          <Select
+            items={options.map((c) => ({ value: c.id, label: c.name }))}
+            value={target || null}
+            onValueChange={(v) => setTarget(v ? String(v) : "")}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Choose a category" />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="space-y-1.5">
+            <Label htmlFor="category-note">
+              Reason (required, shown on their status page)
+            </Label>
+            <Textarea
+              id="category-note"
+              rows={2}
+              placeholder="e.g. Moved to Intermediate to match your skill level."
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={pending || !canSubmit}
+            onClick={submit}
+          >
+            Move registration
+          </Button>
+        </>
+      )}
+    </div>
   );
 }
 
