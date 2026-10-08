@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CategoryPicker } from "@/components/public/category-picker";
 import { RegistrationForm } from "@/components/public/registration-form";
 import { RegistrationSuccess } from "@/components/public/registration-success";
 import { RegistrationLookup } from "@/components/public/registration-lookup";
-import { cn } from "@/lib/utils";
 import type {
   PaymentDetails,
   RegistrationCategory,
@@ -13,12 +12,6 @@ import type {
 import { CircleSlash } from "lucide-react";
 
 type Step = "category" | "form" | "done";
-
-const STEPS: { key: Step; label: string }[] = [
-  { key: "category", label: "Category" },
-  { key: "form", label: "Team details" },
-  { key: "done", label: "Confirmation" },
-];
 
 /**
  * Three-step public registration: pick a category, fill the form for that
@@ -43,14 +36,30 @@ export function RegistrationFlow({
   const [referenceCode, setReferenceCode] = useState<string | null>(null);
   const [paidUpfront, setPaidUpfront] = useState(false);
   const [amountDue, setAmountDue] = useState(0);
+  const topRef = useRef<HTMLDivElement>(null);
+  const mounted = useRef(false);
+
+  // Switching screens keeps the old scroll position otherwise, which on a
+  // phone lands the registrant halfway down the next screen.
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [step]);
 
   return (
-    <div className="space-y-6">
-      <Stepper current={step} />
+    <div ref={topRef} className="scroll-mt-20 space-y-6">
 
       {step === "category" && (
         <div className="space-y-4">
-          <div>
+          <div className="space-y-1">
+            {categories.length > 0 && (
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                Register · Step 1
+              </p>
+            )}
             <h2 className="text-lg font-bold sm:text-xl">
               Choose your category
             </h2>
@@ -108,48 +117,6 @@ export function RegistrationFlow({
         />
       )}
     </div>
-  );
-}
-
-function Stepper({ current }: { current: Step }) {
-  const currentIndex = STEPS.findIndex((s) => s.key === current);
-  return (
-    <ol className="flex items-center gap-2 text-xs sm:gap-3 sm:text-sm">
-      {STEPS.map((s, i) => {
-        const done = i < currentIndex;
-        const active = i === currentIndex;
-        return (
-          <li key={s.key} className="flex flex-1 items-center gap-2">
-            <span
-              className={cn(
-                "flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold transition",
-                done && "bg-primary/20 text-primary",
-                active && "bg-primary text-primary-foreground",
-                !done && !active && "border border-border text-muted-foreground",
-              )}
-            >
-              {done ? "✓" : i + 1}
-            </span>
-            <span
-              className={cn(
-                "truncate font-medium",
-                active ? "text-foreground" : "text-muted-foreground",
-              )}
-            >
-              {s.label}
-            </span>
-            {i < STEPS.length - 1 && (
-              <span
-                className={cn(
-                  "hidden h-px flex-1 sm:block",
-                  done ? "bg-primary/40" : "bg-border",
-                )}
-              />
-            )}
-          </li>
-        );
-      })}
-    </ol>
   );
 }
 
