@@ -187,7 +187,8 @@ Public/live pages subscribe via the browser client (see `components/public/live-
   run the category's `event_date` is set to the **earliest** scheduled day.
 - `generateSchedule` also takes a `scope`: `category` (the tab's category, the
   default and the only scope `group_ids` applies to) or `tournament` (every
-  category still in `draft`, laid out one after another). Courts are shared
+  category still in `draft`, or just the ones in `category_ids`, laid out one
+  after another; drafts left out keep their slots and are scheduled around). Courts are shared
   venue-wide, so a tournament-wide run feeds each finished category's slots
   forward as `reserved` — including the knockout placeholders — and each
   category keeps its own `event_date`, with the form's date only filling in the

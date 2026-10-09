@@ -56,7 +56,8 @@ type CategoryRun = {
  *   it further to some of that category's groups, since groups play on
  *   different days: each day's groups are generated on their own run with
  *   their own date, and the groups left out keep the slots they already have.
- * - `tournament` — every category still in draft, laid out one after another.
+ * - `tournament` — every category still in draft (or the ones picked in
+ *   `cfg.category_ids`), laid out one after another.
  *   Courts are shared venue-wide, so each category is scheduled around the
  *   slots the earlier ones (and any already-started category) took, and
  *   nothing is double-booked. Categories keep their own play dates; the date
@@ -81,13 +82,21 @@ export async function generateSchedule(
 
     // A tournament-wide run only touches categories whose schedule is still
     // editable — once a group stage starts, its times and courts are locked.
+    // `category_ids` narrows it to the categories the organiser picked.
     const targets =
       cfg.scope === "tournament"
-        ? (categories ?? []).filter((c) => c.status === "draft")
+        ? (categories ?? []).filter(
+            (c) =>
+              c.status === "draft" &&
+              (cfg.category_ids.length === 0 ||
+                cfg.category_ids.includes(c.id)),
+          )
         : [active];
     if (targets.length === 0) {
       throw new ActionError(
-        "Every category has already started — schedules lock once the group stage begins.",
+        cfg.category_ids.length
+          ? "None of the selected categories is still in draft — schedules lock once the group stage begins."
+          : "Every category has already started — schedules lock once the group stage begins.",
       );
     }
 
@@ -122,7 +131,8 @@ export async function generateSchedule(
     const posByCourtId = new Map<string, number>();
     courtIdByPos.forEach((id, pos) => posByCourtId.set(id, pos));
 
-    // Slots held by categories this run doesn't touch (already started ones).
+    // Slots held by categories this run doesn't touch (already started ones,
+    // and drafts left out of the picked set).
     // A single-category run keeps its historical behaviour and ignores them:
     // organisers stagger start times themselves there.
     const occupied: Occupancy[] = [];

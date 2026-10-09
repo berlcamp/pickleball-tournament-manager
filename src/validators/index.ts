@@ -91,6 +91,9 @@ export const scheduleSchema = z.object({
   // the tournament that is still a draft. A tournament-wide run lays the
   // categories out one after another on the shared courts.
   scope: z.enum(["category", "tournament"]).default("category"),
+  // Which draft categories a tournament-wide run rebuilds. Empty means all of
+  // them; the ones left out keep their slots and are scheduled around.
+  category_ids: z.array(z.string().uuid()).default([]),
   // Which of the category's groups to (re)schedule. Empty means all of them —
   // groups left out keep the times and dates they already have. Ignored by a
   // tournament-wide run, which always takes whole categories.

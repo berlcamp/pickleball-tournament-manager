@@ -73,13 +73,29 @@ export function ScheduleGenerator({
   const [groupIds, setGroupIds] = useState<string[]>([]);
   // How far the run reaches: this category, or every category still in draft.
   const [scope, setScope] = useState<Scope>("category");
+  // Which draft categories a multi-category run rebuilds. Starts with all of
+  // them; the ones left out keep their schedule and are scheduled around.
+  const [categoryIds, setCategoryIds] = useState<string[]>(() =>
+    draftCategories.map((c) => c.id),
+  );
   const [confirmAll, setConfirmAll] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const wholeTournament = scope === "tournament";
   // The group filter only applies to a single-category run.
   const allGroups = groupIds.length === 0 || wholeTournament;
-  const otherCount = Math.max(0, draftCategories.length - 1);
+  const pickedCategories = draftCategories.filter((c) =>
+    categoryIds.includes(c.id),
+  );
+  const everyCategory = pickedCategories.length === draftCategories.length;
+
+  function toggleCategory(id: string) {
+    setCategoryIds((current) =>
+      current.includes(id)
+        ? current.filter((c) => c !== id)
+        : [...current, id],
+    );
+  }
 
   function toggleGroup(id: string) {
     setGroupIds((current) =>
@@ -102,6 +118,7 @@ export function ScheduleGenerator({
         schedule_mode: mode,
         knockout_rounds: knockout,
         scope,
+        category_ids: wholeTournament ? categoryIds : [],
         group_ids: wholeTournament ? [] : groupIds,
       });
       if (!res.ok) { toast.error(res.error); return; }
@@ -146,9 +163,14 @@ export function ScheduleGenerator({
           <p className="text-sm text-muted-foreground">
             {wholeTournament ? (
               <>
-                Builds the schedule for <strong>every category</strong> still in
-                draft — each one laid out after the last on the shared courts,
-                so no court is double-booked.
+                Builds the schedule for{" "}
+                <strong>
+                  {everyCategory
+                    ? "every category"
+                    : `${pickedCategories.length} ${pickedCategories.length === 1 ? "category" : "categories"}`}
+                </strong>{" "}
+                still in draft — each one laid out after the last on the shared
+                courts, so no court is double-booked.
               </>
             ) : (
               <>
@@ -163,7 +185,7 @@ export function ScheduleGenerator({
       {draftCategories.length > 1 && (
         <Field
           label="Apply to"
-          hint="This category schedules on its own, exactly as before. All categories rebuilds every category still in draft in one run, laying each out around the slots the earlier ones took — categories that have already started keep their locked times."
+          hint="This category schedules on its own, exactly as before. Choose categories rebuilds the categories you pick (all drafts by default) in one run, laying each out around the slots the earlier ones took — categories left out, and ones that have already started, keep their times."
         >
           <div className="flex flex-wrap gap-2">
             <GroupChip
@@ -176,13 +198,40 @@ export function ScheduleGenerator({
               selected={wholeTournament}
               onClick={() => setScope("tournament")}
             >
-              All categories ({draftCategories.length})
+              Choose categories
             </GroupChip>
           </div>
+          {wholeTournament && (
+            <div className="flex flex-wrap gap-2 pt-1">
+              <GroupChip
+                selected={everyCategory}
+                onClick={() =>
+                  setCategoryIds(
+                    everyCategory ? [] : draftCategories.map((c) => c.id),
+                  )
+                }
+              >
+                All ({draftCategories.length})
+              </GroupChip>
+              {draftCategories.map((c) => (
+                <GroupChip
+                  key={c.id}
+                  selected={categoryIds.includes(c.id)}
+                  onClick={() => toggleCategory(c.id)}
+                >
+                  {c.name}
+                </GroupChip>
+              ))}
+            </div>
+          )}
           <p className="text-xs text-muted-foreground">
-            {wholeTournament
-              ? `${categoryName} and ${otherCount} other ${otherCount === 1 ? "category" : "categories"} are rebuilt together, one after another on the same courts.`
-              : "Only this category is rebuilt; every other category keeps its schedule."}
+            {!wholeTournament
+              ? "Only this category is rebuilt; every other category keeps its schedule."
+              : pickedCategories.length === 0
+                ? "Pick at least one category."
+                : everyCategory
+                  ? "Every draft category is rebuilt together, one after another on the same courts."
+                  : "The selected categories are rebuilt one after another on the same courts; the rest keep their schedule and are scheduled around."}
           </p>
         </Field>
       )}
@@ -343,12 +392,14 @@ export function ScheduleGenerator({
 
       <Button
         onClick={() => (wholeTournament ? setConfirmAll(true) : generate())}
-        disabled={pending}
+        disabled={pending || (wholeTournament && pickedCategories.length === 0)}
       >
         {pending
           ? "Building schedule…"
           : wholeTournament
-            ? "Generate all categories"
+            ? everyCategory
+              ? "Generate all categories"
+              : `Generate ${pickedCategories.length} ${pickedCategories.length === 1 ? "category" : "categories"}`
             : allGroups
               ? "Generate schedule"
               : `Generate ${groupIds.length} ${groupIds.length === 1 ? "group" : "groups"}`}
@@ -359,12 +410,16 @@ export function ScheduleGenerator({
       <Dialog open={confirmAll} onOpenChange={setConfirmAll}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Rebuild every category&apos;s schedule?</DialogTitle>
+            <DialogTitle>
+              {everyCategory
+                ? "Rebuild every category\u2019s schedule?"
+                : "Rebuild the selected categories\u2019 schedules?"}
+            </DialogTitle>
             <DialogDescription>
               This replaces the match times and courts of{" "}
-              {draftCategories.map((c) => c.name).join(", ")}. Each category is
-              laid out after the last on the same courts. Categories that have
-              already started keep their locked schedule.
+              {pickedCategories.map((c) => c.name).join(", ")}. Each category is
+              laid out after the last on the same courts. Categories left out,
+              and ones that have already started, keep their schedule.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -372,7 +427,7 @@ export function ScheduleGenerator({
               Cancel
             </DialogClose>
             <Button onClick={generate} disabled={pending}>
-              {pending ? "Building schedule…" : "Generate all categories"}
+              {pending ? "Building schedule…" : "Generate"}
             </Button>
           </DialogFooter>
         </DialogContent>
