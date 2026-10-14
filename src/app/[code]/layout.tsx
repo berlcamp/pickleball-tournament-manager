@@ -1,14 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { getTournamentByPublicRef, getPublicCategories } from "@/lib/data";
 import { portalMetadata } from "./portal-metadata";
 import { PublicTabs } from "@/components/public/public-tabs";
 import { LiveRefresh } from "@/components/public/live-refresh";
 import { TournamentBanner } from "@/components/public/tournament-banner";
 import { PublicFooter } from "@/components/public/public-footer";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { Trophy } from "lucide-react";
+import { PublicHeader } from "@/components/public/public-header";
 
 /**
  * Link previews for the portal. Facebook, Messenger and Viber all build their
@@ -49,32 +47,19 @@ export default async function PublicTournamentLayout({
   const categories = await getPublicCategories(tournament.id);
 
   return (
-    <div className="min-h-screen">
+    <div className="flex min-h-screen flex-col">
       {/* Sticky so the brand stays put while a long registration form scrolls. */}
-      <header className="glass sticky top-0 z-40 border-b border-border">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-2 sm:px-6">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-sm font-bold"
-          >
-            <Trophy className="size-4 shrink-0 text-primary" />
-            <span className="text-gradient">PicklePro</span>
-            <span className="font-normal text-muted-foreground">
-              by Sortbrite
-            </span>
-          </Link>
-          <ThemeToggle />
-        </div>
-      </header>
+      <PublicHeader />
 
-      <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-4 pb-6 sm:px-6 sm:pt-6">
         {/* The banner carries the tournament identity across every tab. */}
         <TournamentBanner tournament={tournament} categories={categories} />
-        <div>
+        {/* Tabs stick under the header; the page scrolls beneath them. */}
+        <div className="mt-4">
           <PublicTabs code={code} />
-          <div className="pt-6">{children}</div>
+          <div className="pt-4 sm:pt-6">{children}</div>
         </div>
-      </div>
+      </main>
 
       <PublicFooter />
 

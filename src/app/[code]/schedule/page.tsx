@@ -5,7 +5,9 @@ import { loadSchedule } from "@/lib/tournament-data";
 import { getTournamentRole } from "@/lib/auth";
 import { roleAtLeast } from "@/lib/constants";
 import { ScheduleTable } from "@/components/tournament/schedule-table";
-import { EyeOff } from "lucide-react";
+import { CalendarClock, EyeOff } from "lucide-react";
+import { EmptyState } from "@/components/public/empty-state";
+import { ScheduleSpotlight } from "@/components/public/schedule-spotlight";
 import { portalMetadata } from "../portal-metadata";
 
 /**
@@ -49,9 +51,10 @@ export default async function PublicSchedulePage({
 
   if (!tournament.show_public_schedule && !isStaff) {
     return (
-      <p className="glass rounded-2xl p-10 text-center text-muted-foreground">
-        The match schedule is currently unavailable.
-      </p>
+      <EmptyState icon={EyeOff} title="Schedule hidden for now">
+        The organizer will publish the match schedule here. Check back closer to
+        game day.
+      </EmptyState>
     );
   }
 
@@ -63,18 +66,30 @@ export default async function PublicSchedulePage({
   return (
     <div className="space-y-6">
       {isStaff && (
-        <div className="glass flex items-center gap-2 rounded-2xl p-4 text-sm text-muted-foreground">
-          <EyeOff className="size-4 shrink-0" />
+        <div className="flex items-start gap-2.5 rounded-2xl border border-warning/40 bg-warning/10 p-4 text-sm text-foreground">
+          <EyeOff className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
           This schedule is hidden from the public. You can see it because
           you&apos;re signed in as tournament staff.
         </div>
       )}
       {rows.length === 0 ? (
-        <p className="glass rounded-2xl p-10 text-center text-muted-foreground">
-          The schedule hasn’t been published yet. Check back soon!
-        </p>
+        <EmptyState icon={CalendarClock} title="No matches scheduled yet">
+          Match times and courts appear here once the organizer builds the
+          schedule. Check back soon!
+        </EmptyState>
       ) : (
-        <ScheduleTable rows={rows} />
+        <>
+          <ScheduleSpotlight rows={rows} />
+          <section aria-labelledby="full-schedule" className="space-y-3">
+            <h2
+              id="full-schedule"
+              className="text-2xl font-bold uppercase leading-none"
+            >
+              Full schedule
+            </h2>
+            <ScheduleTable rows={rows} />
+          </section>
+        </>
       )}
     </div>
   );

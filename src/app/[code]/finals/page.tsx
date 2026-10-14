@@ -10,6 +10,8 @@ import { loadFinals, loadFinalsPreview } from "@/lib/tournament-data";
 import { CategoryFilter } from "@/components/public/category-filter";
 import { BracketView } from "@/components/tournament/bracket-view";
 import { Podium } from "@/components/tournament/podium";
+import { Info, Layers, Network } from "lucide-react";
+import { EmptyState } from "@/components/public/empty-state";
 import { portalMetadata } from "../portal-metadata";
 
 /** Own title and canonical so this tab is indexed as its own page. */
@@ -41,9 +43,9 @@ export default async function PublicFinalsPage({
 
   if (!active) {
     return (
-      <p className="glass rounded-2xl p-10 text-center text-muted-foreground">
-        No categories have been set up yet.
-      </p>
+      <EmptyState icon={Layers} title="Nothing to show yet">
+        The organizer hasn&apos;t set up any categories for this tournament.
+      </EmptyState>
     );
   }
 
@@ -56,9 +58,14 @@ export default async function PublicFinalsPage({
     rounds.length === 0 ? await loadFinalsPreview(db, active.id) : [];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <CategoryFilter categories={categories} activeId={active.id} />
       <Podium placements={placements} />
+      {(rounds.length > 0 || preview.length > 0) && (
+        <h2 className="text-2xl font-bold uppercase leading-none">
+          {rounds.length > 0 ? "Finals bracket" : "Projected bracket"}
+        </h2>
+      )}
       {rounds.length > 0 ? (
         <BracketView
           key={active.id}
@@ -68,10 +75,13 @@ export default async function PublicFinalsPage({
         />
       ) : preview.length > 0 ? (
         <div className="space-y-4">
-          <p className="glass rounded-2xl p-4 text-center text-sm text-muted-foreground">
-            Projected bracket — each slot shows the group and finishing position
-            that will fill it. It moves with the standings until the group stage
-            ends.
+          <p className="flex items-start gap-2.5 rounded-2xl border border-chart-2/30 bg-chart-2/8 p-4 text-sm text-foreground">
+            <Info className="mt-0.5 size-4 shrink-0 text-chart-2" aria-hidden />
+            <span>
+              Each slot shows the group and finishing position that will fill
+              it — <span className="font-semibold">A1</span> is Group A&apos;s
+              winner. It moves with the standings until the group stage ends.
+            </span>
           </p>
           <BracketView
             key={active.id}
@@ -81,9 +91,10 @@ export default async function PublicFinalsPage({
           />
         </div>
       ) : (
-        <p className="glass rounded-2xl p-10 text-center text-muted-foreground">
-          The finals bracket hasn’t been drawn yet. Check back soon!
-        </p>
+        <EmptyState icon={Network} title="Bracket not drawn yet">
+          The knockout bracket appears here once the group stage is set. Check
+          back soon!
+        </EmptyState>
       )}
     </div>
   );

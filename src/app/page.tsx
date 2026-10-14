@@ -7,8 +7,9 @@ import { loadShowcaseTournaments } from "@/lib/data";
 import { TournamentMarquee } from "@/components/marketing/tournament-marquee";
 import { requestOrigin } from "@/lib/site-url";
 import { SITE_NAME, SITE_TITLE, SITE_DESCRIPTION } from "@/lib/seo";
+import { BrandMark } from "@/components/brand-mark";
 import {
-  Trophy,
+  ArrowRight,
   CalendarClock,
   Users,
   BarChart3,
@@ -152,16 +153,8 @@ export default async function Home() {
           __html: JSON.stringify(structuredData(origin)),
         }}
       />
-      <header className="mx-auto flex w-full max-w-6xl items-center justify-between p-6">
-        <div className="flex items-center gap-2 text-lg font-bold">
-          <span className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground">
-            <Trophy className="size-5" />
-          </span>
-          <span className="text-gradient">PicklePro</span>
-          <span className="hidden text-sm font-normal text-muted-foreground sm:inline">
-            by Sortbrite
-          </span>
-        </div>
+      <header className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
+        <BrandMark />
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <Button asChild>
@@ -172,63 +165,129 @@ export default async function Home() {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col items-center px-6">
-        <section className="flex flex-col items-center py-20 text-center">
-          <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-border/70 bg-card/50 px-4 py-1.5 text-xs font-medium text-muted-foreground sm:text-sm">
-            <Sparkles className="size-4 text-primary" />
-            An alternative to Challonge, built around pickleball
-          </span>
-          <h1 className="max-w-3xl text-5xl font-extrabold tracking-tight sm:text-6xl">
-            Run <span className="text-gradient">pickleball tournaments</span>{" "}
-            without the spreadsheets
-          </h1>
-          <p className="mt-6 max-w-2xl text-lg text-muted-foreground">
-            Round robin groups, finals brackets, smart court scheduling and live
-            public standings. Built for organizers, loved by players.
-          </p>
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-            <Button
-              asChild
-              size="lg"
-              className="h-13 rounded-xl px-8 text-base font-semibold shadow-lg shadow-primary/25 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/35"
-            >
-              <Link href={user ? "/dashboard/tournaments/new" : "/login"}>
-                Create a tournament
-              </Link>
-            </Button>
+      <main className="flex w-full flex-1 flex-col items-center">
+        {/* ---------- hero: the court ---------- */}
+        <section className="w-full px-4 sm:px-6">
+          <div className="relative isolate mx-auto max-w-6xl overflow-hidden rounded-3xl bg-court text-court-foreground shadow-raised">
+            <div className="bg-court-lines absolute inset-0 -z-10 opacity-70" aria-hidden />
+            <div className="grid items-center gap-10 px-6 py-12 sm:px-10 sm:py-16 lg:grid-cols-[1.25fr_1fr] lg:py-20">
+              <div>
+                <span className="inline-flex items-center gap-2 rounded-full bg-ball px-3 py-1 font-heading text-xs font-bold uppercase tracking-[0.12em] text-ball-foreground sm:text-sm">
+                  <Sparkles className="size-3.5" aria-hidden />
+                  <span className="sm:hidden">A Challonge alternative</span>
+                  <span className="hidden sm:inline">
+                    A Challonge alternative, built for pickleball
+                  </span>
+                </span>
+                <h1 className="mt-5 text-balance text-5xl font-bold uppercase leading-[0.9] sm:text-6xl lg:text-7xl">
+                  Run pickleball tournaments{" "}
+                  <span className="text-ball">without the spreadsheets</span>
+                </h1>
+                <p className="mt-5 max-w-xl text-base text-court-foreground/85 sm:text-lg">
+                  Round robin groups, finals brackets, smart court scheduling and
+                  live public standings. Built for organizers, loved by players.
+                </p>
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                  <Button
+                    asChild
+                    size="lg"
+                    className="h-13 rounded-xl bg-ball px-7 text-base font-bold text-ball-foreground shadow-none hover:bg-[color-mix(in_oklch,var(--ball),white_15%)] sm:h-13"
+                  >
+                    <Link href={user ? "/dashboard/tournaments/new" : "/login"}>
+                      Create a tournament <ArrowRight className="size-4" aria-hidden />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+
+              {/* A sample scoreboard — what players see on the public link. */}
+              <div
+                aria-hidden
+                className="hidden rounded-2xl bg-card p-4 text-card-foreground shadow-raised lg:block"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="eyebrow">Group A · Live</span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-ball px-2 py-0.5 font-heading text-xs font-bold uppercase tracking-[0.1em] text-ball-foreground">
+                    <span className="size-1.5 rounded-full bg-ball-foreground" />
+                    Live
+                  </span>
+                </div>
+                <ol className="mt-3 divide-y divide-border">
+                  {[
+                    ["1", "Dink Dynasty", "3-0", "+18"],
+                    ["2", "Kitchen Kings", "2-1", "+7"],
+                    ["3", "Third Shot Drop", "1-2", "-5"],
+                    ["4", "Erne Express", "0-3", "-20"],
+                  ].map(([rank, team, rec, diff]) => (
+                    <li key={rank} className="flex items-center gap-3 py-2.5">
+                      <span
+                        className={`scoreboard grid size-7 place-items-center rounded-md text-sm font-bold ${Number(rank) <= 2 ? "bg-court text-court-foreground" : "bg-muted text-muted-foreground"}`}
+                      >
+                        {rank}
+                      </span>
+                      <span className="flex-1 truncate text-sm font-semibold">
+                        {team}
+                      </span>
+                      <span className="scoreboard text-lg font-bold">{rec}</span>
+                      <span className="scoreboard w-10 text-right text-sm text-muted-foreground">
+                        {diff}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </div>
           </div>
         </section>
 
-        <section className="grid w-full gap-5 pb-20 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((f) => (
-            <div
-              key={f.title}
-              className={`group glass relative overflow-hidden rounded-3xl p-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl ${f.glow}`}
-            >
-              <span
-                className={`mb-5 grid size-13 place-items-center rounded-2xl transition-transform duration-300 group-hover:scale-110 ${f.iconBg}`}
+        {/* ---------- features ---------- */}
+        <section
+          aria-labelledby="features-heading"
+          className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 sm:py-20"
+        >
+          <p className="eyebrow text-primary">Everything on one court</p>
+          <h2
+            id="features-heading"
+            className="mt-1 text-4xl font-bold uppercase leading-none sm:text-5xl"
+          >
+            From sign-up to champion
+          </h2>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.map((f) => (
+              <div
+                key={f.title}
+                className={`group glass relative overflow-hidden rounded-2xl p-6 transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-raised ${f.glow}`}
               >
-                <f.icon className="size-6" />
-              </span>
-              <h3 className="text-lg font-semibold tracking-tight">
-                {f.title}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                {f.desc}
-              </p>
-            </div>
-          ))}
+                <span
+                  className={`mb-4 grid size-12 place-items-center rounded-xl ${f.iconBg}`}
+                >
+                  <f.icon className="size-6" aria-hidden />
+                </span>
+                <h3 className="font-heading text-xl font-bold uppercase leading-tight tracking-wide">
+                  {f.title}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  {f.desc}
+                </p>
+              </div>
+            ))}
+          </div>
         </section>
 
-        <TournamentMarquee tournaments={showcase} />
+        <div className="w-full max-w-6xl px-4 sm:px-6">
+          <TournamentMarquee tournaments={showcase} />
+        </div>
       </main>
 
-      <footer className="border-t border-border/50 py-12 text-center">
-        <QrCode className="mx-auto mb-4 size-6 text-primary opacity-70" />
-        <p className="text-xl font-semibold tracking-tight sm:text-2xl">
+      <footer className="border-t border-border bg-card/60 px-4 py-12 text-center">
+        <QrCode className="mx-auto mb-4 size-6 text-primary" aria-hidden />
+        <p className="font-heading text-2xl font-bold uppercase tracking-wide sm:text-3xl">
           Built by a pickleball player{" "}
-          <span className="text-gradient">for pickleball players</span>
+          <span className="text-primary">for pickleball players</span>
         </p>
+        <div className="mt-6 flex justify-center">
+          <BrandMark />
+        </div>
       </footer>
     </div>
   );

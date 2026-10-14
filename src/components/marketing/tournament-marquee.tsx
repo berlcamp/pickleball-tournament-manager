@@ -48,8 +48,9 @@ export function TournamentMarquee({
   return (
     <section className="w-full pb-24">
       <div className="mb-7 flex flex-col items-center text-center">
-        <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-          Real tournaments, <span className="text-gradient">already run</span>
+        <p className="eyebrow text-primary">On court now</p>
+        <h2 className="mt-1 text-3xl font-bold uppercase leading-none sm:text-4xl">
+          Real tournaments, <span className="text-primary">already run</span>
         </h2>
       </div>
 
@@ -95,7 +96,7 @@ function ShowcaseCard({
     <li className="shrink-0">
       <article className="glass flex h-full w-56 flex-col overflow-hidden rounded-2xl sm:w-60">
         <div
-          className="relative h-24 bg-gradient-to-br from-primary/35 via-chart-2/25 to-chart-4/20"
+          className="bg-court-lines relative h-24 bg-court"
           style={
             t.banner
               ? {
@@ -108,15 +109,15 @@ function ShowcaseCard({
         >
           {/* Tournaments without a banner get the gradient and a watermark. */}
           {!t.banner && (
-            <Trophy className="absolute -bottom-2 -right-1 size-16 text-primary/20" />
+            <Trophy className="absolute -bottom-2 -right-1 size-16 text-ball/30" />
           )}
         </div>
 
         <div className="flex flex-1 flex-col gap-3 p-4">
-          <h3 className="line-clamp-2 text-sm font-semibold leading-snug tracking-tight">
+          <h3 className="line-clamp-2 font-heading text-base font-bold uppercase leading-tight tracking-wide">
             {t.name}
           </h3>
-          <footer className="mt-auto flex items-center gap-1.5 text-[9px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+          <footer className="mt-auto flex items-center gap-1.5 font-heading text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             <span className={`size-1.5 rounded-full ${STAGE_DOT[t.status]}`} />
             {STAGE_LABEL[t.status]}
           </footer>

@@ -48,7 +48,7 @@ export function CategoryFilter({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       {pending && switchingTo && (
         <LoadingOverlay
           icon={Layers}
@@ -57,8 +57,8 @@ export function CategoryFilter({
         />
       )}
 
-      <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        <Layers className="size-3.5" />
+      <div className="eyebrow flex items-center gap-1.5">
+        <Layers className="size-3.5" aria-hidden />
         Category
       </div>
 

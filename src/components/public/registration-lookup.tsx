@@ -29,10 +29,13 @@ export function RegistrationLookup() {
       className="glass flex flex-col gap-3 rounded-2xl p-5 sm:flex-row sm:items-end"
     >
       <div className="flex-1 space-y-1.5">
-        <label htmlFor="lookup-code" className="text-sm font-medium">
+        <label
+          htmlFor="lookup-code"
+          className="block font-heading text-lg font-bold uppercase tracking-wide"
+        >
           Already registered?
         </label>
-        <p className="text-xs text-muted-foreground">
+        <p id="lookup-code-hint" className="text-sm text-muted-foreground">
           Enter your reference code to check your status or upload a payment.
         </p>
         <Input
@@ -40,12 +43,19 @@ export function RegistrationLookup() {
           placeholder="PKL-XXXX-XXXX"
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          className="font-mono uppercase tracking-wider"
+          className="h-12 rounded-xl font-mono text-base uppercase tracking-wider sm:h-11"
           autoComplete="off"
+          autoCapitalize="characters"
+          spellCheck={false}
+          aria-describedby="lookup-code-hint"
         />
       </div>
-      <Button type="submit" variant="outline" className="sm:mb-0">
-        <Search className="size-4" /> Check status
+      <Button
+        type="submit"
+        variant="outline"
+        className="h-12 rounded-xl sm:h-11"
+      >
+        <Search className="size-4" aria-hidden /> Check status
       </Button>
     </form>
   );

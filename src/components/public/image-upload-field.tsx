@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { downscaleImage } from "@/lib/image-resize";
 import { cn } from "@/lib/utils";
-import { Camera, Loader2, X } from "lucide-react";
+import { Camera, CircleAlert, Loader2, X } from "lucide-react";
 
 const MAX_BYTES = 15 * 1024 * 1024;
 
@@ -68,9 +68,13 @@ export function ImageUploadField({
   return (
     <div className="space-y-1.5">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-sm font-medium">
+        <span className="text-sm font-semibold">
           {label}
-          {required && <span className="ml-0.5 text-destructive">*</span>}
+          {required && (
+            <span className="ml-0.5 text-destructive" aria-hidden>
+              *
+            </span>
+          )}
         </span>
         {hint && (
           <span className="text-xs text-muted-foreground">{hint}</span>
@@ -128,11 +132,13 @@ export function ImageUploadField({
           type="button"
           disabled={busy}
           onClick={() => inputRef.current?.click()}
+          aria-label={`${label}${required ? " (required)" : ""}: tap to upload a photo`}
           className={cn(
-            "flex h-28 w-full flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed text-muted-foreground transition",
+            "flex h-32 w-full flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed bg-muted/40 text-muted-foreground transition-colors duration-150",
+            "focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.99]",
             error
               ? "border-destructive/60 text-destructive"
-              : "border-border hover:border-primary/50 hover:text-foreground",
+              : "border-border hover:border-primary/60 hover:bg-primary/5 hover:text-foreground",
           )}
         >
           {busy ? (
@@ -142,15 +148,24 @@ export function ImageUploadField({
             </>
           ) : (
             <>
-              <Camera className="size-5" />
-              <span className="text-sm">Tap to upload a photo</span>
+              <span className="grid size-10 place-items-center rounded-full bg-primary text-primary-foreground">
+                <Camera className="size-5" aria-hidden />
+              </span>
+              <span className="text-sm font-semibold text-foreground">
+                Tap to upload a photo
+              </span>
               <span className="text-xs">JPG or PNG, up to 15MB</span>
             </>
           )}
         </button>
       )}
 
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && (
+        <p className="flex items-center gap-1.5 text-sm font-medium text-destructive">
+          <CircleAlert className="size-4 shrink-0" aria-hidden />
+          {error}
+        </p>
+      )}
     </div>
   );
 }

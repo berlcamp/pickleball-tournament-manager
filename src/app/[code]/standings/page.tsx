@@ -10,6 +10,8 @@ import { loadGroupStage, loadFinals } from "@/lib/tournament-data";
 import { PublicStandings } from "@/components/public/public-standings";
 import { CategoryFilter } from "@/components/public/category-filter";
 import { Podium } from "@/components/tournament/podium";
+import { Layers } from "lucide-react";
+import { EmptyState } from "@/components/public/empty-state";
 import { portalMetadata } from "../portal-metadata";
 
 /** Own title and canonical so this tab is indexed as its own page. */
@@ -41,9 +43,9 @@ export default async function PublicStandingsPage({
 
   if (!active) {
     return (
-      <p className="glass rounded-2xl p-10 text-center text-muted-foreground">
-        No categories have been set up yet.
-      </p>
+      <EmptyState icon={Layers} title="Nothing to show yet">
+        The organizer hasn&apos;t set up any categories for this tournament.
+      </EmptyState>
     );
   }
 
@@ -54,7 +56,7 @@ export default async function PublicStandingsPage({
   ]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <CategoryFilter categories={categories} activeId={active.id} />
       <Podium placements={finals.placements} />
       <PublicStandings

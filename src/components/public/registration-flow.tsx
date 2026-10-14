@@ -9,6 +9,7 @@ import type {
   PaymentDetails,
   RegistrationCategory,
 } from "@/components/public/registration-types";
+import { EmptyState } from "@/components/public/empty-state";
 import { CircleSlash } from "lucide-react";
 
 type Step = "category" | "form" | "done";
@@ -50,17 +51,14 @@ export function RegistrationFlow({
   }, [step]);
 
   return (
-    <div ref={topRef} className="scroll-mt-20 space-y-6">
-
+    <div ref={topRef} className="scroll-mt-36 space-y-6">
       {step === "category" && (
         <div className="space-y-4">
           <div className="space-y-1">
             {categories.length > 0 && (
-              <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                Register · Step 1
-              </p>
+              <p className="eyebrow text-primary">Register · Step 1</p>
             )}
-            <h2 className="text-lg font-bold sm:text-xl">
+            <h2 className="text-3xl font-bold uppercase leading-none">
               Choose your category
             </h2>
             <p className="text-sm text-muted-foreground">
@@ -79,15 +77,16 @@ export function RegistrationFlow({
               }}
             />
           ) : totalCategories === 0 ? (
-            <EmptyState
-              title="No categories yet"
-              body="The organizer hasn't set up any categories for this tournament."
-            />
+            <EmptyState icon={CircleSlash} title="No categories yet">
+              The organizer hasn&apos;t set up any categories for this
+              tournament.
+            </EmptyState>
           ) : (
-            <EmptyState
-              title="Registration is closed"
-              body="No category is accepting entries right now. Check the standings and schedule tabs for the latest updates, or look up your reference code below if you already registered."
-            />
+            <EmptyState icon={CircleSlash} title="Registration is closed">
+              No category is accepting entries right now. Check the standings
+              and schedule tabs for the latest, or look up your reference code
+              below if you already registered.
+            </EmptyState>
           )}
 
           <RegistrationLookup />
@@ -116,16 +115,6 @@ export function RegistrationFlow({
           amountDue={amountDue}
         />
       )}
-    </div>
-  );
-}
-
-function EmptyState({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="glass flex flex-col items-center gap-2 rounded-2xl p-8 text-center">
-      <CircleSlash className="size-6 text-muted-foreground" />
-      <h3 className="font-semibold">{title}</h3>
-      <p className="max-w-md text-sm text-muted-foreground">{body}</p>
     </div>
   );
 }

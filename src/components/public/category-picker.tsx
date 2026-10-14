@@ -44,9 +44,9 @@ export function CategoryPicker({
               type="button"
               onClick={() => onSelect(category)}
               className={cn(
-                "group relative w-full overflow-hidden rounded-2xl border border-border bg-card/80 text-left shadow-lg backdrop-blur-xl",
-                "transition-all duration-150 active:scale-[0.985] active:brightness-110",
-                "hover:border-primary/50 hover:shadow-2xl",
+                "group relative w-full overflow-hidden rounded-2xl border border-border bg-card text-left shadow-card",
+                "transition-[border-color,box-shadow,transform] duration-150 active:scale-[0.985]",
+                "hover:border-primary/50 hover:shadow-raised",
                 "focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
               )}
             >
@@ -69,10 +69,10 @@ export function CategoryPicker({
                   </span>
 
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-balance text-base font-bold leading-tight sm:text-lg">
+                    <h3 className="text-balance font-heading text-xl font-bold uppercase leading-none tracking-wide">
                       {category.name}
                     </h3>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       {FORMAT_DESCRIPTIONS[category.format]}
                     </p>
                     {category.eventDate && (
@@ -83,15 +83,15 @@ export function CategoryPicker({
                     )}
                   </div>
 
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                    <ChevronRight className="size-4" />
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform duration-150 group-hover:translate-x-0.5">
+                    <ChevronRight className="size-5" aria-hidden />
                   </span>
                 </div>
 
                 <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-border pt-3">
                   {category.fee > 0 ? (
                     <span className="inline-flex items-baseline gap-1.5">
-                      <span className="text-xl font-bold">
+                      <span className="scoreboard text-2xl font-bold leading-none">
                         {formatCurrency(
                           feePerPlayer(category.fee, category.format),
                         )}
@@ -101,7 +101,7 @@ export function CategoryPicker({
                       </span>
                     </span>
                   ) : (
-                    <span className="rounded-full bg-primary/15 px-2.5 py-1 text-sm font-bold text-primary">
+                    <span className="rounded-full bg-primary/12 px-2.5 py-1 font-heading text-sm font-bold uppercase tracking-wide text-primary">
                       Free entry
                     </span>
                   )}
@@ -137,13 +137,13 @@ function Chip({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.7rem] font-medium",
+        "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium",
         tone === "warning"
           ? "bg-warning/15 text-warning"
-          : "bg-muted/60 text-muted-foreground",
+          : "bg-muted text-muted-foreground",
       )}
     >
-      <Icon className="size-3" />
+      <Icon className="size-3.5" aria-hidden />
       {children}
     </span>
   );

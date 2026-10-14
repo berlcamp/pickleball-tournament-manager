@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ImageUploadField } from "@/components/public/image-upload-field";
+import { StepProgress } from "@/components/public/step-progress";
 import { submitRegistration } from "@/actions/registration";
 import { publicRegistrationSchema } from "@/validators/registration";
 import {
@@ -26,6 +27,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
+  CircleAlert,
   Copy,
   Info,
   Loader2,
@@ -49,7 +51,7 @@ type StepKey = "players" | "contact" | "payment";
 type Errors = Record<string, string>;
 
 /** Touch-sized field: the shared Input is compact for the dashboard. */
-const FIELD = "h-11 rounded-xl px-3.5 text-base";
+const FIELD = "h-12 rounded-xl px-3.5 text-base sm:h-11";
 
 /**
  * Error keys → the element that should take focus when that error is the
@@ -290,51 +292,37 @@ export function RegistrationForm({
   };
 
   // Category choice counts as step 1 of the whole flow.
-  const totalSteps = steps.length + 1;
   const currentStep = stepIndex + 2;
+  const STEP_LABEL: Record<StepKey, string> = {
+    players: isTeam ? "Players" : "Player",
+    contact: "Contact",
+    payment: "Payment",
+  };
+  const stepLabels = ["Category", ...steps.map((k) => STEP_LABEL[k])];
+  // Photos make the request slow on mobile data — say so on the button.
+  const sendsPhotos = Boolean(proof) || players.some((p) => p.id_photo);
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-4">
-      <div ref={topRef} className="scroll-mt-20 space-y-4">
+      <div ref={topRef} className="scroll-mt-36 space-y-4">
         {/* ---------- progress ---------- */}
-        <div className="space-y-2.5">
-          <div className="flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={goBack}
-              className="-ml-2 inline-flex h-10 items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-            >
-              <ArrowLeft className="size-4" />
-              {stepIndex === 0 ? "Categories" : "Back"}
-            </button>
-            <span className="text-xs font-medium text-muted-foreground">
-              Step {currentStep} of {totalSteps}
-            </span>
-          </div>
-          <div
-            className="flex gap-1.5"
-            role="progressbar"
-            aria-label="Registration progress"
-            aria-valuemin={1}
-            aria-valuemax={totalSteps}
-            aria-valuenow={currentStep}
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={goBack}
+            className="-ml-2 inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           >
-            {Array.from({ length: totalSteps }, (_, i) => (
-              <span
-                key={i}
-                className={cn(
-                  "h-1.5 flex-1 rounded-full transition-colors duration-300",
-                  i < currentStep ? "bg-primary" : "bg-muted",
-                )}
-              />
-            ))}
-          </div>
+            <ArrowLeft className="size-4" aria-hidden />
+            {stepIndex === 0 ? "Back to categories" : "Back"}
+          </button>
+          <StepProgress steps={stepLabels} current={currentStep - 1} />
         </div>
 
         {/* ---------- chosen category ---------- */}
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card/50 px-4 py-3">
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-card">
           <div className="min-w-0">
-            <div className="truncate text-sm font-semibold">
+            <div className="eyebrow">Your category</div>
+            <div className="truncate font-heading text-lg font-bold uppercase leading-tight tracking-wide">
               {category.name}
             </div>
             <div className="truncate text-xs text-muted-foreground">
@@ -352,7 +340,7 @@ export function RegistrationForm({
           <button
             type="button"
             onClick={onBack}
-            className="shrink-0 rounded-lg px-2 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="min-h-11 shrink-0 rounded-lg px-3 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             Change
           </button>
@@ -365,7 +353,7 @@ export function RegistrationForm({
           <h2
             ref={headingRef}
             tabIndex={-1}
-            className="text-lg font-bold outline-none sm:text-xl"
+            className="text-2xl font-bold uppercase leading-none tracking-wide outline-none sm:text-3xl"
           >
             {STEP_COPY[step].title}
           </h2>
@@ -385,7 +373,7 @@ export function RegistrationForm({
                 )}
               >
                 {isTeam && (
-                  <legend className="-ml-1 px-1 text-sm font-semibold">
+                  <legend className="-ml-1 px-1 font-heading text-base font-bold uppercase tracking-wide">
                     Player {i + 1}
                   </legend>
                 )}
@@ -407,11 +395,11 @@ export function RegistrationForm({
                       clearError(`player_${i}_name`);
                     }}
                     aria-invalid={Boolean(errors[`player_${i}_name`])}
-                    aria-describedby={
-                      errors[`player_${i}_name`]
-                        ? `player-${i}-name-error`
-                        : undefined
-                    }
+                    aria-describedby={describedBy(
+                      `player-${i}-name`,
+                      errors[`player_${i}_name`],
+                      false,
+                    )}
                     className={FIELD}
                   />
                 </Field>
@@ -494,6 +482,7 @@ export function RegistrationForm({
               id="contact-number"
               label="Mobile number"
               required
+              hint="The organizer contacts your team here"
               error={errors.contact_number}
             >
               <Input
@@ -508,9 +497,7 @@ export function RegistrationForm({
                   clearError("contact_number");
                 }}
                 aria-invalid={Boolean(errors.contact_number)}
-                aria-describedby={
-                  errors.contact_number ? "contact-number-error" : undefined
-                }
+                aria-describedby={describedBy("contact-number", errors.contact_number, true)}
                 className={FIELD}
               />
             </Field>
@@ -532,9 +519,7 @@ export function RegistrationForm({
                   clearError("contact_email");
                 }}
                 aria-invalid={Boolean(errors.contact_email)}
-                aria-describedby={
-                  errors.contact_email ? "contact-email-error" : undefined
-                }
+                aria-describedby={describedBy("contact-email", errors.contact_email, false)}
                 className={FIELD}
               />
             </Field>
@@ -542,6 +527,7 @@ export function RegistrationForm({
               id="club-name"
               label="Club name"
               required
+              hint="The club your team represents"
               error={errors.club_name}
             >
               <Input
@@ -555,9 +541,7 @@ export function RegistrationForm({
                   clearError("club_name");
                 }}
                 aria-invalid={Boolean(errors.club_name)}
-                aria-describedby={
-                  errors.club_name ? "club-name-error" : undefined
-                }
+                aria-describedby={describedBy("club-name", errors.club_name, true)}
                 className={FIELD}
               />
             </Field>
@@ -578,9 +562,7 @@ export function RegistrationForm({
                   clearError("club_address");
                 }}
                 aria-invalid={Boolean(errors.club_address)}
-                aria-describedby={
-                  errors.club_address ? "club-address-error" : undefined
-                }
+                aria-describedby={describedBy("club-address", errors.club_address, false)}
                 className={FIELD}
               />
             </Field>
@@ -589,10 +571,12 @@ export function RegistrationForm({
 
         {step === "payment" && (
           <div className="space-y-5">
-            <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
+            <div className="rounded-2xl bg-court p-4 text-court-foreground">
               <div className="flex items-baseline justify-between gap-3">
-                <span className="text-sm font-medium">Amount to pay</span>
-                <span className="text-2xl font-bold text-primary">
+                <span className="font-heading text-sm font-semibold uppercase tracking-[0.1em] text-court-foreground/80">
+                  Amount to pay
+                </span>
+                <span className="scoreboard text-3xl font-bold leading-none">
                   {formatCurrency(total)}
                 </span>
               </div>
@@ -621,13 +605,19 @@ export function RegistrationForm({
               />
             </div>
 
-            <Field id="payment-reference" label="Reference number" optional>
+            <Field
+              id="payment-reference"
+              label="Reference number"
+              optional
+              hint="From your GCash receipt — helps the organizer match it"
+            >
               <Input
                 id="payment-reference"
                 autoComplete="off"
                 placeholder="e.g. 1234 567 890123"
                 value={paymentReference}
                 onChange={(e) => setPaymentReference(e.target.value)}
+                aria-describedby="payment-reference-hint"
                 className={FIELD}
               />
             </Field>
@@ -637,38 +627,39 @@ export function RegistrationForm({
         )}
       </section>
 
-      {/* ---------- action bar: sticks to the bottom on phones ---------- */}
-      <div className="glass-strong sticky bottom-3 z-30 flex items-center gap-3 rounded-2xl p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      {/* ---------- action bar: one primary button, pinned to the bottom
+          edge on phones while the form is on screen ---------- */}
+      <div className="sticky bottom-0 z-30 -mx-4 flex items-center gap-3 border-t border-border bg-popover px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-raised sm:bottom-3 sm:mx-0 sm:rounded-2xl sm:border sm:p-3">
         {feeDue ? (
-          <div className="min-w-0 flex-1 pl-1">
-            <div className="text-[0.7rem] font-medium uppercase tracking-wide text-muted-foreground">
-              Total
-            </div>
-            <div className="truncate text-lg font-bold leading-tight">
+          <div className="min-w-0 flex-1">
+            <div className="eyebrow text-[0.7rem]">Total</div>
+            <div className="scoreboard truncate text-2xl font-bold leading-none">
               {formatCurrency(total)}
             </div>
           </div>
         ) : (
-          <div className="min-w-0 flex-1 pl-1 text-sm font-semibold text-primary">
+          <div className="min-w-0 flex-1 font-heading text-base font-bold uppercase tracking-wide text-primary">
             Free entry
           </div>
         )}
         <Button
           type="submit"
           disabled={pending}
-          className="h-12 min-w-36 rounded-xl px-5 text-base font-semibold"
+          aria-live="polite"
+          className="h-12 min-w-40 rounded-xl px-5 text-base font-semibold sm:h-12"
         >
           {pending ? (
             <>
-              <Loader2 className="size-4 animate-spin" /> Submitting…
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+              {sendsPhotos ? "Uploading photos…" : "Submitting…"}
             </>
           ) : isLast ? (
             <>
-              Submit <Check className="size-4" />
+              Submit registration <Check className="size-4" aria-hidden />
             </>
           ) : (
             <>
-              Continue <ArrowRight className="size-4" />
+              Continue <ArrowRight className="size-4" aria-hidden />
             </>
           )}
         </Button>
@@ -679,11 +670,18 @@ export function RegistrationForm({
 
 // ---------------------------------------------------------------------------
 
+/** Hint and error ids for an input, in the order a screen reader should read them. */
+function describedBy(id: string, error: string | undefined, hasHint: boolean) {
+  const ids = [hasHint && `${id}-hint`, error && `${id}-error`].filter(Boolean);
+  return ids.length > 0 ? ids.join(" ") : undefined;
+}
+
 function Field({
   id,
   label,
   required,
   optional,
+  hint,
   error,
   children,
 }: {
@@ -691,21 +689,38 @@ function Field({
   label: string;
   required?: boolean;
   optional?: boolean;
+  /** Always-visible helper line under the label. */
+  hint?: string;
   error?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={id} className="text-sm font-medium">
-        {label}
-        {required && <span className="text-destructive">*</span>}
-        {optional && (
-          <span className="font-normal text-muted-foreground">(optional)</span>
+      <div className="space-y-0.5">
+        <Label htmlFor={id} className="text-sm font-semibold">
+          {label}
+          {required && (
+            <span className="text-destructive" aria-hidden>
+              *
+            </span>
+          )}
+          {optional && (
+            <span className="font-normal text-muted-foreground">(optional)</span>
+          )}
+        </Label>
+        {hint && (
+          <p id={`${id}-hint`} className="text-xs text-muted-foreground">
+            {hint}
+          </p>
         )}
-      </Label>
+      </div>
       {children}
       {error && (
-        <p id={`${id}-error`} className="text-xs font-medium text-destructive">
+        <p
+          id={`${id}-error`}
+          className="flex items-center gap-1.5 text-sm font-medium text-destructive"
+        >
+          <CircleAlert className="size-4 shrink-0" aria-hidden />
           {error}
         </p>
       )}
@@ -790,7 +805,7 @@ function FeeBreakdown({
   if (lines.length === 0) return null;
 
   return (
-    <dl className="mt-3 space-y-1 border-t border-primary/20 pt-3 text-xs text-muted-foreground">
+    <dl className="mt-3 space-y-1 border-t border-court-foreground/20 pt-3 text-sm text-court-foreground/80">
       {lines.map((line) => (
         <div key={line.label} className="flex justify-between gap-3">
           <dt>
@@ -798,7 +813,7 @@ function FeeBreakdown({
             {playerCount > 1 &&
               ` · ${formatCurrency(line.each)} × ${playerCount}`}
           </dt>
-          <dd className="font-medium text-foreground">
+          <dd className="font-semibold text-court-foreground">
             {formatCurrency(line.each * playerCount)}
           </dd>
         </div>
