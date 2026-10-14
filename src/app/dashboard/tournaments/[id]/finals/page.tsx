@@ -6,7 +6,9 @@ import { roleAtLeast } from "@/lib/constants";
 import { PageHeader, EmptyState } from "@/components/page-header";
 import { BracketView } from "@/components/tournament/bracket-view";
 import { Podium } from "@/components/tournament/podium";
-import { Eye, Network } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { ArrowRight, Eye, Network } from "lucide-react";
 
 export default async function FinalsPage({
   params,
@@ -33,7 +35,7 @@ export default async function FinalsPage({
     <div className="space-y-6">
       <PageHeader
         title="Finals"
-        description="Knockout bracket and championship results."
+        description="The knockout bracket. Winners move into the next round as soon as a score is saved."
       />
 
       <Podium placements={placements} />
@@ -46,13 +48,19 @@ export default async function FinalsPage({
         />
       ) : preview.length > 0 ? (
         <div className="space-y-4">
-          <div className="glass flex items-start gap-2 rounded-2xl p-4 text-sm text-muted-foreground">
-            <Eye className="mt-0.5 size-4 shrink-0" />
-            <span>
-              Preview only — every slot shows the group and finishing position
-              that will fill it, and the draw shifts as the standings move. The
-              bracket that counts is drawn when the group stage ends.
+          <div className="glass flex items-start gap-3 rounded-2xl p-4">
+            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-chart-2/12 text-chart-2">
+              <Eye className="size-4" />
             </span>
+            <div className="text-sm">
+              <p className="font-semibold">Preview — not the real draw yet</p>
+              <p className="text-muted-foreground">
+                Each slot shows the group and finishing place that will fill it
+                (A1 is Group A&apos;s winner), and it shifts as the standings
+                move. The bracket that counts is drawn when you end the group
+                stage.
+              </p>
+            </div>
           </div>
           <BracketView tournamentId={id} rounds={preview} canScore={false} />
         </div>
@@ -60,8 +68,14 @@ export default async function FinalsPage({
         <EmptyState
           icon={Network}
           title="No bracket yet"
-          description="Generate this category's groups — the finals bracket is drawn from them."
-        />
+          description="The finals bracket is drawn from the groups. Draw this category's groups first, and a preview of the bracket appears here."
+        >
+          <Button asChild>
+            <Link href={`/dashboard/tournaments/${id}/groups?category=${active.id}`}>
+              Go to Seeding & Groups <ArrowRight className="size-4" />
+            </Link>
+          </Button>
+        </EmptyState>
       )}
     </div>
   );

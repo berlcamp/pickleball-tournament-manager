@@ -97,7 +97,9 @@ export function ScheduleSummaryButton({
               : STATUS_LABEL[r.status],
           ]),
           styles: { fontSize: 9, cellPadding: 2 },
-          headStyles: { fillColor: [22, 163, 74], textColor: 255 },
+          // jsPDF can't read CSS variables; this is the court-green
+          // `--primary` (oklch 0.52 0.14 155) converted to sRGB.
+          headStyles: { fillColor: [24, 128, 76], textColor: 255 },
           alternateRowStyles: { fillColor: [245, 245, 245] },
           margin: { left: marginX, right: marginX },
         });

@@ -28,11 +28,14 @@ export function RaffleFormDialog({ raffle, trigger }: Props) {
   const isEdit = !!raffle;
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // Shown under the field rather than as a toast, so it sits where the fix is.
+  const [nameError, setNameError] = useState<string | null>(null);
   const [name, setName] = useState(raffle?.name ?? "");
   const [description, setDescription] = useState(raffle?.description ?? "");
 
   function onOpenChange(next: boolean) {
     if (next) {
+      setNameError(null);
       setName(raffle?.name ?? "");
       setDescription(raffle?.description ?? "");
     }
@@ -42,7 +45,7 @@ export function RaffleFormDialog({ raffle, trigger }: Props) {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) {
-      toast.error("Name is required.");
+      setNameError("Give the raffle a name.");
       return;
     }
     setSubmitting(true);
@@ -63,8 +66,8 @@ export function RaffleFormDialog({ raffle, trigger }: Props) {
   }
 
   const defaultTrigger = isEdit ? (
-    <Button variant="outline" size="sm">
-      <Pencil className="size-3.5" />
+    <Button variant="outline">
+      <Pencil className="size-4" />
       Edit
     </Button>
   ) : (
@@ -79,7 +82,7 @@ export function RaffleFormDialog({ raffle, trigger }: Props) {
       <DialogTrigger render={(trigger ?? defaultTrigger) as React.ReactElement} />
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit raffle" : "New raffle"}</DialogTitle>
+          <DialogTitle className="font-heading text-2xl font-bold">{isEdit ? "Edit raffle" : "New raffle"}</DialogTitle>
           <DialogDescription>
             {isEdit
               ? "Update raffle name and description."
@@ -93,12 +96,25 @@ export function RaffleFormDialog({ raffle, trigger }: Props) {
               id="raffle-name"
               placeholder="e.g. Season Kickoff 2026"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                setNameError(null);
+              }}
+              aria-invalid={Boolean(nameError)}
+              aria-describedby={nameError ? "raffle-name-error" : undefined}
               autoFocus
             />
+            {nameError && (
+              <p id="raffle-name-error" className="text-xs text-destructive">
+                {nameError}
+              </p>
+            )}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="raffle-desc">Description</Label>
+            <Label htmlFor="raffle-desc">
+              Description{" "}
+              <span className="text-muted-foreground">(optional)</span>
+            </Label>
             <Textarea
               id="raffle-desc"
               rows={3}

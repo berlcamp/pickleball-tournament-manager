@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition, type ReactNode } from "react";
-import { Loader2, Pencil, Trash2, Eraser } from "lucide-react";
+import { Eraser, Loader2, Pencil, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -39,7 +39,7 @@ export function EntriesViewDialog({ departmentId, departmentName, trigger }: Pro
   const [editing, setEditing] = useState<RaffleEntry | null>(null);
   const [editName, setEditName] = useState("");
   const [editDesignation, setEditDesignation] = useState("");
-  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -58,46 +58,50 @@ export function EntriesViewDialog({ departmentId, departmentName, trigger }: Pro
     };
   }, [open, departmentId]);
 
-  function onDeleteEntry(id: string) {
-    startTransition(async () => {
-      const res = await deleteEntry({ id });
+  // The list is local state loaded on open, so edits and removals change it
+  // first and put the old row back if the server says no.
+  function onDeleteEntry(entry: RaffleEntry) {
+    const before = entries;
+    setEntries((prev) => (prev ?? []).filter((e) => e.id !== entry.id));
+    void deleteEntry({ id: entry.id }).then((res) => {
       if (!res.ok) {
-        toast.error("Delete failed", { description: res.error });
-        return;
+        setEntries(before);
+        toast.error(`Couldn't remove ${entry.name}`, { description: res.error });
       }
-      setEntries((prev) => (prev ?? []).filter((e) => e.id !== id));
     });
   }
 
   function openEdit(entry: RaffleEntry) {
+    setEditError(null);
     setEditing(entry);
     setEditName(entry.name);
     setEditDesignation(entry.designation ?? "");
   }
 
-  async function onSaveEdit() {
+  function onSaveEdit() {
     if (!editing) return;
     const name = editName.trim();
     if (!name) {
-      toast.error("Name is required.");
+      setEditError("A name is needed.");
       return;
     }
-    setEditSaving(true);
-    const res = await updateEntry({
-      id: editing.id,
-      name,
-      designation: editDesignation.trim() || undefined,
-    });
-    setEditSaving(false);
-    if (!res.ok) {
-      toast.error("Update failed", { description: res.error });
-      return;
-    }
+    const before = entries;
+    const id = editing.id;
     const designation = editDesignation.trim() || null;
     setEntries((prev) =>
-      (prev ?? []).map((e) => (e.id === editing.id ? { ...e, name, designation } : e)),
+      (prev ?? []).map((e) => (e.id === id ? { ...e, name, designation } : e)),
     );
     setEditing(null);
+    void updateEntry({
+      id,
+      name,
+      designation: designation ?? undefined,
+    }).then((res) => {
+      if (!res.ok) {
+        setEntries(before);
+        toast.error("Couldn't save that change", { description: res.error });
+      }
+    });
   }
 
   function onClearAll() {
@@ -131,18 +135,29 @@ export function EntriesViewDialog({ departmentId, departmentName, trigger }: Pro
       <DialogTrigger render={trigger as React.ReactElement} />
       <DialogContent className="flex max-h-[85vh] flex-col sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{departmentName}</DialogTitle>
+          <DialogTitle className="font-heading text-2xl font-bold">
+            {departmentName}
+          </DialogTitle>
           <DialogDescription>
-            {list.length} {list.length === 1 ? "entry" : "entries"}
+            <span className="scoreboard text-base font-bold text-foreground">
+              {list.length}
+            </span>{" "}
+            {list.length === 1 ? "name" : "names"} in the draw
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex items-center gap-2">
-          <Input
-            placeholder="Search names…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              aria-label="Search names"
+              placeholder="Search names"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
           {list.length > 0 ? (
             <Dialog open={clearOpen} onOpenChange={setClearOpen}>
               <DialogTrigger
@@ -151,6 +166,7 @@ export function EntriesViewDialog({ departmentId, departmentName, trigger }: Pro
                     variant="outline"
                     size="icon"
                     className="text-destructive"
+                    aria-label="Clear all entries"
                     title="Clear all entries"
                   >
                     <Eraser className="size-4" />
@@ -175,6 +191,7 @@ export function EntriesViewDialog({ departmentId, departmentName, trigger }: Pro
                     Cancel
                   </Button>
                   <Button variant="destructive" onClick={onClearAll} disabled={pending}>
+                    {pending && <Loader2 className="size-4 animate-spin" />}
                     Clear all
                   </Button>
                 </DialogFooter>
@@ -191,18 +208,18 @@ export function EntriesViewDialog({ departmentId, departmentName, trigger }: Pro
           ) : filtered.length === 0 ? (
             <div className="py-12 text-center text-sm text-muted-foreground">
               {list.length === 0
-                ? "No entries yet. Use “Add names” to populate."
-                : "No matches."}
+                ? "No names yet. Use “Add names” to fill this department."
+                : "No names match that search."}
             </div>
           ) : (
-            <ul className="divide-y rounded-lg border">
+            <ul className="divide-y divide-border rounded-xl border border-border">
               {filtered.map((e) => (
                 <li
                   key={e.id}
-                  className="flex items-center justify-between gap-2 px-3 py-2 text-sm"
+                  className="flex min-h-12 items-center justify-between gap-2 px-3 py-1.5 text-sm"
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="line-clamp-1">{e.name}</div>
+                    <div className="line-clamp-1 font-medium">{e.name}</div>
                     {e.designation ? (
                       <div className="line-clamp-1 text-xs text-muted-foreground">
                         {e.designation}
@@ -214,19 +231,17 @@ export function EntriesViewDialog({ departmentId, departmentName, trigger }: Pro
                       size="icon-sm"
                       variant="ghost"
                       onClick={() => openEdit(e)}
-                      disabled={pending}
                       className="text-muted-foreground hover:text-foreground"
-                      title="Edit"
+                      aria-label={`Edit ${e.name}`}
                     >
                       <Pencil className="size-3.5" />
                     </Button>
                     <Button
                       size="icon-sm"
                       variant="ghost"
-                      onClick={() => onDeleteEntry(e.id)}
-                      disabled={pending}
+                      onClick={() => onDeleteEntry(e)}
                       className="text-muted-foreground hover:text-destructive"
-                      title="Remove"
+                      aria-label={`Remove ${e.name}`}
                     >
                       <Trash2 className="size-3.5" />
                     </Button>
@@ -256,9 +271,15 @@ export function EntriesViewDialog({ departmentId, departmentName, trigger }: Pro
                 <Input
                   id="edit-name"
                   value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  disabled={editSaving}
+                  onChange={(e) => {
+                    setEditName(e.target.value);
+                    setEditError(null);
+                  }}
+                  aria-invalid={Boolean(editError)}
                 />
+                {editError && (
+                  <p className="text-xs text-destructive">{editError}</p>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="edit-designation">
@@ -270,18 +291,14 @@ export function EntriesViewDialog({ departmentId, departmentName, trigger }: Pro
                   value={editDesignation}
                   onChange={(e) => setEditDesignation(e.target.value)}
                   placeholder="e.g. Coach, Driver, Manager"
-                  disabled={editSaving}
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setEditing(null)} disabled={editSaving}>
+              <Button variant="outline" onClick={() => setEditing(null)}>
                 Cancel
               </Button>
-              <Button onClick={onSaveEdit} disabled={editSaving}>
-                {editSaving ? <Loader2 className="size-4 animate-spin" /> : null}
-                Save
-              </Button>
+              <Button onClick={onSaveEdit}>Save</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

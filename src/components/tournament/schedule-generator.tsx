@@ -27,7 +27,7 @@ import { MATCH_INTERVALS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { formatTime } from "@/lib/format";
 import type { CategorySettings, KnockoutRounds, ScheduleMode } from "@/types";
-import { CalendarClock, HelpCircle } from "lucide-react";
+import { CalendarClock, HelpCircle, Loader2 } from "lucide-react";
 
 type Scope = "category" | "tournament";
 
@@ -149,17 +149,21 @@ export function ScheduleGenerator({
   }
 
   return (
-    <div className={cn("space-y-4", !embedded && "glass rounded-2xl p-5")}>
+    <div className={cn("space-y-5", !embedded && "glass rounded-2xl p-4 sm:p-5")}>
       {/* In a dialog the title comes from the host, but the blurb stays: it
           tracks the scope toggle and says what the run will actually rebuild. */}
       <div className="flex items-center gap-3">
         {!embedded && (
-          <span className="grid size-10 place-items-center rounded-xl bg-primary/15 text-primary">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/12 text-primary">
             <CalendarClock className="size-5" />
           </span>
         )}
         <div>
-          {!embedded && <h3 className="font-semibold">Smart scheduling engine</h3>}
+          {!embedded && (
+            <h3 className="font-heading text-xl font-bold leading-tight">
+              Smart scheduling engine
+            </h3>
+          )}
           <p className="text-sm text-muted-foreground">
             {wholeTournament ? (
               <>
@@ -391,9 +395,16 @@ export function ScheduleGenerator({
       )}
 
       <Button
+        size="lg"
+        className="w-full sm:w-auto"
         onClick={() => (wholeTournament ? setConfirmAll(true) : generate())}
         disabled={pending || (wholeTournament && pickedCategories.length === 0)}
       >
+        {pending ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <CalendarClock className="size-4" />
+        )}
         {pending
           ? "Building schedule…"
           : wholeTournament
@@ -427,6 +438,7 @@ export function ScheduleGenerator({
               Cancel
             </DialogClose>
             <Button onClick={generate} disabled={pending}>
+              {pending && <Loader2 className="size-4 animate-spin" />}
               {pending ? "Building schedule…" : "Generate"}
             </Button>
           </DialogFooter>
@@ -452,11 +464,11 @@ function GroupChip({
       onClick={onClick}
       aria-pressed={selected}
       className={cn(
-        "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+        "min-h-10 rounded-full border px-3.5 text-sm font-semibold transition-colors duration-150 active:scale-[0.97] sm:min-h-8 sm:text-xs",
+        "focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
         selected
-          ? "border-primary bg-primary text-primary-foreground"
-          : "border-border text-muted-foreground hover:text-foreground",
+          ? "border-court bg-court text-court-foreground"
+          : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground"
       )}
     >
       {children}
@@ -496,9 +508,9 @@ function HelpHint({
       <PopoverPrimitive.Trigger
         type="button"
         aria-label={`What is "${title}" for?`}
-        className="text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:text-foreground"
+        className="-m-2 grid size-8 place-items-center rounded-full text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
       >
-        <HelpCircle className="size-3.5" />
+        <HelpCircle className="size-4" />
       </PopoverPrimitive.Trigger>
       <PopoverPrimitive.Portal>
         <PopoverPrimitive.Positioner
@@ -506,7 +518,7 @@ function HelpHint({
           sideOffset={6}
           className="isolate z-50"
         >
-          <PopoverPrimitive.Popup className="z-50 max-w-xs origin-(--transform-origin) rounded-lg bg-popover p-3 text-popover-foreground shadow-md ring-1 ring-foreground/10 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95">
+          <PopoverPrimitive.Popup className="glass-strong z-50 max-w-xs origin-(--transform-origin) rounded-xl p-3 text-popover-foreground data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95">
             <PopoverPrimitive.Title className="mb-1 text-xs font-semibold">
               {title}
             </PopoverPrimitive.Title>

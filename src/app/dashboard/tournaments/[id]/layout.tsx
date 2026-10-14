@@ -40,62 +40,88 @@ export default async function TournamentLayout({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="glass overflow-hidden rounded-2xl">
-        <div
-          className="h-28 bg-gradient-to-br from-primary/30 via-chart-2/20 to-transparent"
-          style={
-            t.banner
-              ? {
-                  backgroundImage: `url(${t.banner})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                }
-              : undefined
-          }
-        />
-        <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-bold">{t.name}</h1>
-              <Badge variant="secondary">{ROLE_LABELS[role]}</Badge>
-            </div>
-            <div className="mt-1.5 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <Calendar className="size-4" /> {formatDate(t.start_date)}
-              </span>
-              {t.location && (
-                <span className="flex items-center gap-1.5">
-                  <MapPin className="size-4" /> {t.location}
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {canManage && (
-              <ScheduleGeneratorButton
-                tournamentId={id}
-                categories={categories}
-                groupsByCategory={groupsByCategory}
+    <div className="space-y-5">
+      <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+        <div className="relative isolate bg-court text-court-foreground">
+          {t.banner ? (
+            <>
+              <div
+                className="absolute inset-0 -z-10 bg-cover bg-center opacity-35"
+                style={{ backgroundImage: `url(${t.banner})` }}
+                aria-hidden
               />
-            )}
-            <Button asChild variant="outline" size="sm">
-              <Link href={`/${t.short_code}`} target="_blank">
-                <ExternalLink className="size-4" /> Public page
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link href={`/qr/${t.short_code}`} target="_blank">
-                <QrCode className="size-4" /> Open QR
-              </Link>
-            </Button>
+              <div
+                className="absolute inset-0 -z-10 bg-gradient-to-t from-court via-court/80 to-court/30"
+                aria-hidden
+              />
+            </>
+          ) : (
+            <div className="bg-court-lines absolute inset-0 -z-10" aria-hidden />
+          )}
+          <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-end sm:justify-between sm:p-6">
+            <div className="min-w-0">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <Link
+                  href="/dashboard"
+                  className="rounded text-sm text-court-foreground/75 outline-none hover:text-court-foreground focus-visible:ring-2 focus-visible:ring-ball"
+                >
+                  ← All tournaments
+                </Link>
+                <Badge className="border-0 bg-ball text-ball-foreground">
+                  {ROLE_LABELS[role]}
+                </Badge>
+              </div>
+              <h1 className="text-balance text-3xl font-bold uppercase leading-[0.95] sm:text-5xl">
+                {t.name}
+              </h1>
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-court-foreground/80">
+                <span className="flex items-center gap-1.5">
+                  <Calendar className="size-4" /> {formatDate(t.start_date)}
+                </span>
+                {t.location && (
+                  <span className="flex items-center gap-1.5">
+                    <MapPin className="size-4" /> {t.location}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {canManage && (
+                <ScheduleGeneratorButton
+                  tournamentId={id}
+                  categories={categories}
+                  groupsByCategory={groupsByCategory}
+                />
+              )}
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="border-court-foreground/25 bg-court-foreground/10 text-court-foreground hover:bg-court-foreground/20 hover:text-court-foreground dark:border-court-foreground/25 dark:bg-court-foreground/10"
+              >
+                <Link href={`/${t.short_code}`} target="_blank">
+                  <ExternalLink className="size-4" /> Public page
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="border-court-foreground/25 bg-court-foreground/10 text-court-foreground hover:bg-court-foreground/20 hover:text-court-foreground dark:border-court-foreground/25 dark:bg-court-foreground/10"
+              >
+                <Link href={`/qr/${t.short_code}`} target="_blank">
+                  <QrCode className="size-4" /> QR code
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <CategorySwitcher categories={categories} />
-      </div>
+        {categories.length > 0 && (
+          <div className="border-t border-border p-4 sm:px-6">
+            <CategorySwitcher categories={categories} />
+          </div>
+        )}
+      </section>
 
       <TabNav id={id} canManage={canManage} />
 

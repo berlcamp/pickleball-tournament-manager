@@ -6,7 +6,7 @@ export default function NewTournamentPage() {
     <div className="mx-auto max-w-2xl space-y-6">
       <PageHeader
         title="New tournament"
-        description="Set up the basics — you can add teams and configure stages next."
+        description="Name it and list the categories you will run. Teams, groups and the schedule come next, and everything here can be changed later."
       />
       <TournamentForm />
     </div>

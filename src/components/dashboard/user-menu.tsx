@@ -35,8 +35,8 @@ export function UserMenu({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="group flex cursor-pointer items-center gap-2 rounded-full border border-border py-1 pl-1 pr-2.5 outline-none transition-colors hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-primary/50 data-[popup-open]:bg-accent/60">
-        <Avatar className="size-8 ring-2 ring-border">
+      <DropdownMenuTrigger className="group flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-border bg-card py-1 pl-1 pr-2.5 outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 data-[popup-open]:bg-muted sm:min-h-0">
+        <Avatar className="size-8 ring-2 ring-primary/20">
           {avatarUrl && <AvatarImage src={avatarUrl} alt={label} />}
           <AvatarFallback>{initials(label || email)}</AvatarFallback>
         </Avatar>
@@ -53,7 +53,9 @@ export function UserMenu({
             <AvatarFallback>{initials(label || email)}</AvatarFallback>
           </Avatar>
           <div className="min-w-0">
-            <div className="truncate text-sm font-semibold">{label}</div>
+            <div className="truncate font-heading text-lg font-bold leading-tight">
+              {label}
+            </div>
             <div className="truncate text-xs text-muted-foreground">
               {email}
             </div>

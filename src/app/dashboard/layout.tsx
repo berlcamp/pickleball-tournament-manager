@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Trophy } from "lucide-react";
 import { requireUser, getProfile } from "@/lib/auth";
 import { isSuperAdmin } from "@/lib/super-admin";
 import { UserMenu } from "@/components/dashboard/user-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { BrandMark } from "@/components/brand-mark";
 
 /** Everything behind the login is private; keep it out of search results. */
 export const metadata: Metadata = {
@@ -30,18 +29,10 @@ export default async function DashboardLayout({
     <div className="flex min-h-screen flex-col">
       {/* No side nav: the dashboard is the tournament list, and everything
           else hangs off a tournament or the user menu. */}
-      <header className="glass sticky top-0 z-20 border-b border-border/50">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-6 py-3">
-          <Link href="/dashboard" className="flex items-center gap-2 font-bold">
-            <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground">
-              <Trophy className="size-4.5" />
-            </span>
-            <span className="text-gradient">PicklePro</span>
-            <span className="hidden text-xs font-normal text-muted-foreground sm:inline">
-              by Sortbrite
-            </span>
-          </Link>
-          <div className="flex items-center gap-2">
+      <header className="sticky top-0 z-20 border-b border-border bg-background/90 backdrop-blur-md supports-[backdrop-filter]:bg-background/75">
+        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
+          <BrandMark href="/dashboard" />
+          <div className="flex items-center gap-1.5">
             <ThemeToggle />
             <UserMenu
               name={name}
@@ -52,7 +43,7 @@ export default async function DashboardLayout({
           </div>
         </div>
       </header>
-      <main className="flex-1 p-6">
+      <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8">
         <div className="mx-auto w-full max-w-6xl">{children}</div>
       </main>
     </div>

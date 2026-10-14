@@ -28,17 +28,22 @@ export function DepartmentFormDialog({ raffleId, department, trigger }: Props) {
   const isEdit = !!department;
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // Shown under the field rather than as a toast, so it sits where the fix is.
+  const [nameError, setNameError] = useState<string | null>(null);
   const [name, setName] = useState(department?.name ?? "");
 
   function onOpenChange(next: boolean) {
-    if (next) setName(department?.name ?? "");
+    if (next) {
+      setNameError(null);
+      setName(department?.name ?? "");
+    }
     setOpen(next);
   }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) {
-      toast.error("Name is required.");
+      setNameError("Give the department a name.");
       return;
     }
     setSubmitting(true);
@@ -74,7 +79,7 @@ export function DepartmentFormDialog({ raffleId, department, trigger }: Props) {
       <DialogTrigger render={(trigger ?? defaultTrigger) as React.ReactElement} />
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Rename department" : "Add department"}</DialogTitle>
+          <DialogTitle className="font-heading text-2xl font-bold">{isEdit ? "Rename department" : "Add department"}</DialogTitle>
           <DialogDescription>
             Departments group raffle entries (e.g. Men&apos;s, Women&apos;s,
             Sponsors).
@@ -87,9 +92,19 @@ export function DepartmentFormDialog({ raffleId, department, trigger }: Props) {
               id="dept-name"
               placeholder="e.g. Sponsors"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                setNameError(null);
+              }}
+              aria-invalid={Boolean(nameError)}
+              aria-describedby={nameError ? "dept-name-error" : undefined}
               autoFocus
             />
+            {nameError && (
+              <p id="dept-name-error" className="text-xs text-destructive">
+                {nameError}
+              </p>
+            )}
           </div>
           <DialogFooter>
             <Button

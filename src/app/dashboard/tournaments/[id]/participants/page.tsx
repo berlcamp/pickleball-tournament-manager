@@ -1,9 +1,12 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getTournamentContext, resolveActiveCategory } from "@/lib/data";
 import { roleAtLeast } from "@/lib/constants";
 import { PageHeader } from "@/components/page-header";
 import { ParticipantsManager } from "@/components/tournament/participants-manager";
+import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
 import type { Participant } from "@/types";
 
 export default async function ParticipantsPage({
@@ -21,20 +24,21 @@ export default async function ParticipantsPage({
   if (!active) notFound();
 
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("participants")
-    .select("*")
-    .eq("category_id", active.id)
-    .order("seed", { ascending: true });
+  const [{ data }, { data: regs }] = await Promise.all([
+    supabase
+      .from("participants")
+      .select("*")
+      .eq("category_id", active.id)
+      .order("seed", { ascending: true }),
+    // How many approved registrations have no team here yet. Names, ids and
+    // status only — no other registrant PII on this tab.
+    supabase
+      .from("registrations")
+      .select("id, status, participant_id, team_name")
+      .eq("category_id", active.id)
+      .order("created_at", { ascending: true }),
+  ]);
   const participants = (data ?? []) as Participant[];
-
-  // How many approved registrations have no team here yet. Names, ids and
-  // status only — no other registrant PII on this tab.
-  const { data: regs } = await supabase
-    .from("registrations")
-    .select("id, status, participant_id, team_name")
-    .eq("category_id", active.id)
-    .order("created_at", { ascending: true });
   const participantIds = new Set(participants.map((p) => p.id));
   const approved = (regs ?? []).filter((r) => r.status === "approved");
   const importable = approved.filter(
@@ -59,8 +63,19 @@ export default async function ParticipantsPage({
     <div className="space-y-6">
       <PageHeader
         title="Teams"
-        description={`${participants.length} teams in ${active.name}. Add individually, in bulk, or from the approved registrations.`}
-      />
+        description={`${participants.length} ${participants.length === 1 ? "team" : "teams"} in ${active.name}. Add them one by one, paste a list, or bring in approved registrations.`}
+      >
+        {/* Once there is a field to seed, point at the next step. */}
+        {participants.length >= 2 && active.status === "draft" && (
+          <Button asChild variant="outline">
+            <Link
+              href={`/dashboard/tournaments/${id}/seeding${category ? `?category=${category}` : ""}`}
+            >
+              Next: seeding <ArrowRight className="size-4" />
+            </Link>
+          </Button>
+        )}
+      </PageHeader>
       <ParticipantsManager
         tournamentId={id}
         categoryId={active.id}

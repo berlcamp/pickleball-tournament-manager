@@ -14,7 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Trash2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 
 export function ClearScheduleButton({
   tournamentId,
@@ -52,7 +52,9 @@ export function ClearScheduleButton({
       />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Clear schedule?</DialogTitle>
+          <DialogTitle className="font-heading text-2xl font-bold">
+            Clear schedule?
+          </DialogTitle>
           <DialogDescription>
             This removes every scheduled match and reserved knockout slot for{" "}
             <strong>{categoryName}</strong>. You can regenerate the schedule
@@ -62,6 +64,7 @@ export function ClearScheduleButton({
         <DialogFooter>
           <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
           <Button variant="destructive" onClick={clear} disabled={pending}>
+            {pending && <Loader2 className="size-4 animate-spin" />}
             {pending ? "Clearing…" : "Clear schedule"}
           </Button>
         </DialogFooter>

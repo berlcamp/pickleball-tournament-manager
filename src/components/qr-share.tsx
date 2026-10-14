@@ -5,6 +5,7 @@ import { QRCodeCanvas } from "qrcode.react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -41,20 +42,32 @@ export function QrShare({
       </DialogTrigger>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Scan or share</DialogTitle>
+          <DialogTitle className="font-heading text-2xl font-bold">
+            {label}
+          </DialogTitle>
+          <DialogDescription>
+            Point a phone camera at the code, or copy the link to post it.
+          </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col items-center gap-4">
-          <div className="rounded-2xl bg-white p-4">
+          <div className="rounded-2xl border border-border bg-white p-4 shadow-card">
             <QRCodeCanvas value={url} size={200} />
           </div>
           <div className="flex w-full gap-2">
-            <Input readOnly value={url} className="text-xs" />
-            <Button size="icon" variant="secondary" onClick={copy}>
+            <Input
+              readOnly
+              value={url}
+              aria-label="Link"
+              onFocus={(e) => e.currentTarget.select()}
+              className="text-xs"
+            />
+            <Button onClick={copy} className="shrink-0">
               {copied ? (
                 <Check className="size-4" />
               ) : (
                 <Copy className="size-4" />
               )}
+              {copied ? "Copied" : "Copy"}
             </Button>
           </div>
         </div>

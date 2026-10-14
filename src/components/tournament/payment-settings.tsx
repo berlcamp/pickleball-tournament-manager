@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ImageIcon, Upload, Wallet, X } from "lucide-react";
+import { Check, ImageIcon, Loader2, Upload, Wallet, X } from "lucide-react";
 import type { Tournament } from "@/types";
 
 const BUCKET = "pickleball-tournament";
@@ -22,6 +22,7 @@ export function PaymentSettings({ tournament }: { tournament: Tournament }) {
   const [pending, startTransition] = useTransition();
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [saved, setSaved] = useState(false);
 
   const [name, setName] = useState(tournament.payment_name ?? "");
   const [number, setNumber] = useState(tournament.payment_number ?? "");
@@ -74,20 +75,24 @@ export function PaymentSettings({ tournament }: { tournament: Tournament }) {
         return;
       }
       toast.success("Payment details saved");
+      setSaved(true);
+      window.setTimeout(() => setSaved(false), 2500);
     });
   }
 
   return (
-    <div className="glass space-y-4 rounded-2xl p-6">
-      <div>
-        <h3 className="flex items-center gap-2 font-semibold">
-          <Wallet className="size-4 text-primary" />
-          Payment details
-        </h3>
-        <p className="text-sm text-muted-foreground">
-          Shown to registrants who owe a fee. Set the fee amount per category
-          below.
-        </p>
+    <section className="space-y-5 rounded-2xl border border-border bg-card p-5 shadow-card sm:p-6">
+      <div className="flex items-start gap-3">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+          <Wallet className="size-5" />
+        </span>
+        <div>
+          <h2 className="font-heading text-2xl font-bold">Payment details</h2>
+          <p className="text-sm text-muted-foreground">
+            One GCash account for the whole tournament, shown to teams who owe
+            a fee. Set the fee itself per category under Registration.
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -96,6 +101,7 @@ export function PaymentSettings({ tournament }: { tournament: Tournament }) {
           <Input
             id="pay-number"
             placeholder="0917 123 4567"
+            inputMode="tel"
             value={number}
             onChange={(e) => setNumber(e.target.value)}
           />
@@ -112,7 +118,9 @@ export function PaymentSettings({ tournament }: { tournament: Tournament }) {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="pay-instructions">Instructions (optional)</Label>
+        <Label htmlFor="pay-instructions">
+          Instructions <span className="text-muted-foreground">(optional)</span>
+        </Label>
         <Textarea
           id="pay-instructions"
           rows={2}
@@ -123,7 +131,9 @@ export function PaymentSettings({ tournament }: { tournament: Tournament }) {
       </div>
 
       <div className="space-y-1.5">
-        <Label>Payment QR (optional)</Label>
+        <Label>
+          Payment QR <span className="text-muted-foreground">(optional)</span>
+        </Label>
         <input
           ref={fileRef}
           type="file"
@@ -152,7 +162,12 @@ export function PaymentSettings({ tournament }: { tournament: Tournament }) {
                 disabled={uploading}
                 onClick={() => fileRef.current?.click()}
               >
-                <Upload className="size-4" /> Replace
+                {uploading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Upload className="size-4" />
+                )}
+                Replace
               </Button>
               <Button
                 type="button"
@@ -170,25 +185,40 @@ export function PaymentSettings({ tournament }: { tournament: Tournament }) {
             type="button"
             disabled={uploading}
             onClick={() => fileRef.current?.click()}
-            className="flex h-24 w-full flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-border text-muted-foreground transition hover:border-foreground/30 hover:text-foreground"
+            className="flex h-24 w-full flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-border text-muted-foreground outline-none transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
           >
             {uploading ? (
-              <span className="text-sm">Uploading…</span>
+              <>
+                <Loader2 className="size-5 animate-spin text-primary" />
+                <span className="text-sm">Uploading…</span>
+              </>
             ) : (
               <>
-                <ImageIcon className="size-5" />
-                <span className="text-sm">Upload your GCash QR</span>
+                <ImageIcon className="size-5 text-primary" />
+                <span className="text-sm font-medium">Upload your GCash QR</span>
+                <span className="text-xs">Players can scan it to pay</span>
               </>
             )}
           </button>
         )}
       </div>
 
-      <div className="flex justify-end">
-        <Button onClick={save} disabled={pending}>
+      <div className="flex flex-col-reverse items-stretch gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-end">
+        <span
+          aria-live="polite"
+          className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground"
+        >
+          {saved && (
+            <>
+              <Check className="size-4 text-primary" /> Saved
+            </>
+          )}
+        </span>
+        <Button onClick={save} disabled={pending || uploading}>
+          {pending && <Loader2 className="size-4 animate-spin" />}
           {pending ? "Saving…" : "Save payment details"}
         </Button>
       </div>
-    </div>
+    </section>
   );
 }

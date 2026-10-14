@@ -11,7 +11,7 @@ import {
   normalizeShortCode,
   shortCodeProblem,
 } from "@/lib/short-code";
-import { Check, Copy, Link2 } from "lucide-react";
+import { Check, Copy, Link2, Loader2 } from "lucide-react";
 
 /**
  * The tournament's public link. It sits at the domain root — sortbrite.com/ab3kd
@@ -31,6 +31,7 @@ export function PublicLinkSettings({
   const [pending, startTransition] = useTransition();
   const [value, setValue] = useState(shortCode);
   const [copied, setCopied] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const normalized = normalizeShortCode(value);
   const problem = normalized === shortCode ? null : shortCodeProblem(normalized);
@@ -45,6 +46,8 @@ export function PublicLinkSettings({
         return;
       }
       toast.success("Public link updated");
+      setSaved(true);
+      window.setTimeout(() => setSaved(false), 2500);
     });
   }
 
@@ -60,24 +63,31 @@ export function PublicLinkSettings({
   }
 
   return (
-    <div className="glass space-y-4 rounded-2xl p-6">
-      <div>
-        <h3 className="flex items-center gap-2 font-semibold">
-          <Link2 className="size-4 text-primary" />
-          Public link
-        </h3>
-        <p className="text-sm text-muted-foreground">
-          Where players register and follow results. Short enough to print on a
-          poster or read out loud.
-        </p>
+    <section className="space-y-5 rounded-2xl border border-border bg-card p-5 shadow-card sm:p-6">
+      <div className="flex items-start gap-3">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+          <Link2 className="size-5" />
+        </span>
+        <div>
+          <h2 className="font-heading text-2xl font-bold">Public link</h2>
+          <p className="text-sm text-muted-foreground">
+            Where players register and follow results. Short enough to print
+            on a poster or read out loud.
+          </p>
+        </div>
       </div>
 
-      <div className="flex flex-col gap-2 rounded-xl border border-border bg-background/40 p-3 sm:flex-row sm:items-center">
-        <code className="min-w-0 flex-1 truncate text-sm">
-          <span className="text-muted-foreground">{displayHost}/</span>
-          <span className="font-semibold text-primary">{shortCode}</span>
+      <div className="flex items-center gap-2 rounded-xl bg-court p-3 pl-4 text-court-foreground">
+        <code className="min-w-0 flex-1 truncate text-sm sm:text-base">
+          <span className="text-court-foreground/70">{displayHost}/</span>
+          <span className="font-bold text-ball">{shortCode}</span>
         </code>
-        <Button variant="outline" size="sm" onClick={copy}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={copy}
+          className="border-court-foreground/25 bg-court-foreground/10 text-court-foreground hover:bg-court-foreground/20 hover:text-court-foreground dark:border-court-foreground/25 dark:bg-court-foreground/10"
+        >
           {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
           {copied ? "Copied" : "Copy"}
         </Button>
@@ -86,7 +96,7 @@ export function PublicLinkSettings({
       <div className="space-y-1.5">
         <Label htmlFor="short-code">Customise the link</Label>
         <div className="flex flex-col gap-2 sm:flex-row">
-          <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-lg border border-input px-2.5">
+          <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-lg border border-input px-2.5 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
             <span className="shrink-0 text-sm text-muted-foreground">
               {displayHost}/
             </span>
@@ -106,7 +116,14 @@ export function PublicLinkSettings({
             disabled={pending || !dirty || Boolean(problem)}
             className="sm:w-auto"
           >
-            {pending ? "Saving…" : "Save link"}
+            {pending && <Loader2 className="size-4 animate-spin" />}
+            {pending ? "Saving…" : saved ? (
+              <>
+                <Check className="size-4" /> Saved
+              </>
+            ) : (
+              "Save link"
+            )}
           </Button>
         </div>
         {problem ? (
@@ -118,6 +135,6 @@ export function PublicLinkSettings({
           </p>
         )}
       </div>
-    </div>
+    </section>
   );
 }

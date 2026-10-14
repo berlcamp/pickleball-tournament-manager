@@ -7,7 +7,9 @@ import {
   SeedingGroupsBoard,
   type BoardGroup,
 } from "@/components/tournament/seeding-groups-board";
-import { Lock, Users } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Lock, UserPlus, Users } from "lucide-react";
 
 export default async function GroupsPage({
   params,
@@ -79,13 +81,22 @@ export default async function GroupsPage({
     <div className="space-y-6">
       <PageHeader
         title="Seeding & Groups"
-        description="Set the seed order, then split the teams into groups."
+        description="Rank the teams, then draw them into groups. Both save as you go."
       />
 
       {canEdit && !canGenerate && (
-        <div className="glass flex items-center gap-2 rounded-2xl p-4 text-sm text-muted-foreground">
-          <Lock className="size-4" />
-          Group stage has started — seeding and groups are locked.
+        <div className="glass flex items-start gap-3 rounded-2xl p-4">
+          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground">
+            <Lock className="size-4" />
+          </span>
+          <div className="text-sm">
+            <p className="font-semibold">Seeding and groups are locked</p>
+            <p className="text-muted-foreground">
+              {active.name}&apos;s group stage has started, and the matches
+              were built from these groups. To change them, reopen the stage
+              from the Group Stage tab — possible until the first score is in.
+            </p>
+          </div>
         </div>
       )}
 
@@ -93,8 +104,16 @@ export default async function GroupsPage({
         <EmptyState
           icon={Users}
           title="No teams to seed"
-          description="Add teams first, then come back to seed them and draw the groups."
-        />
+          description="Add this category's teams first — then come back here to rank them and draw the groups."
+        >
+          {canEdit && (
+            <Button asChild>
+              <Link href={`/dashboard/tournaments/${id}/participants?category=${active.id}`}>
+                <UserPlus className="size-4" /> Add teams
+              </Link>
+            </Button>
+          )}
+        </EmptyState>
       ) : (
         <SeedingGroupsBoard
           key={active.id}

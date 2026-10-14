@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScheduleGenerator } from "@/components/tournament/schedule-generator";
-import { CalendarClock } from "lucide-react";
+import { CalendarClock, Lock } from "lucide-react";
 import type { Category } from "@/types";
 
 /**
@@ -42,28 +42,39 @@ export function ScheduleGeneratorButton({
 
   return (
     <>
+      {/* Sits on the court-green workspace hero, so it wears the ball color
+          as that header's one primary action. */}
       <Button
-        variant="outline"
         size="sm"
+        className="bg-ball text-ball-foreground shadow-none hover:bg-[color-mix(in_oklch,var(--ball),black_8%)]"
         onClick={() => setOpen(true)}
-        disabled={locked}
-        title={
-          locked
-            ? `${active.name} has started — match times and courts are locked.`
-            : undefined
-        }
+        // Not `disabled` when locked: a disabled button can't say why on a
+        // phone (no hover title), so it opens and explains instead.
+        aria-label={locked ? `Schedule Generator (locked for ${active.name})` : undefined}
       >
-        <CalendarClock className="size-4" /> Schedule Generator
+        {locked ? <Lock className="size-4" /> : <CalendarClock className="size-4" />}
+        Schedule Generator
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Schedule generator</DialogTitle>
-            <DialogDescription className="sr-only">
-              Build the match times and court assignments for this category.
+            <DialogTitle className="font-heading text-2xl font-bold">
+              Schedule generator
+            </DialogTitle>
+            <DialogDescription className={locked ? undefined : "sr-only"}>
+              {locked
+                ? `${active.name} has already started, so its match times and courts are locked — players are going by them. To change the schedule, reopen the group stage from the Group Stage tab (possible until the first score is entered).`
+                : "Build the match times and court assignments for this category."}
             </DialogDescription>
           </DialogHeader>
+          {locked ? (
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => setOpen(false)}>
+                Got it
+              </Button>
+            </div>
+          ) : (
           <ScheduleGenerator
             key={active.id}
             embedded
@@ -78,6 +89,7 @@ export function ScheduleGeneratorButton({
               .filter((c) => c.status === "draft")
               .map((c) => ({ id: c.id, name: c.name }))}
           />
+          )}
         </DialogContent>
       </Dialog>
     </>

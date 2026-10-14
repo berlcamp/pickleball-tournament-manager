@@ -7,7 +7,7 @@ import { roleAtLeast } from "@/lib/constants";
 import { PageHeader, EmptyState } from "@/components/page-header";
 import { GroupStageView } from "@/components/tournament/group-stage-view";
 import { Button } from "@/components/ui/button";
-import { Network } from "lucide-react";
+import { ArrowRight, Network } from "lucide-react";
 
 export default async function GroupStagePage({
   params,
@@ -30,17 +30,17 @@ export default async function GroupStagePage({
     <div className="space-y-6">
       <PageHeader
         title="Group Stage"
-        description="Enter match scores — standings update automatically."
+        description="Tap a match to enter its score — standings update on their own."
       />
       {groups.length === 0 ? (
         <EmptyState
           icon={Network}
           title="No groups yet"
-          description="Generate groups first to start the round robin."
+          description="The round robin is built from the groups. Draw them on the Seeding & Groups tab, and the matches appear here."
         >
           <Button asChild>
-            <Link href={`/dashboard/tournaments/${id}/groups`}>
-              Go to Seeding & Groups
+            <Link href={`/dashboard/tournaments/${id}/groups?category=${active.id}`}>
+              Go to Seeding & Groups <ArrowRight className="size-4" />
             </Link>
           </Button>
         </EmptyState>

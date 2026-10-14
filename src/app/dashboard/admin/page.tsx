@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ExternalLink, ShieldCheck, Star } from "lucide-react";
+import { ExternalLink, Search, ShieldCheck, Star } from "lucide-react";
 import { requireSuperAdmin } from "@/lib/super-admin";
 import { getAllTournaments } from "@/lib/admin-data";
 import { PageHeader, EmptyState } from "@/components/page-header";
@@ -61,27 +61,33 @@ export default async function SuperAdminPage({
         title="Super admin dashboard"
         description="Every tournament on PicklePro. Flip a switch to feature one on the homepage."
       >
-        <span className="flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+        <span className="flex items-center gap-1.5 rounded-full bg-court px-3 py-1 text-xs font-semibold text-court-foreground">
           <ShieldCheck className="size-3.5" /> Super admin
         </span>
       </PageHeader>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {stats.map((s) => (
-          <div key={s.label} className="glass rounded-2xl p-4">
-            <div className="text-2xl font-bold">{s.value}</div>
-            <div className="text-xs text-muted-foreground">{s.label}</div>
+          <div
+            key={s.label}
+            className="rounded-2xl border border-border bg-card p-4 shadow-card"
+          >
+            <div className="eyebrow">{s.label}</div>
+            <div className="scoreboard mt-1 text-4xl font-bold">{s.value}</div>
           </div>
         ))}
       </div>
 
       {/* A plain GET form: the filter survives a reload and can be linked. */}
-      <form className="flex gap-2">
+      <form role="search" className="relative max-w-sm">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
+          type="search"
           name="q"
+          aria-label="Search tournaments"
           defaultValue={q ?? ""}
           placeholder="Search by name, code, location or owner"
-          className="max-w-sm"
+          className="pl-9"
         />
       </form>
 
@@ -96,7 +102,66 @@ export default async function SuperAdminPage({
           }
         />
       ) : (
-        <div className="glass rounded-2xl p-2">
+        <>
+        {/* Phones get one card per tournament; the table needs a wide screen. */}
+        <ul className="space-y-3 md:hidden">
+          {tournaments.map((t) => (
+            <li
+              key={t.id}
+              className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-card"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="truncate font-heading text-xl font-bold leading-tight">
+                    {t.name}
+                  </div>
+                  <div className="truncate text-xs text-muted-foreground">
+                    /{t.short_code}
+                    {t.location && ` · ${t.location}`}
+                  </div>
+                </div>
+                <TournamentStatusBadge status={t.status} />
+              </div>
+              <div className="text-sm">
+                <span className="text-muted-foreground">Owner: </span>
+                {t.ownerName ?? t.ownerEmail ?? "no owner"}
+              </div>
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <span>
+                  <span className="scoreboard font-bold text-foreground">
+                    {t.categoryCount}
+                  </span>{" "}
+                  categories
+                </span>
+                <span>
+                  <span className="scoreboard font-bold text-foreground">
+                    {t.participantCount}
+                  </span>{" "}
+                  teams
+                </span>
+                <span>{formatDate(t.created_at)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <FeatureToggle
+                    tournamentId={t.id}
+                    name={t.name}
+                    featured={t.featured}
+                  />
+                  On homepage
+                </label>
+                <Link
+                  href={`/${t.short_code}`}
+                  target="_blank"
+                  className="flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary"
+                >
+                  Public page <ExternalLink className="size-4" />
+                </Link>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <div className="hidden rounded-2xl border border-border bg-card p-2 shadow-card md:block">
           <Table>
             <TableHeader>
               <TableRow>
@@ -118,7 +183,7 @@ export default async function SuperAdminPage({
               {tournaments.map((t) => (
                 <TableRow key={t.id}>
                   <TableCell>
-                    <div className="font-medium">{t.name}</div>
+                    <div className="font-semibold">{t.name}</div>
                     <div className="text-xs text-muted-foreground">
                       /{t.short_code}
                       {t.location && ` · ${t.location}`}
@@ -133,10 +198,10 @@ export default async function SuperAdminPage({
                   <TableCell>
                     <TournamentStatusBadge status={t.status} />
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
+                  <TableCell className="scoreboard text-right text-base font-bold">
                     {t.categoryCount}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
+                  <TableCell className="scoreboard text-right text-base font-bold">
                     {t.participantCount}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
@@ -164,6 +229,7 @@ export default async function SuperAdminPage({
             </TableBody>
           </Table>
         </div>
+        </>
       )}
     </div>
   );

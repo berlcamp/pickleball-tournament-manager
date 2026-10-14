@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useId, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { bulkAddParticipants } from "@/actions/participants";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +16,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { ClipboardCheck, Shuffle } from "lucide-react";
+import { ClipboardCheck, Loader2, Shuffle } from "lucide-react";
 import {
   drawCrossPairs,
   drawSinglePairs,
@@ -35,9 +36,13 @@ export function BlindPairingDialog({
   tournamentId,
   categoryId,
   registrants,
+  primary = false,
 }: {
   tournamentId: string;
   categoryId: string;
+  /** In a blind pairing category the draw is how teams get made, so its
+   *  trigger takes the primary style there. */
+  primary?: boolean;
   /** Blind pairing categories: approved registrants still without a team,
    *  offered as a one-click roster. */
   registrants?: string[];
@@ -112,14 +117,16 @@ export function BlindPairingDialog({
         if (!next) reset();
       }}
     >
-      <DialogTrigger render={<Button variant="outline" />}>
+      <DialogTrigger render={<Button variant={primary ? "default" : "outline"} />}>
         <Shuffle className="size-4" /> Blind pairing
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Blind pairing</DialogTitle>
+          <DialogTitle className="font-heading text-2xl font-bold">
+            Blind pairing
+          </DialogTitle>
           <DialogDescription>
-            One player per line. The draw gives everyone a random partner.
+            Type one player per line. The draw gives everyone a random partner, and nothing is saved until you add the teams.
           </DialogDescription>
         </DialogHeader>
 
@@ -197,16 +204,14 @@ export function BlindPairingDialog({
 
           {teams && (
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                Draw ({teams.length} teams)
-              </label>
-              <ul className="divide-y divide-border/50 rounded-xl border border-border/60">
+              <p className="eyebrow">Draw ({teams.length} teams)</p>
+              <ul className="divide-y divide-border rounded-xl border border-border">
                 {teams.map((team, i) => (
                   <li
                     key={team.join("|")}
                     className="flex items-center gap-3 px-3 py-2 text-sm"
                   >
-                    <span className="grid size-6 shrink-0 place-items-center rounded-lg bg-muted text-xs font-semibold text-muted-foreground">
+                    <span className="scoreboard grid size-7 shrink-0 place-items-center rounded-lg bg-muted text-sm font-bold text-muted-foreground">
                       {i + 1}
                     </span>
                     <span className="truncate font-medium">
@@ -235,7 +240,12 @@ export function BlindPairingDialog({
             {teams ? "Draw again" : "Draw partners"}
           </Button>
           <Button onClick={save} disabled={pending || !teams?.length}>
-            {teams?.length ? `Add ${teams.length} teams` : "Add teams"}
+            {pending && <Loader2 className="size-4 animate-spin" />}
+            {pending
+              ? "Adding…"
+              : teams?.length
+                ? `Add ${teams.length} teams`
+                : "Add teams"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -260,13 +270,13 @@ function ModeButton({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "rounded-lg px-3 py-2 text-left transition-colors",
+        "min-h-11 rounded-lg px-3 py-2 text-left outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
         active
-          ? "bg-background shadow-sm"
+          ? "bg-background shadow-sm ring-1 ring-primary/30"
           : "text-muted-foreground hover:text-foreground",
       )}
     >
-      <span className="block text-sm font-medium">{label}</span>
+      <span className="block text-sm font-semibold">{label}</span>
       <span className="block text-xs text-muted-foreground">{hint}</span>
     </button>
   );
@@ -283,12 +293,12 @@ function Roster({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const id = useId();
   return (
     <div className="space-y-1.5">
-      <label className="text-xs font-medium text-muted-foreground">
-        {label}
-      </label>
+      <Label htmlFor={id}>{label}</Label>
       <Textarea
+        id={id}
         rows={7}
         className="field-sizing-fixed h-36 resize-none overflow-y-auto"
         placeholder={placeholder}

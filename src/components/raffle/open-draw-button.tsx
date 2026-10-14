@@ -10,7 +10,7 @@ export function OpenDrawButton({ raffleId }: { raffleId: string }) {
   return (
     <Button onClick={openDraw} className="gap-1.5">
       <Play className="size-4 fill-current" />
-      Open Draw
+      Open draw screen
     </Button>
   );
 }

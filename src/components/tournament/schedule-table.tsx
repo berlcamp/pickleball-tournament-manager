@@ -1,13 +1,15 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useOptimistic, useState, useTransition } from "react";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { MatchStatusBadge } from "@/components/status-badge";
 import { toggleQueued } from "@/actions/schedule";
 import { formatDate, formatTime, timeToMinutes } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { Loader2, Search, Trophy } from "lucide-react";
+import { ScrollFade } from "@/components/tournament/scroll-fade";
+import { Search, SearchX, Trophy } from "lucide-react";
 
 export interface ScheduleRow {
   id: string;
@@ -99,13 +101,38 @@ export function ScheduleTable({
       });
   }, [rows, q, day, group, court, category, venue]);
 
+  const statusCell = (r: ScheduleRow) =>
+    canQueue && tournamentId && r.status === "pending" ? (
+      <QueueToggle
+        tournamentId={tournamentId}
+        scheduleId={r.id}
+        queued={!!r.queued}
+      />
+    ) : (
+      <MatchStatusBadge status={r.status} />
+    );
+
+  const groupBadge = (r: ScheduleRow) =>
+    r.kind === "knockout" ? (
+      <Badge variant="default" className="shrink-0">
+        <Trophy />
+        {r.group}
+      </Badge>
+    ) : (
+      <Badge variant="secondary" className="shrink-0">
+        {r.group}
+      </Badge>
+    );
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+        <div className="relative sm:min-w-56 sm:flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
+            type="search"
             placeholder="Search team, group or court…"
+            aria-label="Search matches"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             className="pl-9"
@@ -120,120 +147,163 @@ export function ScheduleTable({
             { v: "afternoon", l: "Afternoon" },
           ]}
         />
-        {showCategory && (
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
+          {showCategory && (
+            <FilterSelect
+              value={category}
+              onChange={setCategory}
+              all="All categories"
+              options={categories}
+            />
+          )}
+          {venues.length > 1 && (
+            <FilterSelect
+              value={venue}
+              onChange={setVenue}
+              all="All venues"
+              options={venues}
+            />
+          )}
           <FilterSelect
-            value={category}
-            onChange={setCategory}
-            all="All categories"
-            options={categories}
+            value={group}
+            onChange={setGroup}
+            all="All groups"
+            options={groups}
           />
-        )}
-        {venues.length > 1 && (
           <FilterSelect
-            value={venue}
-            onChange={setVenue}
-            all="All venues"
-            options={venues}
+            value={court}
+            onChange={setCourt}
+            all="All courts"
+            options={courts}
           />
-        )}
-        <FilterSelect
-          value={group}
-          onChange={setGroup}
-          all="All groups"
-          options={groups}
-        />
-        <FilterSelect
-          value={court}
-          onChange={setCourt}
-          all="All courts"
-          options={courts}
-        />
+        </div>
       </div>
 
-      <div className="glass overflow-x-auto rounded-2xl">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <th className="px-3 py-3">When &amp; where</th>
-              {showCategory && <th className="px-3 py-3">Category</th>}
-              <th className="px-3 py-3">Match</th>
-              <th className="px-3 py-3">Group</th>
-              <th className="px-3 py-3">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={4 + (showCategory ? 1 : 0)}
-                  className="px-3 py-10 text-center text-muted-foreground"
-                >
-                  No matches found.
-                </td>
-              </tr>
-            ) : (
-              filtered.map((r) => (
-                <tr
-                  key={r.id}
-                  className="border-b border-border/50 last:border-0 hover:bg-accent/30"
-                >
-                  {/* Date, time, court and venue read as one block: when the
-                      match is, then where. Only the parts the board actually
-                      has are shown. */}
-                  <td className="whitespace-nowrap px-3 py-3">
-                    {showDate && (
-                      <div className="text-xs text-muted-foreground">
-                        {r.date ? formatDate(r.date) : "Date TBD"}
-                      </div>
-                    )}
-                    <div className="font-medium tabular-nums">
-                      {formatTime(r.time)}
-                      <span className="px-1.5 text-muted-foreground">·</span>
-                      <span className="font-normal">{r.court}</span>
+      {filtered.length === 0 ? (
+        <div className="glass flex flex-col items-center gap-2 rounded-2xl px-6 py-10 text-center">
+          <SearchX className="size-6 text-muted-foreground" />
+          <p className="font-medium">No matches match these filters.</p>
+          <p className="text-sm text-muted-foreground">
+            Clear the search or pick &ldquo;All&rdquo; in the filters above.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Phones: one card per match — time and court first, since that is
+              what a player scanning the board courtside is looking for. */}
+          <ul className="space-y-2 sm:hidden">
+            {filtered.map((r) => (
+              <li
+                key={r.id}
+                className={cn(
+                  "glass rounded-2xl p-3",
+                  r.status === "in_progress" && "border-ball ring-2 ring-ball/40",
+                )}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-baseline gap-2">
+                      <span className="scoreboard text-2xl font-bold leading-none">
+                        {formatTime(r.time)}
+                      </span>
+                      <span className="font-heading text-base font-semibold uppercase tracking-wide text-primary">
+                        {r.court}
+                      </span>
                     </div>
-                    {showVenue && (
-                      <div className="text-xs text-muted-foreground">
-                        {r.venue ?? "—"}
-                      </div>
+                    {(showDate || showVenue || showCategory) && (
+                      <p className="mt-1 truncate text-xs text-muted-foreground">
+                        {[
+                          showDate ? (r.date ? formatDate(r.date) : "Date TBD") : null,
+                          showVenue ? r.venue : null,
+                          showCategory ? r.category : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
                     )}
-                  </td>
-                  {showCategory && (
-                    <td className="whitespace-nowrap px-3 py-3 text-muted-foreground">
-                      {r.category ?? "—"}
-                    </td>
-                  )}
-                  <td className="px-3 py-3">
-                    <span className="font-medium">{r.team1}</span>
-                    <span className="mx-2 text-muted-foreground">vs</span>
-                    <span className="font-medium">{r.team2}</span>
-                  </td>
-                  <td className="px-3 py-3">
-                    {r.kind === "knockout" ? (
-                      <Badge variant="default">
-                        <Trophy />
-                        {r.group}
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary">{r.group}</Badge>
-                    )}
-                  </td>
-                  <td className="px-3 py-3">
-                    {canQueue && tournamentId && r.status === "pending" ? (
-                      <QueueToggle
-                        tournamentId={tournamentId}
-                        scheduleId={r.id}
-                        queued={!!r.queued}
-                      />
-                    ) : (
-                      <MatchStatusBadge status={r.status} />
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+                  </div>
+                  {groupBadge(r)}
+                </div>
+                <div className="mt-2.5 flex items-end justify-between gap-3">
+                  <div className="min-w-0 text-[0.9375rem] leading-snug">
+                    <div className="truncate font-semibold">{r.team1}</div>
+                    <div className="truncate font-semibold">
+                      <span className="mr-1.5 text-xs font-normal text-muted-foreground">
+                        vs
+                      </span>
+                      {r.team2}
+                    </div>
+                  </div>
+                  <div className="shrink-0">{statusCell(r)}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <div className="glass hidden overflow-hidden rounded-2xl sm:block">
+            <ScrollFade>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left font-heading text-[0.8125rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <th className="px-4 py-2.5">When &amp; where</th>
+                    {showCategory && <th className="px-3 py-2.5">Category</th>}
+                    <th className="px-3 py-2.5">Match</th>
+                    <th className="px-3 py-2.5">Group</th>
+                    <th className="px-3 py-2.5">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((r) => (
+                    <tr
+                      key={r.id}
+                      className={cn(
+                        "border-b border-border last:border-0 transition-colors duration-150 hover:bg-muted/60",
+                        r.status === "in_progress" && "bg-ball/10 hover:bg-ball/15",
+                      )}
+                    >
+                      {/* Date, time, court and venue read as one block: when the
+                          match is, then where. Only the parts the board actually
+                          has are shown. */}
+                      <td className="whitespace-nowrap px-4 py-3">
+                        {showDate && (
+                          <div className="text-xs text-muted-foreground">
+                            {r.date ? formatDate(r.date) : "Date TBD"}
+                          </div>
+                        )}
+                        <div className="flex items-baseline gap-2">
+                          <span className="scoreboard text-xl font-bold">
+                            {formatTime(r.time)}
+                          </span>
+                          <span className="font-heading text-sm font-semibold uppercase tracking-wide text-primary">
+                            {r.court}
+                          </span>
+                        </div>
+                        {showVenue && (
+                          <div className="text-xs text-muted-foreground">
+                            {r.venue ?? "—"}
+                          </div>
+                        )}
+                      </td>
+                      {showCategory && (
+                        <td className="whitespace-nowrap px-3 py-3 text-muted-foreground">
+                          {r.category ?? "—"}
+                        </td>
+                      )}
+                      <td className="px-3 py-3">
+                        <span className="font-semibold">{r.team1}</span>
+                        <span className="mx-2 text-xs text-muted-foreground">vs</span>
+                        <span className="font-semibold">{r.team2}</span>
+                      </td>
+                      <td className="px-3 py-3">{groupBadge(r)}</td>
+                      <td className="px-3 py-3">{statusCell(r)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </ScrollFade>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -248,16 +318,19 @@ function Pills({
   options: { v: string; l: string }[];
 }) {
   return (
-    <div className="flex rounded-lg bg-muted p-1">
+    <div className="flex rounded-xl bg-muted p-1" role="group" aria-label="Time of day">
       {options.map((o) => (
         <button
           key={o.v}
+          type="button"
           onClick={() => onChange(o.v)}
-          className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
+          aria-pressed={value === o.v}
+          className={cn(
+            "min-h-10 flex-1 rounded-lg px-3 font-heading text-[0.95rem] font-semibold uppercase tracking-wide transition-colors duration-150 outline-none focus-visible:ring-3 focus-visible:ring-ring/50 sm:min-h-8 sm:flex-none",
             value === o.v
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
+              ? "bg-court text-court-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground",
+          )}
         >
           {o.l}
         </button>
@@ -267,9 +340,13 @@ function Pills({
 }
 
 /**
- * Green (on) / gray (off) toggle for a match's "queued" flag. Rendered in the
- * Status column only while a match has no score yet; once scored the parent
- * swaps this for the status badge instead.
+ * On / off toggle for a match's "queued" flag. Rendered in the Status column
+ * only while a match has no score yet; once scored the parent swaps this for
+ * the status badge instead.
+ *
+ * Optimistic: the pill flips on tap and stays tappable. `useOptimistic` holds
+ * the new value while the save runs, then hands back to the server's value —
+ * which is the new one on success and the old one (plus a toast) on failure.
  */
 function QueueToggle({
   tournamentId,
@@ -280,16 +357,15 @@ function QueueToggle({
   scheduleId: string;
   queued: boolean;
 }) {
+  const [on, setOn] = useOptimistic(queued);
   const [pending, startTransition] = useTransition();
-  // Optimistic local state so the pill flips instantly on click.
-  const [on, setOn] = useState(queued);
 
   function toggle() {
     const next = !on;
-    setOn(next);
     startTransition(async () => {
+      setOn(next);
       const res = await toggleQueued(tournamentId, scheduleId, next);
-      if (!res.ok) setOn(!next); // revert on failure
+      if (!res.ok) toast.error(res.error ?? "Couldn't update the queue.");
     });
   }
 
@@ -297,25 +373,23 @@ function QueueToggle({
     <button
       type="button"
       onClick={toggle}
-      disabled={pending}
       aria-pressed={on}
+      aria-busy={pending || undefined}
+      title={on ? "Called to court — tap to undo" : "Mark as called to court next"}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-60",
+        "inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors duration-150 outline-none focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.97] sm:min-h-7 sm:px-2.5",
         on
-          ? "bg-primary/20 text-primary hover:bg-primary/30"
-          : "bg-muted text-muted-foreground hover:bg-muted/70",
+          ? "bg-primary text-primary-foreground hover:bg-[color-mix(in_oklch,var(--primary),black_10%)]"
+          : "bg-muted text-muted-foreground hover:bg-[color-mix(in_oklch,var(--muted),var(--foreground)_6%)] hover:text-foreground",
       )}
     >
-      {pending ? (
-        <Loader2 className="size-3 animate-spin" />
-      ) : (
-        <span
-          className={cn(
-            "size-2 rounded-full",
-            on ? "bg-primary" : "bg-muted-foreground/50",
-          )}
-        />
-      )}
+      <span
+        className={cn(
+          "size-2 rounded-full",
+          on ? "bg-primary-foreground" : "bg-muted-foreground/50",
+          pending && "animate-pulse",
+        )}
+      />
       {on ? "Queued" : "Queue"}
     </button>
   );
@@ -336,7 +410,8 @@ function FilterSelect({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="h-9 rounded-md border border-input bg-transparent px-3 text-sm outline-none"
+      aria-label={all}
+      className="h-11 w-full min-w-0 rounded-lg border border-input bg-card px-3 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-9 sm:w-auto sm:text-sm dark:bg-input/30"
     >
       <option value="all">{all}</option>
       {options.map((o) => (

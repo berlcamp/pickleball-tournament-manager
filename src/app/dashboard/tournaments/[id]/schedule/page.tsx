@@ -33,7 +33,7 @@ export default async function SchedulePage({
     <div className="space-y-6">
       <PageHeader
         title="Schedule"
-        description="Court assignments and match times for this category."
+        description="Who plays where and when. Tap Queue to call a match to its court next."
       >
         <ScheduleSummaryButton
           rows={allRows}
@@ -46,10 +46,18 @@ export default async function SchedulePage({
       </PageHeader>
 
       {roleAtLeast(ctx.role, "admin") && active.status !== "draft" && (
-        <div className="glass flex items-center gap-2 rounded-2xl p-4 text-sm text-muted-foreground">
-          <Lock className="size-4" />
-          Group stage has started — match times and courts are locked, but you
-          can still queue matches below.
+        <div className="glass flex items-start gap-3 rounded-2xl p-4">
+          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground">
+            <Lock className="size-4" />
+          </span>
+          <div className="text-sm">
+            <p className="font-semibold">Times and courts are locked</p>
+            <p className="text-muted-foreground">
+              {active.name} has started, and players are going by this
+              schedule. You can still queue matches below to call teams to
+              their court.
+            </p>
+          </div>
         </div>
       )}
 
@@ -71,7 +79,7 @@ export default async function SchedulePage({
           title="No schedule yet"
           description={
             roleAtLeast(ctx.role, "admin")
-              ? "Use the Schedule Generator button at the top of the page to lay out match times and courts for this category."
+              ? "Press Schedule Generator in the tournament header to lay out match times and courts. Draw the groups first — the schedule is built from their matches."
               : "Match times and courts haven't been published for this category yet."
           }
         />

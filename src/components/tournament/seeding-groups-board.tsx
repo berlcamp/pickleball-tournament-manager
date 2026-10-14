@@ -1,9 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import {
+  startTransition,
+  useEffect,
+  useOptimistic,
+  useRef,
+  useState,
+} from "react";
 import {
   DndContext,
   closestCenter,
+  KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
@@ -12,6 +19,7 @@ import {
 import {
   arrayMove,
   SortableContext,
+  sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
@@ -30,9 +38,11 @@ import {
   Check,
   GripVertical,
   Loader2,
+  Network,
   Shuffle,
   Users,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { GroupGenerator } from "@/components/tournament/group-generator";
 import { saveSeeding, randomizeSeeding } from "@/actions/seeding";
 import { assignParticipantToGroup } from "@/actions/groups";
@@ -84,34 +94,51 @@ function TeamRow({
     <li
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`flex items-center gap-2 rounded-xl bg-card/50 px-3 py-2 ${
-        isDragging ? "ring-2 ring-primary" : ""
-      }`}
+      className={cn(
+        "flex items-center gap-2 rounded-xl border border-border bg-card py-1.5 pr-2 pl-1.5",
+        isDragging && "relative z-10 border-primary shadow-raised ring-2 ring-primary/40",
+      )}
     >
       {!dragDisabled && (
         <button
+          type="button"
           {...attributes}
           {...listeners}
-          className="cursor-grab text-muted-foreground active:cursor-grabbing"
-          aria-label="Drag to reorder"
+          className="grid size-11 shrink-0 cursor-grab touch-none place-items-center rounded-lg text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 active:cursor-grabbing sm:size-8"
+          aria-label={`Drag to reorder ${team.name}, seed ${index + 1}`}
         >
           <GripVertical className="size-5" />
         </button>
       )}
-      <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-primary/15 text-xs font-bold text-primary">
+      <span
+        className={cn(
+          "scoreboard grid size-8 shrink-0 place-items-center rounded-lg bg-court text-lg font-bold text-court-foreground",
+          dragDisabled && "ml-1.5",
+        )}
+        aria-label={`Seed ${index + 1}`}
+      >
         {index + 1}
       </span>
-      <span className="min-w-0 flex-1 truncate text-sm font-medium">
+      <span className="min-w-0 flex-1 truncate text-sm font-semibold">
         {team.name}
       </span>
+      {saving && (
+        <Loader2
+          className="size-4 shrink-0 animate-spin text-muted-foreground"
+          aria-label="Saving"
+        />
+      )}
       {canEdit ? (
         <Select
           items={options}
           value={team.groupId ?? UNASSIGNED}
           onValueChange={(v) => onAssign(team, String(v))}
-          disabled={saving}
         >
-          <SelectTrigger size="sm" className="w-32 shrink-0">
+          <SelectTrigger
+            size="sm"
+            className="w-28 shrink-0 sm:w-32"
+            aria-label={`Group for ${team.name}`}
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -123,7 +150,7 @@ function TeamRow({
           </SelectContent>
         </Select>
       ) : (
-        <span className="text-xs text-muted-foreground">
+        <span className="shrink-0 font-heading text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           {options.find((o) => o.value === team.groupId)?.label ?? "Unassigned"}
         </span>
       )}
@@ -153,9 +180,13 @@ export function SeedingGroupsBoard({
   const [order, setOrder] = useState<string[]>(() => teams.map((t) => t.id));
   const [roster, setRoster] = useState(() => rosterKey(categoryId, teams));
   const [shuffling, setShuffling] = useState(false);
-  const [pending, startTransition] = useTransition();
-  // The row being saved, so only its dropdown is disabled mid-flight.
-  const [saving, setSaving] = useState<string | null>(null);
+  // Group moves picked from a row's dropdown, shown before the server
+  // confirms them. Each lives for its save's transition; the revalidated
+  // board then carries the real membership (or the old one, on failure).
+  const [moves, addMove] = useOptimistic<
+    Record<string, string | null>,
+    { teamId: string; groupId: string | null }
+  >({}, (state, m) => ({ ...state, [m.teamId]: m.groupId }));
   const [seedState, setSeedState] = useState<"idle" | "saving" | "saved">(
     "idle",
   );
@@ -165,7 +196,11 @@ export function SeedingGroupsBoard({
   const savingSeeds = useRef(false);
   const queuedSeeds = useRef<string[] | null>(null);
 
-  const sensors = useSensors(useSensor(PointerSensor));
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    // Arrow keys reorder too, for anyone not using a mouse or finger.
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   // Teams added, removed, or a different category: start from the server order.
   // A plain refresh (after assigning a group) keeps the unsaved local order.
@@ -181,7 +216,10 @@ export function SeedingGroupsBoard({
     };
   }, []);
 
-  const byId = new Map(teams.map((t) => [t.id, t]));
+  const moved = (id: string) => Object.prototype.hasOwnProperty.call(moves, id);
+  const byId = new Map(
+    teams.map((t) => [t.id, moved(t.id) ? { ...t, groupId: moves[t.id] } : t]),
+  );
   const rows = order
     .map((id) => byId.get(id))
     .filter((t): t is BoardTeam => Boolean(t));
@@ -254,78 +292,100 @@ export function SeedingGroupsBoard({
   function assign(team: BoardTeam, value: string) {
     const groupId = value === UNASSIGNED ? null : value;
     if (groupId === team.groupId) return;
-    setSaving(team.id);
     startTransition(async () => {
+      addMove({ teamId: team.id, groupId });
       const res = await assignParticipantToGroup(
         tournamentId,
         categoryId,
         team.id,
         groupId,
       );
-      setSaving(null);
       if (!res.ok) {
-        toast.error(res.error);
-        return;
+        toast.error(`${team.name} wasn't moved. ${res.error ?? ""}`.trim());
       }
-      const target = groups.find((g) => g.id === groupId);
-      toast.success(
-        target ? `${team.name} → ${target.name}` : `${team.name} unassigned`,
-      );
     });
   }
+
+  // The Groups column follows the optimistic moves too: a moved team leaves
+  // its old group and appears in the new one at once, with its in-group seed
+  // shown as pending until the server has worked it out.
+  const groupView = groups.map((g) => ({
+    ...g,
+    members: [
+      ...g.members
+        .filter((m) => !moved(m.participantId) || moves[m.participantId] === g.id)
+        .map((m) => ({ ...m, pending: false })),
+      ...teams
+        .filter((t) => moved(t.id) && moves[t.id] === g.id && t.groupId !== g.id)
+        .map((t) => ({
+          participantId: t.id,
+          seed: 0,
+          name: t.name,
+          pending: true,
+        })),
+    ],
+  }));
 
   return (
     <div className="space-y-6">
       {canEdit && (
         <div className="grid gap-4 lg:grid-cols-2">
-          <div className="glass flex flex-col gap-4 rounded-2xl p-5">
-            <div className="flex items-center gap-3">
-              <span className="grid size-10 place-items-center rounded-xl bg-primary/15 text-primary">
+          <div className="glass flex flex-col gap-4 rounded-2xl p-4 sm:p-5">
+            <div className="flex items-start gap-3">
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/12 text-primary">
                 <ArrowUpDown className="size-5" />
               </span>
               <div>
-                <h3 className="font-semibold">Seed order</h3>
+                <h3 className="font-heading text-xl font-bold leading-tight">
+                  1 · Seed order
+                </h3>
                 <p className="text-sm text-muted-foreground">
-                  Drag teams in the list to set seeds — saved as you drop —
-                  or shuffle at random.
+                  Drag teams by the handle to rank them — seed 1 is the
+                  strongest. Each drop saves on its own. Or shuffle at random.
                 </p>
               </div>
             </div>
             <div className="mt-auto flex flex-wrap items-center gap-3">
               <Button
                 onClick={randomize}
-                disabled={shuffling || pending}
+                disabled={shuffling}
                 variant="outline"
               >
-                <Shuffle className={`size-4 ${shuffling ? "animate-spin" : ""}`} />
+                <Shuffle className={cn("size-4", shuffling && "animate-spin")} />
                 {shuffling ? "Shuffling…" : "Random seed"}
               </Button>
-              {seedState === "saving" && (
-                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Loader2 className="size-3.5 animate-spin" /> Saving…
-                </span>
-              )}
-              {seedState === "saved" && (
-                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Check className="size-3.5 text-primary" /> Saved
-                </span>
-              )}
+              <span aria-live="polite" className="text-xs text-muted-foreground">
+                {seedState === "saving" && (
+                  <span className="flex items-center gap-1.5">
+                    <Loader2 className="size-3.5 animate-spin" /> Saving order…
+                  </span>
+                )}
+                {seedState === "saved" && (
+                  <span className="flex items-center gap-1.5">
+                    <Check className="size-3.5 text-primary" /> Order saved
+                  </span>
+                )}
+              </span>
             </div>
           </div>
           <GroupGenerator
             tournamentId={tournamentId}
             categoryId={categoryId}
             participantCount={teams.length}
+            hasGroups={groups.length > 0}
           />
         </div>
       )}
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <section className="glass rounded-2xl p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="font-semibold">Teams</h3>
+        <section className="glass rounded-2xl p-4 sm:p-5">
+          <div className="mb-3 flex items-baseline justify-between gap-3">
+            <h3 className="font-heading text-xl font-bold">Teams by seed</h3>
             <span className="text-xs text-muted-foreground">
-              {rows.length} total
+              <span className="scoreboard text-base font-bold text-foreground">
+                {rows.length}
+              </span>{" "}
+              {rows.length === 1 ? "team" : "teams"}
             </span>
           </div>
           {rows.length === 0 ? (
@@ -342,7 +402,7 @@ export function SeedingGroupsBoard({
                 items={order}
                 strategy={verticalListSortingStrategy}
               >
-                <ul className="space-y-2">
+                <ul className="space-y-1.5">
                   {rows.map((team, i) => (
                     <TeamRow
                       key={team.id}
@@ -351,7 +411,7 @@ export function SeedingGroupsBoard({
                       options={options}
                       canEdit={canEdit}
                       dragDisabled={!canEdit || shuffling}
-                      saving={saving === team.id || (pending && saving !== null)}
+                      saving={moved(team.id)}
                       onAssign={assign}
                     />
                   ))}
@@ -361,38 +421,68 @@ export function SeedingGroupsBoard({
           )}
         </section>
 
-        <section className="glass rounded-2xl p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="font-semibold">Groups</h3>
+        <section className="glass rounded-2xl p-4 sm:p-5">
+          <div className="mb-3 flex items-baseline justify-between gap-3">
+            <h3 className="font-heading text-xl font-bold">Groups</h3>
+            {groups.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                <span className="scoreboard text-base font-bold text-foreground">
+                  {groups.length}
+                </span>{" "}
+                {groups.length === 1 ? "group" : "groups"}
+              </span>
+            )}
           </div>
           {groups.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No groups yet — generate them above, then move teams by hand if
-              you need to.
-            </p>
+            <div className="flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border px-4 py-10 text-center">
+              <Network className="size-6 text-primary" />
+              <p className="font-medium">No groups yet</p>
+              <p className="max-w-xs text-sm text-muted-foreground">
+                {canEdit
+                  ? "Set the seed order, then use “Draw groups” above. You can move teams between groups by hand afterwards."
+                  : "The organiser hasn't drawn the groups yet."}
+              </p>
+            </div>
           ) : (
-            <div className="space-y-3">
-              {groups.map((g) => (
-                <div key={g.id} className="rounded-xl bg-card/50 p-4">
-                  <div className="mb-2 flex items-center justify-between">
-                    <h4 className="text-sm font-semibold">{g.name}</h4>
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Users className="size-3.5" /> {g.members.length}
+            <div className="grid gap-3 sm:grid-cols-2">
+              {groupView.map((g) => (
+                <div
+                  key={g.id}
+                  className="overflow-hidden rounded-xl border border-border bg-card"
+                >
+                  <div className="flex items-center justify-between bg-court px-3 py-2 text-court-foreground">
+                    <h4 className="font-heading text-base font-bold uppercase tracking-wide">
+                      {g.name}
+                    </h4>
+                    <span className="flex items-center gap-1 text-xs text-court-foreground/75">
+                      <Users className="size-3.5" />
+                      <span className="scoreboard text-sm font-semibold">
+                        {g.members.length}
+                      </span>
                     </span>
                   </div>
                   {g.members.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">Empty</p>
+                    <p className="px-3 py-3 text-xs text-muted-foreground">
+                      Empty — pick this group from a team&apos;s dropdown.
+                    </p>
                   ) : (
-                    <ul className="space-y-1.5">
+                    <ul className="divide-y divide-border">
                       {g.members.map((m) => (
                         <li
                           key={m.participantId}
-                          className="flex items-center gap-2 text-sm"
+                          className={cn(
+                            "flex items-center gap-2 px-3 py-2 text-sm",
+                            m.pending && "text-muted-foreground",
+                          )}
                         >
-                          <span className="grid size-5 place-items-center rounded bg-muted text-[10px] font-bold text-muted-foreground">
-                            {m.seed}
+                          <span className="scoreboard grid size-6 shrink-0 place-items-center rounded-md bg-muted text-sm font-bold text-muted-foreground">
+                            {m.pending ? (
+                              <Loader2 className="size-3 animate-spin" />
+                            ) : (
+                              m.seed
+                            )}
                           </span>
-                          <span className="truncate">{m.name}</span>
+                          <span className="truncate font-medium">{m.name}</span>
                         </li>
                       ))}
                     </ul>

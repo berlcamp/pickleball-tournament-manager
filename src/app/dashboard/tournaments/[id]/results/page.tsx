@@ -7,7 +7,9 @@ import { StandingsTable } from "@/components/tournament/standings-table";
 import { BracketView } from "@/components/tournament/bracket-view";
 import { Podium } from "@/components/tournament/podium";
 import { QrShare } from "@/components/qr-share";
-import { Trophy } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { ArrowRight, Trophy } from "lucide-react";
 
 export default async function ResultsPage({
   params,
@@ -33,7 +35,10 @@ export default async function ResultsPage({
 
   return (
     <div className="space-y-8">
-      <PageHeader title="Results" description="Final standings and bracket.">
+      <PageHeader
+        title="Results"
+        description="Podium, knockout bracket and every group's final table."
+      >
         <QrShare
           path={`/${ctx.tournament.short_code}/standings?category=${active.id}`}
           label="Share results"
@@ -44,15 +49,21 @@ export default async function ResultsPage({
         <EmptyState
           icon={Trophy}
           title="No results yet"
-          description="Results appear here as matches are played."
-        />
+          description="Results fill in as scores are entered. Draw the groups and start the group stage to get going."
+        >
+          <Button asChild variant="outline">
+            <Link href={`/dashboard/tournaments/${id}/group-stage?category=${active.id}`}>
+              Go to Group Stage <ArrowRight className="size-4" />
+            </Link>
+          </Button>
+        </EmptyState>
       ) : (
         <>
           <Podium placements={finals.placements} />
 
           {finals.rounds.length > 0 && (
             <section className="space-y-3">
-              <h2 className="text-lg font-semibold">Finals bracket</h2>
+              <h2 className="text-2xl font-bold">Finals bracket</h2>
               <BracketView
                 tournamentId={id}
                 rounds={finals.rounds}
@@ -63,12 +74,10 @@ export default async function ResultsPage({
 
           {groups.length > 0 && (
             <section className="space-y-4">
-              <h2 className="text-lg font-semibold">Group standings</h2>
+              <h2 className="text-2xl font-bold">Group standings</h2>
               {groups.map((g) => (
                 <div key={g.id} className="space-y-2">
-                  <h3 className="text-sm font-medium text-muted-foreground">
-                    {g.name}
-                  </h3>
+                  <h3 className="eyebrow">{g.name}</h3>
                   <StandingsTable rows={g.standings} />
                 </div>
               ))}

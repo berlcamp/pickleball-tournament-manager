@@ -6,7 +6,7 @@ import {
   listRegistrations,
   registrationsEnabled,
 } from "@/lib/registration-data";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader, EmptyState } from "@/components/page-header";
 import { RegistrationsManager } from "@/components/tournament/registrations-manager";
 import { Button } from "@/components/ui/button";
 import { Settings2, TriangleAlert } from "lucide-react";
@@ -27,23 +27,22 @@ export default async function RegistrationsPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <PageHeader
-          title="Registrations"
-          description={
-            anyOpen
-              ? `Teams signing up at /${tournament.short_code}`
-              : "Open registration for a category in Settings to start accepting teams."
-          }
-        />
+      <PageHeader
+        title="Registrations"
+        description={
+          anyOpen
+            ? `Teams sign up at /${tournament.short_code}. Check their details and payment, then approve them.`
+            : "Open registration for a category in Settings to start accepting teams."
+        }
+      >
         {roleAtLeast(role, "admin") && (
-          <Button asChild variant="outline" size="sm">
+          <Button asChild variant="outline">
             <Link href={`/dashboard/tournaments/${id}/settings`}>
               <Settings2 className="size-4" /> Registration settings
             </Link>
           </Button>
         )}
-      </div>
+      </PageHeader>
 
       {registrationsEnabled() ? (
         <RegistrationsManager
@@ -53,15 +52,11 @@ export default async function RegistrationsPage({
           canManage={roleAtLeast(role, "admin")}
         />
       ) : (
-        <div className="glass flex flex-col items-center gap-2 rounded-2xl p-10 text-center">
-          <TriangleAlert className="size-6 text-warning" />
-          <h2 className="font-semibold">Registration is not configured</h2>
-          <p className="max-w-md text-sm text-muted-foreground">
-            Set <span className="font-mono">SUPABASE_SERVICE_ROLE_KEY</span> in
-            the server environment. Registrant IDs and receipts are stored
-            privately, which requires the service-role key.
-          </p>
-        </div>
+        <EmptyState
+          icon={TriangleAlert}
+          title="Registration is not set up"
+          description="Set SUPABASE_SERVICE_ROLE_KEY in the server environment. Registrant IDs and receipts are stored privately, which requires the service-role key."
+        />
       )}
     </div>
   );

@@ -3,7 +3,7 @@
 import { useForm, useFieldArray, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -17,7 +17,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, Upload, X, ImageIcon } from "lucide-react";
+import {
+  Check,
+  ImageIcon,
+  Loader2,
+  Plus,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 import { createTournament, updateTournament } from "@/actions/tournaments";
 import { TournamentFormatInfo } from "@/components/tournament/tournament-format-info";
 
@@ -31,6 +39,14 @@ export function TournamentForm({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [uploading, setUploading] = useState(false);
+  // A quiet "Saved" beside the button after an edit lands, cleared after a
+  // moment — the toast alone is easy to miss on a long settings page.
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    if (!saved) return;
+    const t = setTimeout(() => setSaved(false), 2500);
+    return () => clearTimeout(t);
+  }, [saved]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isEdit = Boolean(tournamentId);
 
@@ -102,44 +118,72 @@ export function TournamentForm({
         return;
       }
       toast.success(tournamentId ? "Tournament updated" : "Tournament created");
+      if (tournamentId) {
+        setSaved(true);
+        // What was just saved becomes the new baseline, so "Unsaved changes"
+        // only shows up again on the next real edit.
+        form.reset(form.getValues());
+      }
       // An update revalidates the workspace in the same response; only a
       // new tournament needs to move somewhere.
       if (!tournamentId) router.push(`/dashboard/tournaments/${res.data}`);
     });
   }
 
+  const errors = form.formState.errors;
+  const dirty = form.formState.isDirty;
+
   return (
     <form
       onSubmit={form.handleSubmit(onSubmit)}
-      className="glass space-y-5 rounded-2xl p-6"
+      className="space-y-6 rounded-2xl border border-border bg-card p-5 shadow-card sm:p-6"
+      noValidate
     >
-      <div className="space-y-2">
-        <Label htmlFor="name">Tournament name</Label>
-        <Input id="name" placeholder="Summer Slam 2026" {...form.register("name")} />
-        {form.formState.errors.name && (
-          <p className="text-xs text-destructive">
-            {form.formState.errors.name.message}
+      {isEdit && (
+        <div>
+          <h2 className="font-heading text-2xl font-bold">Details</h2>
+          <p className="text-sm text-muted-foreground">
+            What players see at the top of your public page.
           </p>
+        </div>
+      )}
+
+      <div className="space-y-1.5">
+        <Label htmlFor="name">Tournament name</Label>
+        <Input
+          id="name"
+          placeholder="Summer Slam 2026"
+          aria-invalid={Boolean(errors.name)}
+          {...form.register("name")}
+        />
+        {errors.name && (
+          <p className="text-xs text-destructive">{errors.name.message}</p>
         )}
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="location">Location</Label>
+        <div className="space-y-1.5">
+          <Label htmlFor="location">Venue</Label>
           <Input
             id="location"
             placeholder="City Sports Center"
             {...form.register("location")}
           />
+          <p className="text-xs text-muted-foreground">
+            Optional. Shown on the public page.
+          </p>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor="start_date">Start date</Label>
           <Input id="start_date" type="date" {...form.register("start_date")} />
+          <p className="text-xs text-muted-foreground">
+            Optional. Each category can have its own day.
+          </p>
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label>Banner image (optional)</Label>
+      <div className="space-y-1.5">
+        <Label>Banner image</Label>
         <input type="hidden" {...form.register("banner")} />
         <input
           ref={fileInputRef}
@@ -152,7 +196,7 @@ export function TournamentForm({
           }}
         />
         {bannerUrl ? (
-          <div className="relative overflow-hidden rounded-xl border border-border/50">
+          <div className="relative overflow-hidden rounded-xl border border-border">
             <Image
               src={bannerUrl}
               alt="Tournament banner"
@@ -169,12 +213,18 @@ export function TournamentForm({
                 disabled={uploading}
                 onClick={() => fileInputRef.current?.click()}
               >
-                <Upload className="size-4" /> Replace
+                {uploading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Upload className="size-4" />
+                )}
+                Replace
               </Button>
               <Button
                 type="button"
                 variant="secondary"
-                size="icon"
+                size="icon-sm"
+                aria-label="Remove banner"
                 onClick={() =>
                   form.setValue("banner", "", { shouldDirty: true })
                 }
@@ -188,27 +238,36 @@ export function TournamentForm({
             type="button"
             disabled={uploading}
             onClick={() => fileInputRef.current?.click()}
-            className="flex h-40 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border text-muted-foreground transition hover:border-foreground/30 hover:text-foreground disabled:opacity-60"
+            className="flex h-40 w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border text-muted-foreground outline-none transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
           >
             {uploading ? (
-              <span className="text-sm">Uploading…</span>
+              <>
+                <Loader2 className="size-6 animate-spin text-primary" />
+                <span className="text-sm">Uploading…</span>
+              </>
             ) : (
               <>
-                <ImageIcon className="size-6" />
-                <span className="text-sm">Click to upload a banner image</span>
+                <span className="grid size-11 place-items-center rounded-full bg-primary/10 text-primary">
+                  <ImageIcon className="size-5" />
+                </span>
+                <span className="text-sm font-medium">
+                  Tap to upload a banner
+                </span>
                 <span className="text-xs">PNG or JPG, up to 5MB</span>
               </>
             )}
           </button>
         )}
-        {form.formState.errors.banner && (
-          <p className="text-xs text-destructive">
-            {form.formState.errors.banner.message}
-          </p>
+        <p className="text-xs text-muted-foreground">
+          Optional. It becomes the preview picture when your link is shared on
+          Facebook or Messenger.
+        </p>
+        {errors.banner && (
+          <p className="text-xs text-destructive">{errors.banner.message}</p>
         )}
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <Label htmlFor="description">Description</Label>
         <Textarea
           id="description"
@@ -218,14 +277,19 @@ export function TournamentForm({
         />
       </div>
 
-      <div className="flex items-center justify-between rounded-xl border border-border/50 p-3">
-        <div>
-          <Label htmlFor="show_public_schedule">Show schedule on public page</Label>
-          <p className="text-xs text-muted-foreground">
-            When off, visitors who open the Schedule tab will see &quot;The
-            match schedule is currently unavailable&quot;.
-          </p>
-        </div>
+      <label
+        htmlFor="show_public_schedule"
+        className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-border p-4"
+      >
+        <span>
+          <span className="block text-sm font-medium">
+            Show the schedule on the public page
+          </span>
+          <span className="mt-0.5 block text-xs text-muted-foreground">
+            When off, visitors who open the Schedule tab see &quot;The match
+            schedule is currently unavailable&quot;.
+          </span>
+        </span>
         <Switch
           id="show_public_schedule"
           checked={showPublicSchedule}
@@ -235,22 +299,21 @@ export function TournamentForm({
             })
           }
         />
-      </div>
+      </label>
 
       {!isEdit && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
+        <div className="space-y-3 border-t border-border pt-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <Label>Categories</Label>
-              <p className="text-xs text-muted-foreground">
-                Each category is its own sub-tournament (teams, groups, finals)
-                and is played on its own date.
+              <h2 className="font-heading text-xl font-bold">Categories</h2>
+              <p className="text-sm text-muted-foreground">
+                Each category is its own mini-tournament (teams, groups,
+                finals) and is played on its own day.
               </p>
             </div>
             <Button
               type="button"
               variant="outline"
-              size="sm"
               className="w-full sm:w-auto"
               onClick={() => append({ name: "", event_date: "" })}
             >
@@ -260,60 +323,82 @@ export function TournamentForm({
 
           <TournamentFormatInfo />
 
-          {fields.map((field, i) => (
-            <div
-              key={field.id}
-              className="flex flex-col gap-2 rounded-xl border border-border/50 p-3 sm:flex-row sm:items-end"
-            >
-              <div className="w-full space-y-1.5 sm:flex-1">
-                <Label htmlFor={`cat-${i}`} className="text-xs">
-                  Name
-                </Label>
-                <Input
-                  id={`cat-${i}`}
-                  placeholder="e.g. Men's Doubles"
-                  {...form.register(`categories.${i}.name` as const)}
-                />
-              </div>
-              <div className="w-full space-y-1.5 sm:w-44">
-                <Label htmlFor={`cat-date-${i}`} className="text-xs">
-                  Date (optional)
-                </Label>
-                <Input
-                  id={`cat-date-${i}`}
-                  type="date"
-                  {...form.register(`categories.${i}.event_date` as const)}
-                />
-              </div>
-              {fields.length > 1 && (
-                <div className="w-full space-y-1.5 sm:w-auto">
-                  <Label className="hidden text-xs sm:block sm:invisible">
-                    Remove
+          {fields.map((field, i) => {
+            const nameError = errors.categories?.[i]?.name?.message;
+            return (
+              <div
+                key={field.id}
+                className="flex flex-col gap-3 rounded-xl border border-border bg-muted/30 p-3 sm:flex-row sm:items-start"
+              >
+                <span className="scoreboard hidden size-11 shrink-0 place-items-center rounded-lg bg-court text-lg font-bold text-court-foreground sm:grid sm:size-9">
+                  {i + 1}
+                </span>
+                <div className="w-full space-y-1.5 sm:flex-1">
+                  <Label htmlFor={`cat-${i}`}>Category name</Label>
+                  <Input
+                    id={`cat-${i}`}
+                    placeholder="e.g. Men's Doubles"
+                    aria-invalid={Boolean(nameError)}
+                    {...form.register(`categories.${i}.name` as const)}
+                  />
+                  {nameError && (
+                    <p className="text-xs text-destructive">{nameError}</p>
+                  )}
+                </div>
+                <div className="w-full space-y-1.5 sm:w-44">
+                  <Label htmlFor={`cat-date-${i}`}>
+                    Day <span className="text-muted-foreground">(optional)</span>
                   </Label>
+                  <Input
+                    id={`cat-date-${i}`}
+                    type="date"
+                    {...form.register(`categories.${i}.event_date` as const)}
+                  />
+                </div>
+                {fields.length > 1 && (
                   <Button
                     type="button"
                     variant="ghost"
-                    size="icon"
-                    className="w-full sm:w-auto"
+                    className="text-muted-foreground hover:text-destructive sm:mt-6 sm:size-9 sm:px-0"
+                    aria-label={`Remove category ${i + 1}`}
                     onClick={() => remove(i)}
                   >
                     <Trash2 className="size-4" />
+                    <span className="sm:hidden">Remove category</span>
                   </Button>
-                </div>
-              )}
-            </div>
-          ))}
-          {form.formState.errors.categories && (
+                )}
+              </div>
+            );
+          })}
+          {errors.categories?.message && (
             <p className="text-xs text-destructive">
-              {form.formState.errors.categories.message ??
-                "Each category needs a name."}
+              {errors.categories.message}
             </p>
           )}
         </div>
       )}
 
-      <div className="flex justify-end gap-2">
-        <Button type="submit" disabled={pending}>
+      <div className="flex flex-col-reverse items-stretch gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-end">
+        {isEdit && (
+          <span
+            aria-live="polite"
+            className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground"
+          >
+            {saved ? (
+              <>
+                <Check className="size-4 text-primary" /> Saved
+              </>
+            ) : dirty ? (
+              "Unsaved changes"
+            ) : null}
+          </span>
+        )}
+        <Button
+          type="submit"
+          size={isEdit ? "default" : "lg"}
+          disabled={pending || uploading}
+        >
+          {pending && <Loader2 className="size-4 animate-spin" />}
           {pending
             ? "Saving…"
             : tournamentId

@@ -12,27 +12,27 @@ import {
 
 const RULES: { title: string; body: string }[] = [
   {
-    title: "1. Match wins",
+    title: "Match wins",
     body: "The team with more matches won ranks higher.",
   },
   {
-    title: "2. Head-to-head (mini-league)",
+    title: "Head-to-head (mini-league)",
     body: "If teams are level on wins, we count wins against the other tied teams only.",
   },
   {
-    title: "3. Set wins",
+    title: "Set wins",
     body: "Still tied? The team that won more sets across all their matches ranks higher.",
   },
   {
-    title: "4. Point differential",
+    title: "Point differential",
     body: "Points scored minus points conceded across all matches. A higher net ranks higher.",
   },
   {
-    title: "5. Total points",
+    title: "Total points",
     body: "The team that scored more points across all their matches ranks higher.",
   },
   {
-    title: "6. Direct head-to-head",
+    title: "Direct head-to-head",
     body: "If two teams are still level, the winner of the match played between those two ranks higher.",
   },
 ];
@@ -46,16 +46,19 @@ export function RankingHelpDialog() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="How standings are ranked"
-        className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        className="-my-1 inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-muted-foreground transition-colors duration-150 outline-none hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 sm:min-h-8"
       >
         <HelpCircle className="size-4" />
-        How are these ranked?
+        <span className="hidden min-[380px]:inline">How are these ranked?</span>
+        <span className="min-[380px]:hidden">Ranking rules</span>
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>How standings are ranked</DialogTitle>
+            <DialogTitle className="font-heading text-2xl font-bold">
+              How standings are ranked
+            </DialogTitle>
             <DialogDescription>
               Teams are compared in order. The first rule that separates two
               teams decides who ranks higher.
@@ -63,10 +66,15 @@ export function RankingHelpDialog() {
           </DialogHeader>
 
           <ol className="space-y-3">
-            {RULES.map((r) => (
-              <li key={r.title} className="flex flex-col gap-0.5">
-                <span className="text-sm font-semibold">{r.title}</span>
-                <span className="text-sm text-muted-foreground">{r.body}</span>
+            {RULES.map((r, i) => (
+              <li key={r.title} className="flex gap-3">
+                <span className="scoreboard grid size-7 shrink-0 place-items-center rounded-lg bg-court text-base font-bold text-court-foreground">
+                  {i + 1}
+                </span>
+                <span className="flex flex-col gap-0.5">
+                  <span className="text-sm font-semibold">{r.title}</span>
+                  <span className="text-sm text-muted-foreground">{r.body}</span>
+                </span>
               </li>
             ))}
           </ol>

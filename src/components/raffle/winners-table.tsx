@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Eraser, Sparkles, Trophy } from "lucide-react";
+import { Eraser, Loader2, Search, Trophy } from "lucide-react";
+import { EmptyState } from "@/components/page-header";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -63,14 +64,17 @@ export function WinnersTable({ winners, raffleId }: Props) {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">
-          {winners.length} {winners.length === 1 ? "winner" : "winners"} drawn
-          across all sessions.
+          <span className="scoreboard text-lg font-bold text-foreground">
+            {winners.length}
+          </span>{" "}
+          {winners.length === 1 ? "winner" : "winners"} drawn across all
+          sessions.
         </p>
         {winners.length > 0 ? (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger
               render={
-                <Button variant="outline" size="sm" className="text-destructive">
+                <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 hover:text-destructive">
                   <Eraser className="size-3.5" />
                   Clear all winners
                 </Button>
@@ -90,6 +94,7 @@ export function WinnersTable({ winners, raffleId }: Props) {
                   Cancel
                 </Button>
                 <Button variant="destructive" onClick={onClearAll} disabled={pending}>
+                  {pending && <Loader2 className="size-4 animate-spin" />}
                   Clear all
                 </Button>
               </DialogFooter>
@@ -99,22 +104,59 @@ export function WinnersTable({ winners, raffleId }: Props) {
       </div>
 
       {winners.length === 0 ? (
-        <div className="rounded-xl border border-dashed p-12 text-center">
-          <h3 className="font-semibold">No winners yet</h3>
-          <p className="mt-1 flex items-center justify-center gap-2 text-sm text-muted-foreground">
-            <Sparkles className="size-3.5" />
-            Open the Draw page and spin to record winners.
-          </p>
-        </div>
+        <EmptyState
+          icon={Trophy}
+          title="No winners yet"
+          description="Open the draw screen and spin. Every winner is saved here, even ones drawn offline once the device reconnects."
+        />
       ) : (
         <>
-          <Input
-            placeholder="Search winners…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="max-w-xs"
-          />
-          <div className="overflow-x-auto rounded-xl border">
+          <div className="relative max-w-xs">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              aria-label="Search winners"
+              placeholder="Search winners"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          {/* Phones: one card per winner. The table needs a wider screen. */}
+          <ul className="space-y-2 md:hidden">
+            {filtered.map((w) => (
+              <li
+                key={w.id}
+                className="flex items-start gap-3 rounded-xl border border-border bg-card p-3 shadow-card"
+              >
+                <span className="scoreboard grid size-9 shrink-0 place-items-center rounded-lg bg-ball text-base font-bold text-ball-foreground">
+                  {w.draw_index}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-semibold">{w.entry_name}</div>
+                  <div className="truncate text-xs text-muted-foreground">
+                    {[w.entry_designation, w.department_name]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
+                    {w.prize_label && (
+                      <span className="font-medium text-foreground">
+                        {w.prize_label}
+                      </span>
+                    )}
+                    <span>{format(new Date(w.drawn_at), "MMM d, h:mm a")}</span>
+                  </div>
+                </div>
+              </li>
+            ))}
+            {filtered.length === 0 ? (
+              <li className="py-8 text-center text-sm text-muted-foreground">
+                No winners match that search.
+              </li>
+            ) : null}
+          </ul>
+          <div className="hidden overflow-x-auto rounded-2xl border border-border bg-card shadow-card md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -128,12 +170,12 @@ export function WinnersTable({ winners, raffleId }: Props) {
               <TableBody>
                 {filtered.map((w) => (
                   <TableRow key={w.id}>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
+                    <TableCell className="scoreboard text-base font-bold text-muted-foreground">
                       {w.draw_index}
                     </TableCell>
                     <TableCell>
                       <span className="flex items-center gap-2 font-medium">
-                        <Trophy className="size-3.5 text-amber-500" />
+                        <Trophy className="size-3.5 text-chart-4" />
                         {w.entry_name}
                       </span>
                       {w.entry_designation ? (
@@ -158,7 +200,7 @@ export function WinnersTable({ winners, raffleId }: Props) {
                 {filtered.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
-                      No matches.
+                      No winners match that search.
                     </TableCell>
                   </TableRow>
                 ) : null}
