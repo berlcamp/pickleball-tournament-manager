@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { getUser } from "@/lib/auth";
 import type { Category, Role, Tournament, TournamentStatus } from "@/types";
 
 export interface MyTournament extends Tournament {
@@ -41,11 +42,9 @@ export function aggregateStatus(
 }
 
 export async function getMyTournaments(): Promise<MyTournament[]> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return [];
+  const supabase = await createClient();
 
   const { data: raw } = await supabase
     .from("tournament_members")
@@ -103,45 +102,43 @@ export async function publicClient() {
 }
 
 /** Load a tournament, the current user's role, and its categories; null if not
- * a member. */
-export async function getTournamentContext(id: string): Promise<{
+ * a member.
+ *
+ * Memoized per request (the workspace layout and its page both ask), and the
+ * three reads go out together: RLS already hides a tournament from a
+ * non-member, so nothing is gained by waiting on the membership row first. */
+export const getTournamentContext = cache(async function (id: string): Promise<{
   tournament: Tournament;
   role: Role;
   categories: Category[];
 } | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) return null;
+  const supabase = await createClient();
 
-  const { data: member } = await supabase
-    .from("tournament_members")
-    .select("role")
-    .eq("tournament_id", id)
-    .eq("user_id", user.id)
-    .maybeSingle();
-  if (!member) return null;
-
-  const { data: tournament } = await supabase
-    .from("tournaments")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
-  if (!tournament) return null;
-
-  const { data: categories } = await supabase
-    .from("categories")
-    .select("*")
-    .eq("tournament_id", id)
-    .order("position");
+  const [{ data: member }, { data: tournament }, { data: categories }] =
+    await Promise.all([
+      supabase
+        .from("tournament_members")
+        .select("role")
+        .eq("tournament_id", id)
+        .eq("user_id", user.id)
+        .maybeSingle(),
+      supabase.from("tournaments").select("*").eq("id", id).maybeSingle(),
+      supabase
+        .from("categories")
+        .select("*")
+        .eq("tournament_id", id)
+        .order("position"),
+    ]);
+  if (!member || !tournament) return null;
 
   return {
     tournament: tournament as Tournament,
     role: member.role as Role,
     categories: (categories ?? []) as Category[],
   };
-}
+});
 
 /**
  * Resolve a tournament from whatever appears in a public URL: the short code

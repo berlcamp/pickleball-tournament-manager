@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import {
   DndContext,
   closestCenter,
@@ -151,7 +150,6 @@ export function SeedingGroupsBoard({
   groups: BoardGroup[];
   canEdit: boolean;
 }) {
-  const router = useRouter();
   const [order, setOrder] = useState<string[]>(() => teams.map((t) => t.id));
   const [roster, setRoster] = useState(() => rosterKey(categoryId, teams));
   const [shuffling, setShuffling] = useState(false);
@@ -232,14 +230,16 @@ export function SeedingGroupsBoard({
   function randomize() {
     if (shuffling) return;
     setShuffling(true);
-    // Animated 5-second visual shuffle.
+    // A short visual shuffle that runs while the server draws — the save
+    // starts at once, the animation just keeps the wait from feeling empty.
     intervalRef.current = setInterval(() => {
       setOrder((prev) => shuffle(prev));
     }, 110);
 
+    const request = randomizeSeeding(tournamentId, categoryId);
     setTimeout(async () => {
+      const res = await request;
       if (intervalRef.current) clearInterval(intervalRef.current);
-      const res = await randomizeSeeding(tournamentId, categoryId);
       if (res.ok && res.data) {
         setOrder(res.data);
         setSeedState("saved");
@@ -248,7 +248,7 @@ export function SeedingGroupsBoard({
         toast.error(res.error);
       }
       setShuffling(false);
-    }, 5000);
+    }, 1200);
   }
 
   function assign(team: BoardTeam, value: string) {
@@ -271,7 +271,6 @@ export function SeedingGroupsBoard({
       toast.success(
         target ? `${team.name} → ${target.name}` : `${team.name} unassigned`,
       );
-      router.refresh();
     });
   }
 

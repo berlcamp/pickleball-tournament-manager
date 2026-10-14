@@ -73,7 +73,7 @@ export async function createTournament(input: unknown) {
       name: parsed.name,
       categories: parsed.categories.length,
     });
-    revalidatePath("/dashboard/tournaments");
+    revalidatePath("/dashboard");
     return data.id;
   });
 }
@@ -95,8 +95,8 @@ export async function updateTournament(id: string, input: unknown) {
       .eq("id", id);
     if (error) throw new ActionError(error.message);
     await logAudit(id, "tournament.update", {});
-    revalidatePath(`/dashboard/tournaments/${id}`);
-    revalidatePath(`/tournament`, "layout");
+    revalidatePath(`/dashboard/tournaments/${id}`, "layout");
+    revalidatePath("/[code]", "layout");
   });
 }
 

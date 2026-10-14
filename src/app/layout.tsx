@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Barlow_Condensed, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { siteUrl } from "@/lib/site-url";
@@ -8,6 +8,13 @@ import { SITE_NAME, SITE_TITLE, SITE_DESCRIPTION } from "@/lib/seo";
 const geistSans = Geist({
   variable: "--font-sans",
   subsets: ["latin"],
+});
+
+// Headlines and scoreboard numerals — the sports voice of the app.
+const barlowCondensed = Barlow_Condensed({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: ["500", "600", "700", "800"],
 });
 
 const geistMono = Geist_Mono({
@@ -73,7 +80,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${barlowCondensed.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="bg-app-gradient min-h-full flex flex-col">

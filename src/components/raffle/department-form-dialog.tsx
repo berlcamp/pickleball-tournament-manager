@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
 import { Loader2, Plus, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -30,7 +29,6 @@ export function DepartmentFormDialog({ raffleId, department, trigger }: Props) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [name, setName] = useState(department?.name ?? "");
-  const router = useRouter();
 
   function onOpenChange(next: boolean) {
     if (next) setName(department?.name ?? "");
@@ -57,7 +55,6 @@ export function DepartmentFormDialog({ raffleId, department, trigger }: Props) {
     }
     toast.success(isEdit ? "Department updated" : "Department added");
     setOpen(false);
-    router.refresh();
   }
 
   const defaultTrigger = isEdit ? (

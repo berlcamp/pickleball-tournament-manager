@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
 import { Loader2, Plus, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -31,7 +30,6 @@ export function RaffleFormDialog({ raffle, trigger }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [name, setName] = useState(raffle?.name ?? "");
   const [description, setDescription] = useState(raffle?.description ?? "");
-  const router = useRouter();
 
   function onOpenChange(next: boolean) {
     if (next) {
@@ -62,7 +60,6 @@ export function RaffleFormDialog({ raffle, trigger }: Props) {
     }
     toast.success(isEdit ? "Raffle updated" : "Raffle created");
     setOpen(false);
-    router.refresh();
   }
 
   const defaultTrigger = isEdit ? (

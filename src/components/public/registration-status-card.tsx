@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -81,7 +80,6 @@ export function RegistrationStatusCard({
   category: Category;
   tournament: Tournament;
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [proof, setProof] = useState<File | null>(null);
   const [reference, setReference] = useState("");
@@ -117,7 +115,6 @@ export function RegistrationStatusCard({
       toast.success("Proof of payment submitted");
       setProof(null);
       setReference("");
-      router.refresh();
     });
   }
 

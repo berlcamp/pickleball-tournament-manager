@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { updateCategoryRegistration } from "@/actions/registration";
 import { Button } from "@/components/ui/button";
@@ -82,7 +81,6 @@ function CategoryRegistrationRow({
   category: Category;
   approvedCount: number;
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [expanded, setExpanded] = useState(false);
 
@@ -128,7 +126,6 @@ function CategoryRegistrationRow({
         return;
       }
       toast.success(`${category.name} registration updated`);
-      router.refresh();
     });
   }
 

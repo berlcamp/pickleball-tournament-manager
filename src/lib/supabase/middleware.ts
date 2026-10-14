@@ -41,9 +41,11 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // `getClaims` refreshes the session like `getUser`, but verifies the JWT
+  // locally when the project signs with asymmetric keys — no Auth round trip
+  // on every request. With a legacy shared secret it falls back to the server.
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims ?? null;
 
   const path = request.nextUrl.pathname;
   const isProtected = path.startsWith("/dashboard");

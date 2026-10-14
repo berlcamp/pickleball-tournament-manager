@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { toast } from "sonner";
 import {
@@ -322,7 +321,6 @@ function RegistrationDetail({
   canManage: boolean;
   onClose: () => void;
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   // Pre-filled from the stored note (the dialog is keyed by registration id,
   // so this resets per row) — clearing the box is then a deliberate act.
@@ -343,7 +341,6 @@ function RegistrationDetail({
       }
       toast.success(`Marked ${STATUS_LABEL[status].toLowerCase()}`);
       onClose();
-      router.refresh();
     });
   }
 
@@ -358,7 +355,6 @@ function RegistrationDetail({
       }
       toast.success(`Payment marked ${PAYMENT_LABEL[next].toLowerCase()}`);
       onClose();
-      router.refresh();
     });
   }
 
@@ -557,7 +553,6 @@ function RegistrationDetail({
                 categories={categories}
                 onDone={() => {
                   onClose();
-                  router.refresh();
                 }}
               />
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { updateShortCode } from "@/actions/tournaments";
 import { Button } from "@/components/ui/button";
@@ -29,7 +28,6 @@ export function PublicLinkSettings({
   /** Absolute site origin, resolved server-side from the request host. */
   origin: string;
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [value, setValue] = useState(shortCode);
   const [copied, setCopied] = useState(false);
@@ -47,7 +45,6 @@ export function PublicLinkSettings({
         return;
       }
       toast.success("Public link updated");
-      router.refresh();
     });
   }
 

@@ -15,7 +15,7 @@ export function Progress({
       )}
     >
       <div
-        className="h-full rounded-full bg-gradient-to-r from-primary to-chart-2 transition-[width] duration-700 ease-out"
+        className="h-full rounded-full bg-primary transition-[width] duration-700 ease-out"
         style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
       />
     </div>

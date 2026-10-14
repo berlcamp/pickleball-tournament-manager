@@ -28,12 +28,12 @@ export function CategoryPills({
             disabled={disabled}
             aria-current={active ? "true" : undefined}
             className={cn(
-              "shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-all",
+              "min-h-11 shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-[background-color,color,border-color,transform] duration-150 sm:min-h-10",
               "focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
               "disabled:opacity-60",
               active
-                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                : "glass text-muted-foreground hover:border-primary/50 hover:text-foreground active:scale-[0.97]",
+                ? "bg-court text-court-foreground shadow-sm ring-2 ring-ball/80 ring-offset-2 ring-offset-background"
+                : "border border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground active:scale-[0.97]",
             )}
           >
             {o.name}

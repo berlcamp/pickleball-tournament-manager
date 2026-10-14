@@ -1,4 +1,6 @@
 import "server-only";
+import { cache } from "react";
+import { after } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { roleAtLeast } from "@/lib/constants";
@@ -30,14 +32,18 @@ export async function assertCategoryDraft(
   }
 }
 
-export async function getSessionUser() {
+/**
+ * The caller and a client bound to their session. Memoized for the request so
+ * `assertRole` and `logAudit` in one action share a single Auth round trip.
+ */
+export const getSessionUser = cache(async () => {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new ActionError("You must be signed in.");
   return { supabase, user };
-}
+});
 
 /** Ensure the current user has at least `min` role on the tournament. */
 export async function assertRole(tournamentId: string, min: Role) {
@@ -55,6 +61,10 @@ export async function assertRole(tournamentId: string, min: Role) {
   return { supabase, user, role: role as Role };
 }
 
+/**
+ * Record an audit entry after the response has gone out. The organiser is
+ * waiting on the save, not on the log, so the insert runs in `after()`.
+ */
 export async function logAudit(
   tournamentId: string,
   action: string,
@@ -62,11 +72,17 @@ export async function logAudit(
 ) {
   try {
     const { supabase, user } = await getSessionUser();
-    await supabase.from("audit_logs").insert({
-      tournament_id: tournamentId,
-      user_id: user.id,
-      action,
-      detail,
+    after(async () => {
+      try {
+        await supabase.from("audit_logs").insert({
+          tournament_id: tournamentId,
+          user_id: user.id,
+          action,
+          detail,
+        });
+      } catch {
+        // Audit logging must never break the primary action.
+      }
     });
   } catch {
     // Audit logging must never break the primary action.

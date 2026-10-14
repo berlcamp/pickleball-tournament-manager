@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -20,7 +19,6 @@ const BUCKET = "pickleball-tournament";
  * category; the fee itself is set per category in the registration settings.
  */
 export function PaymentSettings({ tournament }: { tournament: Tournament }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -76,7 +74,6 @@ export function PaymentSettings({ tournament }: { tournament: Tournament }) {
         return;
       }
       toast.success("Payment details saved");
-      router.refresh();
     });
   }
 

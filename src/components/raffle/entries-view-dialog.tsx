@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useTransition, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
 import { Loader2, Pencil, Trash2, Eraser } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -41,7 +40,6 @@ export function EntriesViewDialog({ departmentId, departmentName, trigger }: Pro
   const [editName, setEditName] = useState("");
   const [editDesignation, setEditDesignation] = useState("");
   const [editSaving, setEditSaving] = useState(false);
-  const router = useRouter();
 
   useEffect(() => {
     if (!open) return;
@@ -68,7 +66,6 @@ export function EntriesViewDialog({ departmentId, departmentName, trigger }: Pro
         return;
       }
       setEntries((prev) => (prev ?? []).filter((e) => e.id !== id));
-      router.refresh();
     });
   }
 
@@ -101,7 +98,6 @@ export function EntriesViewDialog({ departmentId, departmentName, trigger }: Pro
       (prev ?? []).map((e) => (e.id === editing.id ? { ...e, name, designation } : e)),
     );
     setEditing(null);
-    router.refresh();
   }
 
   function onClearAll() {
@@ -114,7 +110,6 @@ export function EntriesViewDialog({ departmentId, departmentName, trigger }: Pro
       toast.success(`Removed ${res.data?.deleted ?? 0} entries`);
       setEntries([]);
       setClearOpen(false);
-      router.refresh();
     });
   }
 

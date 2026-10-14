@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   createCategory,
@@ -22,7 +21,6 @@ export function CategoryManager({
   tournamentId: string;
   categories: Category[];
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [newName, setNewName] = useState("");
   const [newDate, setNewDate] = useState("");
@@ -41,7 +39,6 @@ export function CategoryManager({
       toast.success("Category added");
       setNewName("");
       setNewDate("");
-      router.refresh();
     });
   }
 
@@ -117,7 +114,6 @@ function CategoryRow({
   category: Category;
   canDelete: boolean;
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [name, setName] = useState(category.name);
   const [date, setDate] = useState(category.event_date ?? "");
@@ -138,7 +134,6 @@ function CategoryRow({
         return;
       }
       toast.success("Category updated");
-      router.refresh();
     });
   }
 
@@ -150,7 +145,6 @@ function CategoryRow({
         return;
       }
       toast.success("Category deleted");
-      router.refresh();
     });
   }
 

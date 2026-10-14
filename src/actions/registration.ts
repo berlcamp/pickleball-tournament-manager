@@ -386,7 +386,7 @@ export async function updatePaymentSettings(
     if (error) throw new ActionError(error.message);
     await logAudit(tournamentId, "tournament.payment_settings", {});
     revalidatePath(`/dashboard/tournaments/${tournamentId}/settings`);
-    revalidatePath("/tournament", "layout");
+    revalidatePath("/[code]", "layout");
   });
 }
 
@@ -428,7 +428,7 @@ export async function updateCategoryRegistration(
       categoryId,
     });
     revalidatePath(`/dashboard/tournaments/${tournamentId}/settings`);
-    revalidatePath("/tournament", "layout");
+    revalidatePath("/[code]", "layout");
   });
 }
 

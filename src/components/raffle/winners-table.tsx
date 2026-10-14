@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Eraser, Sparkles, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -36,7 +35,6 @@ export function WinnersTable({ winners, raffleId }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [pending, startTransition] = useTransition();
-  const router = useRouter();
 
   function onClearAll() {
     startTransition(async () => {
@@ -47,7 +45,6 @@ export function WinnersTable({ winners, raffleId }: Props) {
       }
       toast.success(`Removed ${res.data?.deleted ?? 0} winners`);
       setOpen(false);
-      router.refresh();
     });
   }
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { clearSchedule } from "@/actions/schedule";
 import { Button } from "@/components/ui/button";
@@ -28,7 +27,6 @@ export function ClearScheduleButton({
 }) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
-  const router = useRouter();
 
   function clear() {
     startTransition(async () => {
@@ -39,7 +37,6 @@ export function ClearScheduleButton({
       }
       toast.success("Schedule cleared");
       setOpen(false);
-      router.refresh();
     });
   }
 

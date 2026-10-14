@@ -102,11 +102,9 @@ export function TournamentForm({
         return;
       }
       toast.success(tournamentId ? "Tournament updated" : "Tournament created");
-      if (tournamentId) {
-        router.refresh();
-      } else {
-        router.push(`/dashboard/tournaments/${res.data}`);
-      }
+      // An update revalidates the workspace in the same response; only a
+      // new tournament needs to move somewhere.
+      if (!tournamentId) router.push(`/dashboard/tournaments/${res.data}`);
     });
   }
 

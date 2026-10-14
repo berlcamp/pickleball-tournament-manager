@@ -35,7 +35,6 @@ export function CategorySwitcher({ categories }: { categories: Category[] }) {
     // below re-renders on the server, which is the part that takes a moment.
     startTransition(() => {
       router.push(`${pathname}?${params.toString()}`);
-      router.refresh();
     });
   }
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Eye, ListPlus, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,7 +29,6 @@ interface Props {
 export function DepartmentCard({ department }: Props) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, startTransition] = useTransition();
-  const router = useRouter();
 
   function onDelete() {
     startTransition(async () => {
@@ -41,7 +39,6 @@ export function DepartmentCard({ department }: Props) {
       }
       toast.success("Department deleted");
       setConfirmOpen(false);
-      router.refresh();
     });
   }
 
