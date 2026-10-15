@@ -237,3 +237,9 @@ Before the stage ends the Finals tab shows a **preview** of that bracket:
 qualifier slots with no participant, so every slot reads "A1", "B2" … . The
 groups are ordered by their leaders' current standings, so the preview tracks
 the live table. It writes nothing — only `generateFinals` persists a bracket.
+
+The Group Stage and Finals tabs also carry a **Finals seeding** dialog
+(`components/tournament/finals-seeding-dialog.tsx`, fed by
+`loadSeedingSnapshot`): the overall seed list by tier and the round-one draw,
+built with `drawFirstRound` — the same engine path as `generateFinalBracket` —
+so it can mark the pairings the same-group repair swapped.

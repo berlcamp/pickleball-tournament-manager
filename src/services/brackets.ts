@@ -301,6 +301,19 @@ export function generateFinalBracket(
   qualifiers: QualifierSlot[],
 ): BracketMatch[] {
   if (qualifiers.length < 2) return [];
-  const seeded = seedIntoBracket(rankQualifiers(qualifiers));
-  return buildSingleElim(avoidSameGroupFirstRound(seeded));
+  return buildSingleElim(drawFirstRound(qualifiers).slots);
+}
+
+/**
+ * The round-one draw on its own, for explaining it: the bracket-order slots
+ * (`null` = bye) exactly as `generateFinalBracket` uses them, plus the slots
+ * strict seeding would have produced, so a caller can point out which teams
+ * `avoidSameGroupFirstRound` moved.
+ */
+export function drawFirstRound(qualifiers: QualifierSlot[]): {
+  slots: (RankedQualifier | null)[];
+  strict: (RankedQualifier | null)[];
+} {
+  const strict = seedIntoBracket(rankQualifiers(qualifiers));
+  return { slots: avoidSameGroupFirstRound(strict), strict };
 }

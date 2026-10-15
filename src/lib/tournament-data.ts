@@ -7,8 +7,17 @@ import type {
   BracketRound,
   FinalMatchVM,
 } from "@/components/tournament/bracket-view";
+import type {
+  SeedingSnapshot,
+  SeedVM,
+} from "@/components/tournament/finals-seeding-dialog";
 import { groupLabel } from "@/services/seeding";
-import { generateFinalBracket, type QualifierSlot } from "@/services/brackets";
+import {
+  drawFirstRound,
+  generateFinalBracket,
+  type QualifierSlot,
+  type RankedQualifier,
+} from "@/services/brackets";
 import { ADVANCE_PER_GROUP } from "@/lib/constants";
 
 type DB = SupabaseClient<Database>;
@@ -253,6 +262,118 @@ export async function loadFinalsPreview(
       round,
       matches: ms.sort((a, b) => a.slot - b.slot),
     }));
+}
+
+/**
+ * The overall finals seeding as it stands right now — every qualifier ranked
+ * across the groups, and the round-one pairings that seeding produces — for
+ * the "Finals seeding" explainer. Built with the same engine calls as
+ * `generateFinals`, so once the group stage is over it matches the bracket
+ * that was drawn. A group with no result in yet shows its slots without a
+ * team: its order is not known.
+ */
+export async function loadSeedingSnapshot(
+  db: DB,
+  categoryId: string,
+): Promise<SeedingSnapshot | null> {
+  const [{ data: groups }, { data: standings }, { data: participants }] =
+    await Promise.all([
+      db
+        .from("groups")
+        .select("id, position, group_members(participant_id)")
+        .eq("category_id", categoryId)
+        .order("position"),
+      db
+        .from("standings")
+        .select(
+          "group_id, participant_id, rank, matches_won, matches_lost, matches_tied, points, point_diff",
+        )
+        .eq("category_id", categoryId),
+      db.from("participants").select("id, name").eq("category_id", categoryId),
+    ]);
+  if (!groups || groups.length === 0) return null;
+
+  const nameById = new Map((participants ?? []).map((p) => [p.id, p.name]));
+  const rows = groups as unknown as {
+    id: string;
+    position: number;
+    group_members: { participant_id: string }[];
+  }[];
+
+  const qualifiers: QualifierSlot[] = [];
+  const lostByLabel = new Map<string, { lost: number; tied: number }>();
+  for (const g of rows) {
+    const table = (standings ?? [])
+      .filter((s) => s.group_id === g.id)
+      .sort((a, b) => a.rank - b.rank);
+    // Standings rows exist before anyone plays; until a result is in, the
+    // group's order is meaningless, so its slots stay unnamed.
+    const started = table.some(
+      (s) => s.matches_won + s.matches_lost + s.matches_tied > 0,
+    );
+    const advancing = Math.min(
+      Math.max(table.length, g.group_members?.length ?? 0),
+      ADVANCE_PER_GROUP,
+    );
+    for (let position = 1; position <= advancing; position++) {
+      const label = `${groupLabel(g.position)}${position}`;
+      const s = started ? table[position - 1] : undefined;
+      lostByLabel.set(label, {
+        lost: s?.matches_lost ?? 0,
+        tied: s?.matches_tied ?? 0,
+      });
+      qualifiers.push({
+        label,
+        participantId: s?.participant_id ?? null,
+        groupIndex: g.position,
+        position,
+        record: {
+          matchesWon: s?.matches_won ?? 0,
+          matchesPlayed: s
+            ? s.matches_won + s.matches_lost + s.matches_tied
+            : 0,
+          pointDiff: s?.point_diff ?? 0,
+          points: s?.points ?? 0,
+        },
+      });
+    }
+  }
+  if (qualifiers.length < 2) return null;
+
+  const toVM = (q: RankedQualifier): SeedVM => ({
+    seed: q.overallSeed,
+    label: q.label,
+    group: groupLabel(q.groupIndex),
+    position: q.position,
+    name: q.participantId ? (nameById.get(q.participantId) ?? null) : null,
+    won: q.record.matchesWon,
+    lost: lostByLabel.get(q.label)?.lost ?? 0,
+    tied: lostByLabel.get(q.label)?.tied ?? 0,
+    played: q.record.matchesPlayed,
+    pointDiff: q.record.pointDiff,
+  });
+
+  const { slots, strict } = drawFirstRound(qualifiers);
+  const seeds = slots
+    .filter((q): q is RankedQualifier => q !== null)
+    .sort((a, b) => a.overallSeed - b.overallSeed)
+    .map(toVM);
+
+  const firstRound = [];
+  for (let i = 0; i < slots.length; i += 2) {
+    const a = slots[i];
+    const b = slots[i + 1];
+    firstRound.push({
+      a: a ? toVM(a) : null,
+      b: b ? toVM(b) : null,
+      // A side differs from strict 1-v-N seeding only when the repair moved
+      // it to keep two teams from one group apart.
+      moved:
+        a?.label !== strict[i]?.label || b?.label !== strict[i + 1]?.label,
+    });
+  }
+
+  return { seeds, firstRound, bracketSize: slots.length };
 }
 
 /**

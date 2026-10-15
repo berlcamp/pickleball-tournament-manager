@@ -2,10 +2,11 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getTournamentContext, resolveActiveCategory } from "@/lib/data";
-import { loadGroupStage } from "@/lib/tournament-data";
+import { loadGroupStage, loadSeedingSnapshot } from "@/lib/tournament-data";
 import { roleAtLeast } from "@/lib/constants";
 import { PageHeader, EmptyState } from "@/components/page-header";
 import { GroupStageView } from "@/components/tournament/group-stage-view";
+import { FinalsSeedingDialog } from "@/components/tournament/finals-seeding-dialog";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Network } from "lucide-react";
 
@@ -24,14 +25,24 @@ export default async function GroupStagePage({
   if (!active) notFound();
 
   const supabase = await createClient();
-  const groups = await loadGroupStage(supabase, active.id);
+  const [groups, seeding] = await Promise.all([
+    loadGroupStage(supabase, active.id),
+    loadSeedingSnapshot(supabase, active.id),
+  ]);
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Group Stage"
         description="Tap a match to enter its score — standings update on their own."
-      />
+      >
+        {seeding && (
+          <FinalsSeedingDialog
+            snapshot={seeding}
+            locked={active.status === "final_stage" || active.status === "completed"}
+          />
+        )}
+      </PageHeader>
       {groups.length === 0 ? (
         <EmptyState
           icon={Network}
