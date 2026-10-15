@@ -207,22 +207,21 @@ to choose:
    highlighting and knockout slot reservation; don't re-declare it locally.
 2. **Final stage** — `rankQualifiers` puts every qualifier in one overall
    order, then seeds it standard-style (1 vs N) into a single-elimination
-   bracket. Only the **group winners** are ranked on their own results: win
-   *rate* (groups differ in size), point differential, points, then group
+   bracket. Placement comes first: every group winner is seeded above every
+   runner-up. Within each tier, teams are ranked on **their own** results:
+   win *rate* (groups differ in size), point differential, points, then group
    index as a deterministic last resort — never a random tiebreak, because a
-   redrawn bracket must be identical. Every tier below the winners is laid out
-   in that **same group order, offset by a pairwise swap** (`pairSwap`), so a
-   runner-up's seed is a function of how its group *winner* placed, not of its
-   own record.
+   redrawn bracket must be identical.
 
-   This is Challonge's rule, verified against a real 8-group tournament where a
-   1-2 runner-up was seeded above three 2-1 runners-up. It is intentional: the
-   offset is what structurally keeps a group's winner away from its own
-   runner-up in round one. Do not "fix" it by ranking runners-up on their own
-   records — that reintroduces same-group first-round matches.
+   This deliberately departs from Challonge, where a runner-up inherited its
+   seed from how its group *winner* placed (a pairwise-swapped tier offset).
+   That kept a group's two qualifiers apart structurally but could seed a 1-2
+   runner-up above a 2-1 one, which is not how pickleball tournament directors
+   seed a pool-play knockout. Keeping same-group teams apart is now entirely
+   `avoidSameGroupFirstRound`'s job.
 
 `avoidSameGroupFirstRound` then repairs the draw: strict seeding pairs seed N
-with seed (size + 1 - N), which sometimes lands two teams from the same group
+with seed (size + 1 - N), which regularly lands two teams from the same group
 against each other, and they just played in the group stage. The repair swaps
 opponents between two round-one matches, picking the swap between the
 closest-ranked teams so the seeding moves as little as possible. Byes are

@@ -8,11 +8,10 @@
  * seed against weakest, so the two strongest qualifiers can only meet in the
  * final. There is no second bracket style to choose from.
  *
- * Two teams out of the same group never meet again in round one: they already
- * played each other in the group stage. That falls out of how the placement
- * tiers are offset against each other (see `rankQualifiers`), with
- * `avoidSameGroupFirstRound` as a backstop for the group counts where the
- * offset alone isn't enough.
+ * Group winners are seeded first, then runners-up, each tier ranked on its own
+ * results (see `rankQualifiers`). Two teams out of the same group never meet
+ * again in round one — they already played each other in the group stage —
+ * which `avoidSameGroupFirstRound` repairs after seeding.
  */
 
 /** A qualifier's group-stage record, used to rank it against other groups. */
@@ -93,76 +92,40 @@ function winRate(r: QualifierRecord): number {
   return r.matchesPlayed > 0 ? r.matchesWon / r.matchesPlayed : 0;
 }
 
-/** Swap items pairwise: [a,b,c,d] -> [b,a,d,c]. A trailing odd item stays. */
-function pairSwap<T>(items: T[]): T[] {
-  const out = [...items];
-  for (let i = 0; i + 1 < out.length; i += 2) {
-    const held = out[i];
-    out[i] = out[i + 1];
-    out[i + 1] = held;
-  }
-  return out;
+/**
+ * Order two qualifiers from the same placement tier on their own group-stage
+ * results: win *rate* (groups can differ in size, and a bigger group would
+ * otherwise hand out more wins for the same performance), then point
+ * differential, then points. The last resort is the group index, not a coin
+ * flip: regenerating a bracket must produce the same draw every time, and
+ * unlike group standings there is no further match left in which to settle it.
+ */
+function compareRecords(a: QualifierSlot, b: QualifierSlot): number {
+  return (
+    winRate(b.record) - winRate(a.record) ||
+    b.record.pointDiff - a.record.pointDiff ||
+    b.record.points - a.record.points ||
+    a.groupIndex - b.groupIndex
+  );
 }
 
 /**
  * Rank every qualifier into one overall order across all groups.
  *
- * Only the group winners are ranked on their own results. Everyone below them
- * inherits their group's position in that order — a runner-up's seed is a
- * function of how good its *group winner* was, not of its own record. That is
- * deliberate, and it is what Challonge does: it means each placement tier is
- * laid out in the same group order, and offsetting the tiers by a pairwise
- * swap is what keeps a group's winner away from its own runner-up in round
- * one. Guaranteeing the cross-group draw structurally is worth more here than
- * ranking runners-up against each other.
+ * Placement comes first: every group winner is seeded above every runner-up,
+ * every runner-up above every third place, and so on. Within a tier, teams are
+ * ranked on their own records (`compareRecords`) — the way most pickleball
+ * tournament directors seed a pool-play knockout, so a 2-1 runner-up is always
+ * seeded above a 1-2 one.
  *
- * The consequence is real and intended: a runner-up that went 1-2 can be
- * seeded above one that went 2-1, if its group winner finished higher.
- *
- * The winners' own tiebreak chain uses win *rate* rather than raw wins,
- * because group assignment routinely leaves groups of unequal size and a
- * bigger group would otherwise hand out more wins for the same performance. The last
- * tiebreak is the group index, not a coin flip: regenerating a bracket must
- * produce the same draw every time, and unlike group standings there is no
- * further match left in which to settle it.
+ * This replaced Challonge's rule, where a runner-up inherited its seed from
+ * how its group *winner* placed. That rule kept a group's two qualifiers apart
+ * structurally; here `avoidSameGroupFirstRound` does that job instead.
  */
 export function rankQualifiers(qualifiers: QualifierSlot[]): RankedQualifier[] {
-  const byGroup = new Map<number, Map<number, QualifierSlot>>();
-  for (const q of qualifiers) {
-    if (!byGroup.has(q.groupIndex)) byGroup.set(q.groupIndex, new Map());
-    byGroup.get(q.groupIndex)!.set(q.position, q);
-  }
-
-  const groupOrder = qualifiers
-    .filter((q) => q.position === 1)
-    .sort(
-      (a, b) =>
-        winRate(b.record) - winRate(a.record) ||
-        b.record.pointDiff - a.record.pointDiff ||
-        b.record.points - a.record.points ||
-        a.groupIndex - b.groupIndex,
-    )
-    .map((q) => q.groupIndex);
-
-  // A group with no recorded winner still has to place its other qualifiers.
-  for (const g of [...byGroup.keys()].sort((a, b) => a - b)) {
-    if (!groupOrder.includes(g)) groupOrder.push(g);
-  }
-  const offset = pairSwap(groupOrder);
-
-  // Tier by tier: winners in group order, runners-up in the swapped order,
-  // and so on alternating if a category ever advances more than two.
-  const tiers = [...new Set(qualifiers.map((q) => q.position))].sort(
-    (a, b) => a - b,
-  );
-  const ranked: RankedQualifier[] = [];
-  for (const position of tiers) {
-    for (const g of position % 2 === 1 ? groupOrder : offset) {
-      const q = byGroup.get(g)?.get(position);
-      if (q) ranked.push({ ...q, overallSeed: ranked.length + 1 });
-    }
-  }
-  return ranked;
+  return [...qualifiers]
+    .sort((a, b) => a.position - b.position || compareRecords(a, b))
+    .map((q, i) => ({ ...q, overallSeed: i + 1 }));
 }
 
 /** Place ranked qualifiers into bracket order, leaving byes for the top seeds. */
@@ -174,11 +137,11 @@ function seedIntoBracket(ranked: RankedQualifier[]): (RankedQualifier | null)[] 
 }
 
 /**
- * Backstop for round-one matches between teams from the same group.
+ * Keep teams from the same group apart in round one.
  *
- * The pairwise tier offset in `rankQualifiers` already prevents these for most
- * group counts, but not all — with 6 groups, for instance, the offset still
- * leaves two clashes. This catches whatever slips through.
+ * Strict seeding pairs seed N with seed (size + 1 - N), which regularly lands
+ * a group's winner against its own runner-up now that runners-up are ranked
+ * on their own records. Every such clash is repaired here.
  *
  * The repair is a single exchange of opponents between two round-one
  * matches, chosen to move the seeding as little as possible: of every swap

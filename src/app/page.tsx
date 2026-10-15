@@ -8,6 +8,7 @@ import { TournamentMarquee } from "@/components/marketing/tournament-marquee";
 import { requestOrigin } from "@/lib/site-url";
 import { SITE_NAME, SITE_TITLE, SITE_DESCRIPTION } from "@/lib/seo";
 import { BrandMark } from "@/components/brand-mark";
+import { HowItWorks } from "@/components/marketing/how-it-works";
 import {
   ArrowRight,
   CalendarClock,
@@ -58,7 +59,7 @@ const FEATURES = [
   {
     icon: Shuffle,
     title: "Smart Seeding & Groups",
-    desc: "Drag-and-drop or animated random seeding with snake group generation.",
+    desc: "Drag-and-drop or random seeding, with top seeds spread across the groups.",
     iconBg: "bg-chart-2/15 text-chart-2",
     glow: "group-hover:shadow-[0_0_0_1px_var(--color-chart-2)]",
   },
@@ -72,7 +73,7 @@ const FEATURES = [
   {
     icon: Network,
     title: "Finals Brackets",
-    desc: "Group winners seed straight into an auto-drawn knockout bracket.",
+    desc: "The top teams from every group seed into an auto-drawn knockout bracket — no first-round rematches.",
     iconBg: "bg-chart-5/15 text-chart-5",
     glow: "group-hover:shadow-[0_0_0_1px_var(--color-chart-5)]",
   },
@@ -155,7 +156,10 @@ export default async function Home() {
       />
       <header className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
         <BrandMark />
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
+          <Button asChild variant="ghost" className="hidden sm:inline-flex">
+            <Link href="#how-it-works">How it works</Link>
+          </Button>
           <ThemeToggle />
           <Button asChild>
             <Link href={user ? "/dashboard" : "/login"}>
@@ -197,6 +201,14 @@ export default async function Home() {
                       Create a tournament <ArrowRight className="size-4" aria-hidden />
                     </Link>
                   </Button>
+                  <Button
+                    asChild
+                    size="lg"
+                    variant="outline"
+                    className="h-13 rounded-xl border-court-foreground/30 bg-transparent px-7 text-base font-bold text-court-foreground hover:bg-court-foreground/10 hover:text-court-foreground sm:h-13 dark:border-court-foreground/30 dark:bg-transparent"
+                  >
+                    <Link href="#how-it-works">See how it works</Link>
+                  </Button>
                 </div>
               </div>
 
@@ -215,9 +227,9 @@ export default async function Home() {
                 <ol className="mt-3 divide-y divide-border">
                   {[
                     ["1", "Dink Dynasty", "3-0", "+18"],
-                    ["2", "Kitchen Kings", "2-1", "+7"],
-                    ["3", "Third Shot Drop", "1-2", "-5"],
-                    ["4", "Erne Express", "0-3", "-20"],
+                    ["2", "Kitchen Kings", "2-1", "+4"],
+                    ["3", "Third Shot Drop", "1-2", "-6"],
+                    ["4", "Erne Express", "0-3", "-18"],
                   ].map(([rank, team, rec, diff]) => (
                     <li key={rank} className="flex items-center gap-3 py-2.5">
                       <span
@@ -239,6 +251,8 @@ export default async function Home() {
             </div>
           </div>
         </section>
+
+        <HowItWorks />
 
         {/* ---------- features ---------- */}
         <section

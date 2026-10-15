@@ -29,10 +29,9 @@ export function TournamentFormatInfo() {
           <div className="space-y-1.5">
             <p>
               <span className="font-semibold text-foreground">Final stage</span>{" "}
-              — the group winners are ranked against each other by win rate,
-              then point differential, then points. Each group&apos;s runner-up
-              takes its seed from where that group&apos;s winner placed, so the
-              two halves of a group are always drawn apart.
+              — every group winner is seeded above every runner-up. Within
+              each of those tiers, teams are ranked on their own group results:
+              win rate, then point differential, then points.
             </p>
             <p>
               That order is drawn into a single-elimination bracket, best seed

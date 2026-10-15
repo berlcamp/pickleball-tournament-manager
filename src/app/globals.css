@@ -301,3 +301,11 @@
     transform: translateX(300%);
   }
 }
+
+/* In-page links ("How it works") glide instead of jumping — unless the
+   reader has asked for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
