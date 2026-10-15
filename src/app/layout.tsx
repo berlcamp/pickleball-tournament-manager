@@ -26,9 +26,9 @@ export const metadata: Metadata = {
   // Link previews (Facebook, Messenger, Viber) only follow absolute og: URLs,
   // so every route needs a base to resolve relative metadata against.
   metadataBase: new URL(siteUrl()),
-  title: { default: SITE_TITLE, template: "%s — PicklePro" },
+  title: { default: SITE_TITLE, template: "%s — Sortbrite" },
   description: SITE_DESCRIPTION,
-  applicationName: "PicklePro",
+  applicationName: "Sortbrite",
   // What organizers actually type when they go looking for this. Search
   // engines mostly ignore the tag now; it costs nothing and some crawlers
   // (and our own AI-summary previews) still read it.

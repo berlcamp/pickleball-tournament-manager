@@ -184,6 +184,10 @@ export function TournamentForm({
 
       <div className="space-y-1.5">
         <Label>Banner image</Label>
+        <p className="text-sm text-muted-foreground">
+          Shown as the preview when your public link is shared on Facebook,
+          Messenger or Viber. Use a 1200 × 630 image for the best fit.
+        </p>
         <input type="hidden" {...form.register("banner")} />
         <input
           ref={fileInputRef}

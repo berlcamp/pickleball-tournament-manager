@@ -17,7 +17,7 @@ import { formatDate } from "@/lib/format";
 import { FeatureToggle } from "@/components/dashboard/feature-toggle";
 
 /**
- * System-wide view of every tournament on PicklePro.
+ * System-wide view of every tournament on Sortbrite.
  *
  * Deliberately near read-only: the super admin can see what organisers have
  * created and reaches anything further through the public portal — editing a
@@ -59,7 +59,7 @@ export default async function SuperAdminPage({
     <div className="space-y-6">
       <PageHeader
         title="Super admin dashboard"
-        description="Every tournament on PicklePro. Flip a switch to feature one on the homepage."
+        description="Every tournament on Sortbrite. Flip a switch to feature one on the homepage."
       >
         <span className="flex items-center gap-1.5 rounded-full bg-court px-3 py-1 text-xs font-semibold text-court-foreground">
           <ShieldCheck className="size-3.5" /> Super admin

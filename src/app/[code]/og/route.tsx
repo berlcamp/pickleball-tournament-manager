@@ -26,7 +26,7 @@ export async function GET(
     ? await getPublicCategories(tournament.id)
     : [];
 
-  const name = tournament?.name ?? "PicklePro";
+  const name = tournament?.name ?? "Sortbrite";
   const meta = [
     tournament
       ? formatEventDates(
@@ -70,12 +70,7 @@ export async function GET(
             }}
           />
           <div style={{ fontSize: 30, fontWeight: 700, letterSpacing: -0.5 }}>
-            PicklePro
-          </div>
-          <div
-            style={{ fontSize: 30, color: "rgba(255,255,255,0.55)", marginLeft: 10 }}
-          >
-            by Sortbrite
+            Sortbrite
           </div>
         </div>
 

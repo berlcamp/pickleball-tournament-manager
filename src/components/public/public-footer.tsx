@@ -23,7 +23,7 @@ export function PublicFooter() {
             href="/"
             className="rounded underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
           >
-            PicklePro by Sortbrite
+            Sortbrite
           </Link>
         </p>
       </div>

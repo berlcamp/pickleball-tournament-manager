@@ -115,7 +115,7 @@ function structuredData(origin: string) {
       {
         "@type": "WebSite",
         "@id": `${origin}/#website`,
-        name: "PicklePro by Sortbrite",
+        name: "Sortbrite",
         url: origin,
         publisher: { "@id": `${origin}/#organization` },
         inLanguage: "en",
@@ -123,7 +123,7 @@ function structuredData(origin: string) {
       {
         "@type": "SoftwareApplication",
         "@id": `${origin}/#app`,
-        name: "PicklePro",
+        name: "Sortbrite",
         applicationCategory: "SportsApplication",
         operatingSystem: "Web",
         url: origin,

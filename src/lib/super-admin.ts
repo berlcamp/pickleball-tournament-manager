@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 
 /**
- * PicklePro's system-wide administrator(s), matched by account email.
+ * Sortbrite's system-wide administrator(s), matched by account email.
  *
  * This is deliberately NOT part of the tournament role ladder in
  * `lib/constants.ts` — those roles are granted per tournament by its owner,

@@ -1,23 +1,20 @@
-import Image from "next/image";
 import { CalendarDays, MapPin } from "lucide-react";
 import { formatDate, formatEventDates } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Category, Tournament } from "@/types";
 
 /**
- * Hero for the public portal: the uploaded banner on top, then the tournament's
- * name, date and venue on a court-green scoreboard bar, and finally the day
- * each category is played.
+ * Hero for the public portal: the tournament's name, date and venue on a
+ * court-green header drawn as a pickleball court, then the day each category
+ * is played.
  *
  * Categories run on their own days, so the headline date is derived from them
  * when the organiser hasn't set a tournament-wide start date — a single day
  * when they all share one, a range when they don't.
  *
- * Nothing is drawn over the image — organisers upload a designed poster whose
- * own copy would otherwise sit behind ours. For the same reason the image keeps
- * its natural aspect ratio rather than being cropped to a fixed strip; a very
- * tall poster is capped and letterboxed (on court green) instead of taking
- * over the page.
+ * The uploaded banner is deliberately not shown here: a designed poster
+ * repeats the name and date the header already gives, and pushed the tabs
+ * below the fold on a phone. It is still the link preview (`og:image`).
  */
 export function TournamentBanner({
   tournament,
@@ -47,32 +44,9 @@ export function TournamentBanner({
 
   return (
     <section className="overflow-hidden rounded-2xl border border-border bg-court text-court-foreground shadow-card">
-      {tournament.banner && (
-        <div className="flex justify-center bg-court">
-          <Image
-            src={tournament.banner}
-            alt={`${tournament.name} poster`}
-            width={1600}
-            height={900}
-            unoptimized
-            priority
-            sizes="(max-width: 1024px) 100vw, 1024px"
-            className={cn(
-              "h-auto w-full object-contain",
-              compact ? "max-h-56" : "max-h-[70vh]",
-            )}
-          />
-        </div>
-      )}
-
       <div className="relative isolate">
-        {!tournament.banner && (
-          <div
-            className="bg-court-lines absolute inset-0 -z-10 opacity-70"
-            aria-hidden
-          />
-        )}
-        <div className={cn("p-5 sm:p-7", compact && "sm:p-5")}>
+        <CourtBackdrop />
+        <div className={cn("p-6 sm:px-10 sm:py-9", compact && "sm:p-6")}>
           {(live || finished) && (
             <div className="mb-2.5">
               {live ? (
@@ -141,5 +115,54 @@ export function TournamentBanner({
         </p>
       )}
     </section>
+  );
+}
+
+/**
+ * A pickleball court seen from above, stretched to fill the header: the
+ * outer lines, the net across the middle, the two kitchens (non-volley
+ * zones, 7 ft either side of a 44 ft court) tinted, and the centre lines
+ * splitting the service boxes. Strokes don't scale, so the lines stay crisp
+ * at any header size. Decorative only.
+ */
+function CourtBackdrop() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 44 20"
+      preserveAspectRatio="none"
+      className="pointer-events-none absolute inset-2.5 -z-10 size-[calc(100%-1.25rem)] text-court-foreground sm:inset-3.5 sm:size-[calc(100%-1.75rem)]"
+    >
+      {/* Kitchens */}
+      <rect x="15" y="0" width="14" height="20" className="fill-current opacity-[0.06]" />
+      <g
+        fill="none"
+        stroke="currentColor"
+        strokeOpacity="0.22"
+        strokeWidth="2"
+        vectorEffect="non-scaling-stroke"
+      >
+        {/* Boundary */}
+        <rect x="0" y="0" width="44" height="20" vectorEffect="non-scaling-stroke" />
+        {/* Kitchen lines */}
+        <line x1="15" y1="0" x2="15" y2="20" vectorEffect="non-scaling-stroke" />
+        <line x1="29" y1="0" x2="29" y2="20" vectorEffect="non-scaling-stroke" />
+        {/* Centre lines: baseline to kitchen on each side */}
+        <line x1="0" y1="10" x2="15" y2="10" vectorEffect="non-scaling-stroke" />
+        <line x1="29" y1="10" x2="44" y2="10" vectorEffect="non-scaling-stroke" />
+      </g>
+      {/* The net, in ball color */}
+      <line
+        x1="22"
+        y1="-1"
+        x2="22"
+        y2="21"
+        stroke="var(--ball)"
+        strokeOpacity="0.55"
+        strokeWidth="3"
+        strokeDasharray="2 4"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
   );
 }

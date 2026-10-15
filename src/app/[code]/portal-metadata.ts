@@ -45,10 +45,10 @@ export async function portalMetadata(
   const blurb = tournament.description?.replace(/\s+/g, " ").trim();
   const description = clamp(
     tab
-      ? `${tab.label} for ${tournament.name}. ${where} — live on PicklePro.`
+      ? `${tab.label} for ${tournament.name}. ${where} — live on Sortbrite.`
       : blurb
         ? `${where} — ${blurb}`
-        : `${where} — live standings, schedule and registration on PicklePro.`,
+        : `${where} — live standings, schedule and registration on Sortbrite.`,
     200,
   );
 

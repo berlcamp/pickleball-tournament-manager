@@ -617,7 +617,7 @@ export function DrawBoard({
           </span>
           <div className="flex flex-col gap-0.5">
             <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-white/55">
-              PicklePro by Sortbrite · Electronic Raffle Draw
+              Sortbrite · Electronic Raffle Draw
             </span>
             <h1 className="text-3xl leading-tight" style={{ fontFamily: "var(--font-fraunces), serif" }}>
               <span className="text-white">{raffle.name}</span>

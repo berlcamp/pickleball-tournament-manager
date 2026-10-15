@@ -90,7 +90,7 @@ page declares one instead of merging it with the layout's, so a page that sets
 only a title silently loses the banner. Anything that touches `openGraph` at
 page level has to restate the whole object (the marketing page does the same,
 from the constants in `src/lib/seo.ts`). The tournament **banner** is the
-`og:image`, linked straight to its public Supabase storage URL — untouched,
+`og:image` (and only that — the portal header itself is a drawn court, not the poster), linked straight to its public Supabase storage URL — untouched,
 since it is the poster the organiser designed. Tournaments with no banner fall
 back to a generated 1200×630 card at `src/app/[code]/og/route.tsx` (`next/og`).
 That fallback is deliberately a plain route, **not** the `opengraph-image` file

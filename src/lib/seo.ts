@@ -7,7 +7,7 @@
  * og field has to restate the whole object — and every copy has to say the
  * same thing.
  */
-export const SITE_NAME = "PicklePro by Sortbrite";
-export const SITE_TITLE = "PicklePro by Sortbrite — Pickleball Tournament Manager";
+export const SITE_NAME = "Sortbrite";
+export const SITE_TITLE = "Sortbrite — Pickleball Tournament Manager";
 export const SITE_DESCRIPTION =
   "Run pickleball tournaments with round robin groups, finals brackets, smart court scheduling, online registration and live public standings.";

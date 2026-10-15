@@ -2,13 +2,13 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 /**
- * The PicklePro wordmark: a court-green tile holding a lime ball, then the
+ * The Sortbrite wordmark: a court-green tile holding a lime ball, then the
  * name in the condensed sports face. Shared by the dashboard and the portal so
  * both headers carry the same identity.
  */
 export function BrandMark({
   href = "/",
-  subtitle = "by Sortbrite",
+  subtitle = null,
   className,
 }: {
   href?: string;
@@ -38,7 +38,7 @@ export function BrandMark({
       </span>
       <span className="flex items-baseline gap-2">
         <span className="font-heading text-xl font-bold uppercase leading-none tracking-wide">
-          Pickle<span className="text-primary">Pro</span>
+          Sort<span className="text-primary">brite</span>
         </span>
         {subtitle && (
           <span className="hidden text-xs text-muted-foreground sm:inline">
