@@ -15,7 +15,6 @@ import { TournamentStatusBadge } from "@/components/status-badge";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
-  CalendarClock,
   Check,
   ChevronsUpDown,
   ClipboardList,
@@ -31,8 +30,8 @@ import type { Category } from "@/types";
 
 /**
  * `scoped`: the page shows one category at a time, so the category picker
- * applies to it. Registrations covers the whole tournament, as does Settings
- * (reached from the header button, not a tab).
+ * applies to it. Registrations covers the whole tournament. Schedules and
+ * Settings are header buttons, not tabs, and keep the picker.
  */
 const TABS = [
   { seg: "", label: "Overview", icon: LayoutDashboard, scoped: true },
@@ -40,7 +39,6 @@ const TABS = [
   { seg: "participants", label: "Teams", icon: Users, scoped: true },
   { seg: "groups", label: "Seeding & Groups", icon: Shuffle, scoped: true },
   { seg: "group-stage", label: "Group Stage", icon: ListOrdered, scoped: true },
-  { seg: "schedule", label: "Schedule", icon: CalendarClock, scoped: true },
   { seg: "finals", label: "Finals", icon: Trophy, scoped: true },
 ];
 
@@ -85,8 +83,7 @@ export function WorkspaceNav({
     };
   });
   const current = tabs.find((t) => t.active);
-  const onSettings = pathname.startsWith(`${base}/settings`);
-  const scoped = !onSettings && (current?.scoped ?? true);
+  const scoped = current?.scoped ?? true;
 
   // Keep the current tab in view when the strip scrolls sideways on a phone.
   const activeTab = useRef<HTMLAnchorElement>(null);

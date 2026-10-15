@@ -1,14 +1,12 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getTournamentContext } from "@/lib/data";
-import { createClient } from "@/lib/supabase/server";
 import { WorkspaceNav } from "@/components/tournament/workspace-nav";
-import { ScheduleGeneratorButton } from "@/components/tournament/schedule-generator-button";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ROLE_LABELS, roleAtLeast } from "@/lib/constants";
 import { ExternalLink, MapPin, Calendar } from "lucide-react";
-import { SettingsButton } from "@/components/tournament/settings-button";
+import { HeaderNavButton } from "@/components/tournament/header-nav-button";
 import { HEADER_BUTTON } from "@/components/tournament/header-button";
 import { formatEventDates } from "@/lib/format";
 import { CourtBackdrop } from "@/components/court-backdrop";
@@ -25,21 +23,6 @@ export default async function TournamentLayout({
   if (!ctx) notFound();
   const { tournament: t, role, categories } = ctx;
   const canManage = roleAtLeast(role, "admin");
-
-  // The generator's group filter needs each category's groups. One query for
-  // the whole tournament, since the header doesn't know the active category.
-  const groupsByCategory: Record<string, { id: string; name: string }[]> = {};
-  if (canManage && categories.length > 0) {
-    const supabase = await createClient();
-    const { data: groupRows } = await supabase
-      .from("groups")
-      .select("id, name, category_id")
-      .in("category_id", categories.map((c) => c.id))
-      .order("position");
-    for (const g of groupRows ?? []) {
-      (groupsByCategory[g.category_id] ??= []).push({ id: g.id, name: g.name });
-    }
-  }
 
   return (
     <div className="space-y-5">
@@ -75,14 +58,20 @@ export default async function TournamentLayout({
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
+              <HeaderNavButton
+                id={id}
+                seg="schedule"
+                label="Schedules"
+                icon="schedule"
+              />
               {canManage && (
-                <ScheduleGeneratorButton
-                  tournamentId={id}
-                  categories={categories}
-                  groupsByCategory={groupsByCategory}
+                <HeaderNavButton
+                  id={id}
+                  seg="settings"
+                  label="Settings"
+                  icon="settings"
                 />
               )}
-              {canManage && <SettingsButton id={id} />}
               <Button
                 asChild
                 variant="outline"
