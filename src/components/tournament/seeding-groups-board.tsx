@@ -159,10 +159,10 @@ function TeamRow({
 }
 
 /**
- * Seeding and group assignment in one board: the Teams column is both the seed
- * order (drag to reorder) and where a team is moved between groups by hand.
- * The automatic-assignment card sits beside the seed controls, so the page is
- * one header row over one pair of columns.
+ * Seeding and groups as two boxes side by side. Seed order holds the shuffle
+ * button and the ranked team list (drag to reorder; each row's dropdown moves
+ * the team between groups by hand). Groups holds the draw controls and the
+ * groups they produced.
  */
 export function SeedingGroupsBoard({
   tournamentId,
@@ -327,171 +327,197 @@ export function SeedingGroupsBoard({
   }));
 
   return (
-    <div className="space-y-6">
-      {canEdit && (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="glass flex flex-col gap-4 rounded-2xl p-4 sm:p-5">
-            <div className="flex items-start gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/12 text-primary">
-                <ArrowUpDown className="size-5" />
-              </span>
-              <div>
-                <h3 className="font-heading text-xl font-bold leading-tight">
-                  1 · Seed order
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Drag teams by the handle to rank them — seed 1 is the
-                  strongest. Each drop saves on its own. Or shuffle at random.
-                </p>
-              </div>
-            </div>
-            <div className="mt-auto flex flex-wrap items-center gap-3">
-              <Button
-                onClick={randomize}
-                disabled={shuffling}
-                variant="outline"
-              >
-                <Shuffle className={cn("size-4", shuffling && "animate-spin")} />
-                {shuffling ? "Shuffling…" : "Random seed"}
-              </Button>
-              <span aria-live="polite" className="text-xs text-muted-foreground">
-                {seedState === "saving" && (
-                  <span className="flex items-center gap-1.5">
-                    <Loader2 className="size-3.5 animate-spin" /> Saving order…
-                  </span>
-                )}
-                {seedState === "saved" && (
-                  <span className="flex items-center gap-1.5">
-                    <Check className="size-3.5 text-primary" /> Order saved
-                  </span>
-                )}
-              </span>
-            </div>
+    <div className="grid items-start gap-4 lg:grid-cols-2">
+      {/* ---------- 1. seed order ---------- */}
+      <section
+        aria-labelledby="seed-heading"
+        className="glass space-y-4 rounded-2xl p-4 sm:p-5"
+      >
+        <BoxHeader
+          id="seed-heading"
+          icon={ArrowUpDown}
+          title={canEdit ? "1 · Seed order" : "Seed order"}
+          count={`${rows.length} ${rows.length === 1 ? "team" : "teams"}`}
+        >
+          {canEdit
+            ? "Drag teams by the handle to rank them — seed 1 is the strongest. Each drop saves on its own."
+            : "Teams ranked by seed, strongest first."}
+        </BoxHeader>
+
+        {canEdit && (
+          <div className="flex flex-wrap items-center gap-3">
+            <Button onClick={randomize} disabled={shuffling} variant="outline">
+              <Shuffle className={cn("size-4", shuffling && "animate-spin")} />
+              {shuffling ? "Shuffling…" : "Random seed"}
+            </Button>
+            <span aria-live="polite" className="text-xs text-muted-foreground">
+              {seedState === "saving" && (
+                <span className="flex items-center gap-1.5">
+                  <Loader2 className="size-3.5 animate-spin" /> Saving order…
+                </span>
+              )}
+              {seedState === "saved" && (
+                <span className="flex items-center gap-1.5">
+                  <Check className="size-3.5 text-primary" /> Order saved
+                </span>
+              )}
+            </span>
           </div>
+        )}
+
+        {rows.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No teams in this category yet.
+          </p>
+        ) : (
+          <DndContext
+            // A fixed id keeps dnd-kit's generated aria ids the same on the
+            // server and the client (otherwise hydration warns).
+            id={`seed-order-${categoryId}`}
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={onDragEnd}
+          >
+            <SortableContext items={order} strategy={verticalListSortingStrategy}>
+              <ul className="space-y-1.5">
+                {rows.map((team, i) => (
+                  <TeamRow
+                    key={team.id}
+                    team={team}
+                    index={i}
+                    options={options}
+                    canEdit={canEdit}
+                    dragDisabled={!canEdit || shuffling}
+                    saving={moved(team.id)}
+                    onAssign={assign}
+                  />
+                ))}
+              </ul>
+            </SortableContext>
+          </DndContext>
+        )}
+      </section>
+
+      {/* ---------- 2. groups ---------- */}
+      <section
+        aria-labelledby="groups-heading"
+        className="glass space-y-4 rounded-2xl p-4 sm:p-5"
+      >
+        <BoxHeader
+          id="groups-heading"
+          icon={Network}
+          title={canEdit ? "2 · Groups" : "Groups"}
+          count={
+            groups.length > 0
+              ? `${groups.length} ${groups.length === 1 ? "group" : "groups"}`
+              : null
+          }
+        >
+          {canEdit
+            ? `Spreads the ${teams.length} teams across the groups by seed, so the top seeds land in different groups. Move a team by hand from its dropdown.`
+            : "Who plays whom in the round robin."}
+        </BoxHeader>
+
+        {canEdit && (
           <GroupGenerator
             tournamentId={tournamentId}
             categoryId={categoryId}
             participantCount={teams.length}
             hasGroups={groups.length > 0}
           />
-        </div>
-      )}
+        )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <section className="glass rounded-2xl p-4 sm:p-5">
-          <div className="mb-3 flex items-baseline justify-between gap-3">
-            <h3 className="font-heading text-xl font-bold">Teams by seed</h3>
-            <span className="text-xs text-muted-foreground">
-              <span className="scoreboard text-base font-bold text-foreground">
-                {rows.length}
-              </span>{" "}
-              {rows.length === 1 ? "team" : "teams"}
-            </span>
-          </div>
-          {rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No teams in this category yet.
+        {groups.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border px-4 py-10 text-center">
+            <Network className="size-6 text-primary" />
+            <p className="font-medium">No groups yet</p>
+            <p className="max-w-xs text-sm text-muted-foreground">
+              {canEdit
+                ? "Set the seed order, then press Draw groups. You can move teams between groups by hand afterwards."
+                : "The organiser hasn't drawn the groups yet."}
             </p>
-          ) : (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={onDragEnd}
-            >
-              <SortableContext
-                items={order}
-                strategy={verticalListSortingStrategy}
-              >
-                <ul className="space-y-1.5">
-                  {rows.map((team, i) => (
-                    <TeamRow
-                      key={team.id}
-                      team={team}
-                      index={i}
-                      options={options}
-                      canEdit={canEdit}
-                      dragDisabled={!canEdit || shuffling}
-                      saving={moved(team.id)}
-                      onAssign={assign}
-                    />
-                  ))}
-                </ul>
-              </SortableContext>
-            </DndContext>
-          )}
-        </section>
-
-        <section className="glass rounded-2xl p-4 sm:p-5">
-          <div className="mb-3 flex items-baseline justify-between gap-3">
-            <h3 className="font-heading text-xl font-bold">Groups</h3>
-            {groups.length > 0 && (
-              <span className="text-xs text-muted-foreground">
-                <span className="scoreboard text-base font-bold text-foreground">
-                  {groups.length}
-                </span>{" "}
-                {groups.length === 1 ? "group" : "groups"}
-              </span>
-            )}
           </div>
-          {groups.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border px-4 py-10 text-center">
-              <Network className="size-6 text-primary" />
-              <p className="font-medium">No groups yet</p>
-              <p className="max-w-xs text-sm text-muted-foreground">
-                {canEdit
-                  ? "Set the seed order, then use “Draw groups” above. You can move teams between groups by hand afterwards."
-                  : "The organiser hasn't drawn the groups yet."}
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {groupView.map((g) => (
-                <div
-                  key={g.id}
-                  className="overflow-hidden rounded-xl border border-border bg-card"
-                >
-                  <div className="flex items-center justify-between bg-court px-3 py-2 text-court-foreground">
-                    <h4 className="font-heading text-base font-bold uppercase tracking-wide">
-                      {g.name}
-                    </h4>
-                    <span className="flex items-center gap-1 text-xs text-court-foreground/75">
-                      <Users className="size-3.5" />
-                      <span className="scoreboard text-sm font-semibold">
-                        {g.members.length}
-                      </span>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {groupView.map((g) => (
+              <div
+                key={g.id}
+                className="overflow-hidden rounded-xl border border-border bg-card"
+              >
+                <div className="flex items-center justify-between bg-court px-3 py-2 text-court-foreground">
+                  <h4 className="font-heading text-base font-bold uppercase tracking-wide">
+                    {g.name}
+                  </h4>
+                  <span className="flex items-center gap-1 text-xs text-court-foreground/75">
+                    <Users className="size-3.5" />
+                    <span className="scoreboard text-sm font-semibold">
+                      {g.members.length}
                     </span>
-                  </div>
-                  {g.members.length === 0 ? (
-                    <p className="px-3 py-3 text-xs text-muted-foreground">
-                      Empty — pick this group from a team&apos;s dropdown.
-                    </p>
-                  ) : (
-                    <ul className="divide-y divide-border">
-                      {g.members.map((m) => (
-                        <li
-                          key={m.participantId}
-                          className={cn(
-                            "flex items-center gap-2 px-3 py-2 text-sm",
-                            m.pending && "text-muted-foreground",
-                          )}
-                        >
-                          <span className="scoreboard grid size-6 shrink-0 place-items-center rounded-md bg-muted text-sm font-bold text-muted-foreground">
-                            {m.pending ? (
-                              <Loader2 className="size-3 animate-spin" />
-                            ) : (
-                              m.seed
-                            )}
-                          </span>
-                          <span className="truncate font-medium">{m.name}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  </span>
                 </div>
-              ))}
-            </div>
+                {g.members.length === 0 ? (
+                  <p className="px-3 py-3 text-xs text-muted-foreground">
+                    Empty — pick this group from a team&apos;s dropdown.
+                  </p>
+                ) : (
+                  <ul className="divide-y divide-border">
+                    {g.members.map((m) => (
+                      <li
+                        key={m.participantId}
+                        className={cn(
+                          "flex items-center gap-2 px-3 py-2 text-sm",
+                          m.pending && "text-muted-foreground",
+                        )}
+                      >
+                        <span className="scoreboard grid size-6 shrink-0 place-items-center rounded-md bg-muted text-sm font-bold text-muted-foreground">
+                          {m.pending ? (
+                            <Loader2 className="size-3 animate-spin" />
+                          ) : (
+                            m.seed
+                          )}
+                        </span>
+                        <span className="truncate font-medium">{m.name}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function BoxHeader({
+  id,
+  icon: Icon,
+  title,
+  count,
+  children,
+}: {
+  id: string;
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  count: string | null;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/12 text-primary">
+        <Icon className="size-5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline justify-between gap-3">
+          <h3 id={id} className="font-heading text-xl font-bold leading-tight">
+            {title}
+          </h3>
+          {count && (
+            <span className="shrink-0 text-xs text-muted-foreground">{count}</span>
           )}
-        </section>
+        </div>
+        <p className="text-sm text-muted-foreground">{children}</p>
       </div>
     </div>
   );

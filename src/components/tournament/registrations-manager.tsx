@@ -94,14 +94,16 @@ export function RegistrationsManager({
   tournamentId,
   registrations,
   categories,
+  categoryId,
   canManage,
 }: {
   tournamentId: string;
   registrations: RegistrationView[];
   categories: Category[];
+  /** The category picked in the workspace navigation. */
+  categoryId: string;
   canManage: boolean;
 }) {
-  const [categoryId, setCategoryId] = useState<string>("all");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [payment, setPayment] = useState<PaymentFilter>("all");
   const [query, setQuery] = useState("");
@@ -140,10 +142,7 @@ export function RegistrationsManager({
   );
 
   const scoped = useMemo(
-    () =>
-      shown.filter(
-        (r) => categoryId === "all" || r.category_id === categoryId,
-      ),
+    () => shown.filter((r) => r.category_id === categoryId),
     [shown, categoryId],
   );
 
@@ -189,9 +188,7 @@ export function RegistrationsManager({
     };
   }, [scoped]);
 
-  const exportHref = `/dashboard/tournaments/${tournamentId}/registrations/export${
-    categoryId === "all" ? "" : `?category=${categoryId}`
-  }`;
+  const exportHref = `/dashboard/tournaments/${tournamentId}/registrations/export?category=${categoryId}`;
 
   const filtersActive =
     status !== "all" || payment !== "all" || query.trim() !== "";
@@ -250,26 +247,6 @@ export function RegistrationsManager({
             </a>
           </Button>
         </div>
-
-        {categories.length > 1 && (
-          <ChipRow label="Category">
-            <Chip
-              active={categoryId === "all"}
-              onClick={() => setCategoryId("all")}
-            >
-              All categories
-            </Chip>
-            {categories.map((c) => (
-              <Chip
-                key={c.id}
-                active={categoryId === c.id}
-                onClick={() => setCategoryId(c.id)}
-              >
-                {c.name}
-              </Chip>
-            ))}
-          </ChipRow>
-        )}
 
         <ChipRow label="Status">
           {(["all", "pending", "approved", "disqualified", "cancelled"] as const).map(

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getTournamentContext } from "@/lib/data";
+import { getTournamentContext, resolveActiveCategory } from "@/lib/data";
 import { roleAtLeast } from "@/lib/constants";
 import {
   listRegistrations,
@@ -15,13 +15,18 @@ export const dynamic = "force-dynamic";
 
 export default async function RegistrationsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ category?: string }>;
 }) {
   const { id } = await params;
+  const { category } = await searchParams;
   const ctx = await getTournamentContext(id);
   if (!ctx) notFound();
   const { tournament, role, categories } = ctx;
+  const active = resolveActiveCategory(categories, category);
+  if (!active) notFound();
 
   const anyOpen = categories.some((c) => c.registration_open);
 
@@ -49,6 +54,7 @@ export default async function RegistrationsPage({
           tournamentId={id}
           registrations={await listRegistrations(id)}
           categories={categories}
+          categoryId={active.id}
           canManage={roleAtLeast(role, "admin")}
         />
       ) : (

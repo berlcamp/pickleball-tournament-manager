@@ -5,11 +5,12 @@ import { toast } from "sonner";
 import { generateGroups } from "@/actions/groups";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Loader2, Minus, Network, Plus } from "lucide-react";
+import { Loader2, Minus, Plus } from "lucide-react";
 
 const MIN_GROUPS = 1;
 const MAX_GROUPS = 26;
 
+/** Number of groups and the Draw button, for the Groups box on Seeding & Groups. */
 export function GroupGenerator({
   tournamentId,
   categoryId,
@@ -46,24 +47,10 @@ export function GroupGenerator({
     });
   }
 
+  // The controls only — the Groups box it sits in carries the heading.
   return (
-    <div className="glass flex flex-col gap-4 rounded-2xl p-4 sm:p-5">
-      <div className="flex items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/12 text-primary">
-          <Network className="size-5" />
-        </span>
-        <div>
-          <h3 className="font-heading text-xl font-bold leading-tight">
-            2 · Draw groups
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Spreads the {participantCount} teams across the groups by seed, so
-            the top seeds land in different groups.
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-auto flex flex-wrap items-end gap-3">
+    <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-3">
+      <div className="flex flex-wrap items-end gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="num-groups">Number of groups</Label>
           <div className="flex items-center gap-1">

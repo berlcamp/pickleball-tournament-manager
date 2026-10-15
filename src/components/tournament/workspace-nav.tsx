@@ -17,8 +17,6 @@ import { cn } from "@/lib/utils";
 import {
   Check,
   ChevronsUpDown,
-  ClipboardList,
-  Globe,
   LayoutDashboard,
   Layers,
   ListOrdered,
@@ -29,25 +27,23 @@ import {
 import type { Category } from "@/types";
 
 /**
- * `scoped`: the page shows one category at a time, so the category picker
- * applies to it. Registrations covers the whole tournament. Schedules and
- * Settings are header buttons, not tabs, and keep the picker.
+ * The steps of running a category. Registrations, Schedules and Settings are
+ * in the sticky bar above the header (`workspace-top-bar.tsx`) instead.
  */
 const TABS = [
-  { seg: "", label: "Overview", icon: LayoutDashboard, scoped: true },
-  { seg: "registrations", label: "Registrations", icon: ClipboardList, scoped: false },
-  { seg: "participants", label: "Teams", icon: Users, scoped: true },
-  { seg: "groups", label: "Seeding & Groups", icon: Shuffle, scoped: true },
-  { seg: "group-stage", label: "Group Stage", icon: ListOrdered, scoped: true },
-  { seg: "finals", label: "Finals", icon: Trophy, scoped: true },
+  { seg: "", label: "Overview", icon: LayoutDashboard },
+  { seg: "participants", label: "Teams", icon: Users },
+  { seg: "groups", label: "Seeding & Groups", icon: Shuffle },
+  { seg: "group-stage", label: "Group Stage", icon: ListOrdered },
+  { seg: "finals", label: "Finals", icon: Trophy },
 ];
 
 /**
  * The workspace's one navigation block, attached to the bottom of the
  * tournament header: first *which category* you are looking at (a picker,
  * styled as a select so it never reads as a second row of tabs), then *which
- * page* (underlined tabs). On pages that cover the whole tournament the
- * picker steps aside and says so.
+ * page* (underlined tabs). Every page, including the ones in the header
+ * menu, follows the picked category.
  *
  * The active category lives in `?category=` (layouts don't receive
  * searchParams), and every tab link carries it along.
@@ -82,8 +78,6 @@ export function WorkspaceNav({
       active: t.seg ? pathname.startsWith(path) : pathname === base,
     };
   });
-  const current = tabs.find((t) => t.active);
-  const scoped = current?.scoped ?? true;
 
   // Keep the current tab in view when the strip scrolls sideways on a phone.
   const activeTab = useRef<HTMLAnchorElement>(null);
@@ -121,12 +115,7 @@ export function WorkspaceNav({
             <Layers className="size-3.5" aria-hidden />
             Category
           </span>
-          {!scoped ? (
-            <span className="flex min-h-10 items-center gap-2 text-sm text-muted-foreground">
-              <Globe className="size-4" aria-hidden />
-              This page covers every category
-            </span>
-          ) : categories.length === 1 ? (
+          {categories.length === 1 ? (
             <span className="flex min-h-10 items-center gap-2">
               <span className="font-semibold">{shown.name}</span>
               <TournamentStatusBadge status={shown.status} />
