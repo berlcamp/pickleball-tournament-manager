@@ -67,7 +67,8 @@ export function TournamentBanner({
           <h1
             className={cn(
               "text-balance font-bold uppercase",
-              compact ? "text-2xl sm:text-3xl" : "text-[2rem] sm:text-5xl",
+              // Room on the right for the share button.
+              compact ? "text-2xl sm:text-3xl" : "pr-20 text-[2rem] sm:pr-24 sm:text-5xl",
               "leading-[0.95]",
             )}
           >
@@ -105,14 +106,14 @@ export function TournamentBanner({
               ))}
             </ul>
           )}
-
-          {/* Not on the registrant's status page: that link is private. */}
-          {!compact && (
-            <div className="mt-5">
-              <ShareFacebookButton />
-            </div>
-          )}
         </div>
+
+        {/* Not on the registrant's status page: that link is private. */}
+        {!compact && (
+          <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
+            <ShareFacebookButton />
+          </div>
+        )}
       </div>
 
     </section>
