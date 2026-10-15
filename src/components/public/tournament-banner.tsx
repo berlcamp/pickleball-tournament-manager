@@ -2,6 +2,7 @@ import { CalendarDays, MapPin } from "lucide-react";
 import { formatDate, formatEventDates } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { CourtBackdrop } from "@/components/court-backdrop";
+import { ShareFacebookButton } from "@/components/public/share-facebook-button";
 import type { Category, Tournament } from "@/types";
 
 /**
@@ -103,6 +104,13 @@ export function TournamentBanner({
                 </li>
               ))}
             </ul>
+          )}
+
+          {/* Not on the registrant's status page: that link is private. */}
+          {!compact && (
+            <div className="mt-5">
+              <ShareFacebookButton />
+            </div>
           )}
         </div>
       </div>
