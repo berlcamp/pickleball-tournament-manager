@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { AlertCircle, Check, Plus, X } from "lucide-react";
+import { AlertCircle, Check, Loader2, Plus, X } from "lucide-react";
 
 export interface SetScore {
   participant1_score: number;
@@ -81,8 +81,10 @@ function setError(s: EditableSet): string | null {
  * running result shown above so the scorer can see they typed it the right
  * way round before saving.
  *
- * Saving does not wait on the server: `onSubmit` hands the sets to the parent,
- * which shows them optimistically, and the dialog closes at once.
+ * The dialog stays open until the save is confirmed: `onSubmit` resolves to
+ * an error message (or null on success). While it runs the fields lock and
+ * the dialog can't be dismissed, so a score is never lost by closing it early;
+ * a failure is shown in place, with the typed score still there to retry.
  */
 export function ScoreDialog({
   open,
@@ -103,8 +105,10 @@ export function ScoreDialog({
   initialSets?: SetScore[];
   /** Knockout matches: warn when the sets are level, since nobody advances. */
   requireWinner?: boolean;
-  onSubmit: (sets: SetScore[]) => void;
+  onSubmit: (sets: SetScore[]) => Promise<string | null>;
 }) {
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [sets, setSets] = useState<EditableSet[]>(() => toEditable(initialSets));
   // Blank-field errors only appear after a save attempt, so the form doesn't
   // open already shouting at the scorer.
@@ -153,8 +157,9 @@ export function ScoreDialog({
   const tally = setTally(complete);
   const leader = tally.p1 > tally.p2 ? 1 : tally.p2 > tally.p1 ? 2 : null;
 
-  function submit(e?: React.FormEvent) {
+  async function submit(e?: React.FormEvent) {
     e?.preventDefault();
+    if (saving) return;
     setAttempted(true);
     if (hasError) {
       const bad = errors.findIndex(Boolean);
@@ -162,13 +167,17 @@ export function ScoreDialog({
       field(bad, s && s.p1 === "" ? 1 : 2)?.focus();
       return;
     }
-    onSubmit(
+    setSaving(true);
+    setSaveError(null);
+    const error = await onSubmit(
       considered.map((s) => ({
         participant1_score: Number(s.p1),
         participant2_score: Number(s.p2),
       })),
     );
-    onOpenChange(false);
+    setSaving(false);
+    if (error) setSaveError(error);
+    else onOpenChange(false);
   }
 
   // Enter on the left score moves to the right one while it is still empty
@@ -184,8 +193,16 @@ export function ScoreDialog({
   const levelMatch = complete.length > 0 && leader === null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent initialFocus={firstInput} className="gap-5 sm:max-w-md">
+    <Dialog
+      open={open}
+      // Escape, the backdrop and the close button are all ignored mid-save.
+      onOpenChange={(v) => !saving && onOpenChange(v)}
+    >
+      <DialogContent
+        initialFocus={firstInput}
+        showCloseButton={!saving}
+        className="gap-5 sm:max-w-md"
+      >
         <DialogHeader>
           <DialogTitle className="font-heading text-2xl font-bold">
             {title}
@@ -209,7 +226,15 @@ export function ScoreDialog({
           <TeamTag name={team2} leading={leader === 2} align="left" />
         </div>
 
-        <form ref={formRef} onSubmit={submit} className="space-y-3" noValidate>
+        <form
+          ref={formRef}
+          onSubmit={submit}
+          className="space-y-3"
+          noValidate
+          aria-busy={saving || undefined}
+        >
+          {/* `disabled` on a fieldset locks every field and button inside. */}
+          <fieldset disabled={saving} className="min-w-0 space-y-3">
           {sets.map((s, i) => {
             const error = errors[i];
             const shownError =
@@ -316,10 +341,34 @@ export function ScoreDialog({
             </p>
           )}
 
+          </fieldset>
+
+          {saveError && (
+            <p
+              role="alert"
+              className="flex items-start gap-1.5 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            >
+              <AlertCircle className="mt-0.5 size-4 shrink-0" />
+              <span>
+                The score wasn&apos;t saved. {saveError} Check your connection
+                and try again.
+              </span>
+            </p>
+          )}
+
           <DialogFooter>
-            <Button type="submit" size="lg" className="w-full sm:w-auto">
-              <Check className="size-4" />
-              Save score
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full sm:w-auto"
+              disabled={saving}
+            >
+              {saving ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Check className="size-4" />
+              )}
+              {saving ? "Saving…" : saveError ? "Try again" : "Save score"}
             </Button>
           </DialogFooter>
         </form>

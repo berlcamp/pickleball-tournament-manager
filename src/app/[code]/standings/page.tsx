@@ -6,10 +6,15 @@ import {
   resolveActiveCategory,
   publicClient,
 } from "@/lib/data";
-import { loadGroupStage, loadFinals } from "@/lib/tournament-data";
+import {
+  loadGroupStage,
+  loadFinals,
+  loadSeedingSnapshot,
+} from "@/lib/tournament-data";
 import { PublicStandings } from "@/components/public/public-standings";
 import { CategoryFilter } from "@/components/public/category-filter";
 import { Podium } from "@/components/tournament/podium";
+import { FinalsSeedingDialog } from "@/components/tournament/finals-seeding-dialog";
 import { Layers } from "lucide-react";
 import { EmptyState } from "@/components/public/empty-state";
 import { portalMetadata } from "../portal-metadata";
@@ -50,9 +55,10 @@ export default async function PublicStandingsPage({
   }
 
   const db = await publicClient();
-  const [groups, finals] = await Promise.all([
+  const [groups, finals, seeding] = await Promise.all([
     loadGroupStage(db, active.id),
     loadFinals(db, active.id),
+    loadSeedingSnapshot(db, active.id),
   ]);
 
   return (
@@ -66,6 +72,14 @@ export default async function PublicStandingsPage({
           name: g.name,
           standings: g.standings,
         }))}
+        action={
+          seeding && (
+            <FinalsSeedingDialog
+              snapshot={seeding}
+              locked={finals.rounds.length > 0}
+            />
+          )
+        }
       />
     </div>
   );

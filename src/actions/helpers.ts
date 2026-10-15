@@ -34,15 +34,19 @@ export async function assertCategoryDraft(
 
 /**
  * The caller and a client bound to their session. Memoized for the request so
- * `assertRole` and `logAudit` in one action share a single Auth round trip.
+ * `assertRole` and `logAudit` in one action share one check.
+ *
+ * `getClaims` verifies the session JWT's signature locally when the project
+ * signs with asymmetric keys, so an action no longer waits on a round trip to
+ * Supabase Auth before doing its work (it falls back to the server with a
+ * legacy shared secret). Actions only ever need the caller's id.
  */
 export const getSessionUser = cache(async () => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new ActionError("You must be signed in.");
-  return { supabase, user };
+  const { data } = await supabase.auth.getClaims();
+  const id = data?.claims.sub;
+  if (!id) throw new ActionError("You must be signed in.");
+  return { supabase, user: { id } };
 });
 
 /** Ensure the current user has at least `min` role on the tournament. */

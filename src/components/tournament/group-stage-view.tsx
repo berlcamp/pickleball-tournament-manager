@@ -1,7 +1,6 @@
 "use client";
 
 import { startTransition, useOptimistic, useState } from "react";
-import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { MatchStatusBadge } from "@/components/status-badge";
@@ -56,8 +55,8 @@ export function GroupStageView({
   canScore: boolean;
 }) {
   const [active, setActive] = useState<MatchVM | null>(null);
-  // A saved score shows on its row the moment the dialog closes. The entry
-  // lives only as long as the save's transition: when the action returns, the
+  // A score being saved shows on its row straight away. The entry lives only
+  // as long as the save's transition: once the action returns, the
   // revalidated page carries the real result and this falls back to `{}` —
   // which is also the rollback if the save failed.
   const [unsaved, addUnsaved] = useOptimistic<
@@ -79,20 +78,19 @@ export function GroupStageView({
     };
   }
 
+  // Resolves once the server has answered, so the dialog can stay open (and
+  // locked) until then. The optimistic row update still shows behind it and
+  // is dropped automatically if the save failed.
   function save(match: MatchVM, sets: SetScore[]) {
-    // React's global startTransition (not a hook's) so several courts can
-    // be scored back to back without each save waiting on the last.
-    startTransition(async () => {
-      addUnsaved({ id: match.id, sets });
-      const res = await submitGroupScore(tournamentId, match.id, sets);
-      if (!res.ok) {
-        toast.error(
-          `Score for ${match.team1.name} vs ${match.team2.name} wasn't saved. ${res.error ?? ""}`.trim(),
-          { action: { label: "Retry", onClick: () => save(match, sets) } },
-        );
-      }
+    return new Promise<string | null>((resolve) => {
+      startTransition(async () => {
+        addUnsaved({ id: match.id, sets });
+        const res = await submitGroupScore(tournamentId, match.id, sets);
+        resolve(res.ok ? null : (res.error ?? "Something went wrong."));
+      });
     });
   }
+
 
   const views = groups.map((g) => ({ ...g, matches: g.matches.map(view) }));
   const allMatches = views.flatMap((g) => g.matches);

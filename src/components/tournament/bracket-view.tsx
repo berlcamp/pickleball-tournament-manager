@@ -1,7 +1,6 @@
 "use client";
 
 import { startTransition, useOptimistic, useState } from "react";
-import { toast } from "sonner";
 import {
   ScoreDialog,
   winnerOf,
@@ -223,18 +222,19 @@ export function BracketView({
     };
   }
 
+  // Resolves once the server has answered, so the dialog can stay open (and
+  // locked) until then. The optimistic row update still shows behind it and
+  // is dropped automatically if the save failed.
   function save(match: FinalMatchVM, sets: SetScore[]) {
-    startTransition(async () => {
-      addUnsaved({ id: match.id, sets });
-      const res = await submitFinalScore(tournamentId, match.id, sets);
-      if (!res.ok) {
-        toast.error(
-          `${match.label} score wasn't saved. ${res.error ?? ""}`.trim(),
-          { action: { label: "Retry", onClick: () => save(match, sets) } },
-        );
-      }
+    return new Promise<string | null>((resolve) => {
+      startTransition(async () => {
+        addUnsaved({ id: match.id, sets });
+        const res = await submitFinalScore(tournamentId, match.id, sets);
+        resolve(res.ok ? null : (res.error ?? "Something went wrong."));
+      });
     });
   }
+
 
   // The tree is every round in slot order, except that the final round keeps
   // only the final itself (slot 0); anything else there is a playoff.

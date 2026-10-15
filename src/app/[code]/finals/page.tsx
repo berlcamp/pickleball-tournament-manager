@@ -6,10 +6,15 @@ import {
   resolveActiveCategory,
   publicClient,
 } from "@/lib/data";
-import { loadFinals, loadFinalsPreview } from "@/lib/tournament-data";
+import {
+  loadFinals,
+  loadFinalsPreview,
+  loadSeedingSnapshot,
+} from "@/lib/tournament-data";
 import { CategoryFilter } from "@/components/public/category-filter";
 import { BracketView } from "@/components/tournament/bracket-view";
 import { Podium } from "@/components/tournament/podium";
+import { FinalsSeedingDialog } from "@/components/tournament/finals-seeding-dialog";
 import { Info, Layers, Network } from "lucide-react";
 import { EmptyState } from "@/components/public/empty-state";
 import { portalMetadata } from "../portal-metadata";
@@ -50,7 +55,10 @@ export default async function PublicFinalsPage({
   }
 
   const db = await publicClient();
-  const { rounds, placements } = await loadFinals(db, active.id);
+  const [{ rounds, placements }, seeding] = await Promise.all([
+    loadFinals(db, active.id),
+    loadSeedingSnapshot(db, active.id),
+  ]);
 
   // While the group stage is still running there is no bracket yet — show the
   // draw the groups will feed, with a placeholder in every slot.
@@ -62,9 +70,14 @@ export default async function PublicFinalsPage({
       <CategoryFilter categories={categories} activeId={active.id} />
       <Podium placements={placements} />
       {(rounds.length > 0 || preview.length > 0) && (
-        <h2 className="text-2xl font-bold uppercase leading-none">
-          {rounds.length > 0 ? "Finals bracket" : "Projected bracket"}
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-2xl font-bold uppercase leading-none">
+            {rounds.length > 0 ? "Finals bracket" : "Projected bracket"}
+          </h2>
+          {seeding && (
+            <FinalsSeedingDialog snapshot={seeding} locked={rounds.length > 0} />
+          )}
+        </div>
       )}
       {rounds.length > 0 ? (
         <BracketView

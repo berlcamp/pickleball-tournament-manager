@@ -18,7 +18,14 @@ export interface PublicGroup {
  * Group standings on the portal. One group at a time, picked from a row of
  * thumb-sized pills that scrolls sideways when a category has many groups.
  */
-export function PublicStandings({ groups }: { groups: PublicGroup[] }) {
+export function PublicStandings({
+  groups,
+  action,
+}: {
+  groups: PublicGroup[];
+  /** Shown beside the heading (the finals seeding button). */
+  action?: React.ReactNode;
+}) {
   if (groups.length === 0) {
     return (
       <EmptyState icon={ListOrdered} title="No standings yet">
@@ -29,12 +36,15 @@ export function PublicStandings({ groups }: { groups: PublicGroup[] }) {
   }
   return (
     <section aria-labelledby="standings-heading" className="space-y-3">
-      <h2
-        id="standings-heading"
-        className="text-2xl font-bold uppercase leading-none"
-      >
-        Group standings
-      </h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2
+          id="standings-heading"
+          className="text-2xl font-bold uppercase leading-none"
+        >
+          Group standings
+        </h2>
+        {action}
+      </div>
       <Tabs defaultValue={groups[0].id} className="gap-3">
         {groups.length > 1 && (
           <TabsList

@@ -3,7 +3,13 @@
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
-import { ActionError, assertRole, logAudit, run } from "./helpers";
+import {
+  ActionError,
+  assertRole,
+  getSessionUser,
+  logAudit,
+  run,
+} from "./helpers";
 import { scoreSchema } from "@/validators";
 import {
   computeGroupStandings,
@@ -25,40 +31,47 @@ function winnerFromSets(
   return { p1Sets: p1, p2Sets: p2 };
 }
 
-/** Recompute and persist standings for one group. */
+/**
+ * Recompute and persist standings for one group.
+ *
+ * Two round trips: the group's members and its matches (scores embedded) are
+ * read together, then every standings row is written in parallel. It reads
+ * *after* the caller's write, so two courts saving into the same group at once
+ * still end on standings that include both results.
+ */
 async function recomputeGroup(db: DB, tournamentId: string, groupId: string) {
-  const { data: members } = await db
-    .from("group_members")
-    .select("participant_id")
-    .eq("group_id", groupId);
+  const [{ data: members }, { data: matchRows }] = await Promise.all([
+    db.from("group_members").select("participant_id").eq("group_id", groupId),
+    db
+      .from("group_matches")
+      .select(
+        "id, participant1_id, participant2_id, status, group_match_scores(set_number, participant1_score, participant2_score)",
+      )
+      .eq("group_id", groupId),
+  ]);
   const participantIds = (members ?? []).map((m) => m.participant_id);
+  // Embedded selects aren't typed (the schema declares no relationships).
+  const matches = (matchRows ?? []) as unknown as {
+    id: string;
+    participant1_id: string | null;
+    participant2_id: string | null;
+    status: string;
+    group_match_scores: {
+      set_number: number;
+      participant1_score: number;
+      participant2_score: number;
+    }[];
+  }[];
+  const scoresByMatch = new Map(
+    matches.map((m) => [
+      m.id,
+      [...(m.group_match_scores ?? [])].sort(
+        (a, b) => a.set_number - b.set_number,
+      ),
+    ]),
+  );
 
-  const { data: matches } = await db
-    .from("group_matches")
-    .select("id, participant1_id, participant2_id, status")
-    .eq("group_id", groupId);
-
-  const matchIds = (matches ?? []).map((m) => m.id);
-  const { data: scores } = matchIds.length
-    ? await db
-        .from("group_match_scores")
-        .select("match_id, set_number, participant1_score, participant2_score")
-        .in("match_id", matchIds)
-    : { data: [] };
-
-  const scoresByMatch = new Map<
-    string,
-    { participant1_score: number; participant2_score: number }[]
-  >();
-  for (const s of scores ?? []) {
-    if (!scoresByMatch.has(s.match_id)) scoresByMatch.set(s.match_id, []);
-    scoresByMatch.get(s.match_id)!.push({
-      participant1_score: s.participant1_score,
-      participant2_score: s.participant2_score,
-    });
-  }
-
-  const scored: ScoredMatch[] = (matches ?? [])
+  const scored: ScoredMatch[] = matches
     .filter((m) => m.participant1_id && m.participant2_id)
     .map((m) => ({
       participant1Id: m.participant1_id!,
@@ -212,28 +225,32 @@ export async function submitGroupScore(
 ) {
   return run(async () => {
     const parsed = scoreSchema.parse({ sets });
-    const { supabase } = await assertRole(tournamentId, "scorekeeper");
+    const { supabase } = await getSessionUser();
 
-    const { data: match, error: mErr } = await supabase
-      .from("group_matches")
-      .select("id, group_id, category_id, participant1_id, participant2_id")
-      .eq("id", matchId)
-      .single();
+    // The permission check and the match lookup (with its category's stage)
+    // are independent reads, so they share one round trip. Nothing is
+    // written until both have passed.
+    const [, { data: matchRow, error: mErr }] = await Promise.all([
+      assertRole(tournamentId, "scorekeeper"),
+      supabase
+        .from("group_matches")
+        .select(
+          "id, group_id, category_id, participant1_id, participant2_id, categories(status)",
+        )
+        .eq("id", matchId)
+        .eq("tournament_id", tournamentId)
+        .single(),
+    ]);
+    const match = matchRow as unknown as {
+      group_id: string;
+      participant1_id: string | null;
+      participant2_id: string | null;
+      categories: { status: string } | null;
+    } | null;
     if (mErr || !match) throw new ActionError("Match not found.");
-    await assertGroupStageActive(supabase, match.category_id);
-
-    // Replace scores.
-    await supabase.from("group_match_scores").delete().eq("match_id", matchId);
-    const rows = parsed.sets.map((s, i) => ({
-      match_id: matchId,
-      set_number: i + 1,
-      participant1_score: s.participant1_score,
-      participant2_score: s.participant2_score,
-    }));
-    const { error: sErr } = await supabase
-      .from("group_match_scores")
-      .insert(rows);
-    if (sErr) throw new ActionError(sErr.message);
+    if (match.categories?.status !== "group_stage") {
+      throw new ActionError("Group stage is not active.");
+    }
 
     const { p1Sets, p2Sets } = winnerFromSets(parsed.sets);
     const winnerId =
@@ -243,10 +260,31 @@ export async function submitGroupScore(
           ? match.participant2_id
           : null;
 
-    await supabase
-      .from("group_matches")
-      .update({ status: "completed", winner_id: winnerId })
-      .eq("id", matchId);
+    // Overwrite the sets in place and drop any beyond the new count (an edit
+    // that removed a set), alongside the match result — one round trip.
+    const [{ error: sErr }, { error: dErr }, { error: uErr }] =
+      await Promise.all([
+        supabase.from("group_match_scores").upsert(
+          parsed.sets.map((s, i) => ({
+            match_id: matchId,
+            set_number: i + 1,
+            participant1_score: s.participant1_score,
+            participant2_score: s.participant2_score,
+          })),
+          { onConflict: "match_id,set_number" },
+        ),
+        supabase
+          .from("group_match_scores")
+          .delete()
+          .eq("match_id", matchId)
+          .gt("set_number", parsed.sets.length),
+        supabase
+          .from("group_matches")
+          .update({ status: "completed", winner_id: winnerId })
+          .eq("id", matchId),
+      ]);
+    const writeErr = sErr ?? dErr ?? uErr;
+    if (writeErr) throw new ActionError(writeErr.message);
 
     await recomputeGroup(supabase, tournamentId, match.group_id);
     await logAudit(tournamentId, "group.score", { matchId });
