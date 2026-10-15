@@ -10,6 +10,7 @@ import {
 } from "./helpers";
 import { assignGroups, groupLabel } from "@/services/seeding";
 import { generateRoundRobin } from "@/services/roundRobin";
+import { groupGenSchema } from "@/validators";
 
 /**
  * Generate groups using Challonge-style pair-alternating distribution,
@@ -23,6 +24,8 @@ export async function generateGroups(
 ) {
   return run(async () => {
     const { supabase } = await assertRole(tournamentId, "admin");
+    const parsed = groupGenSchema.safeParse({ num_groups: numGroups });
+    if (!parsed.success) throw new ActionError(parsed.error.issues[0].message);
     await assertCategoryDraft(supabase, categoryId);
 
     const { data: participants, error: pErr } = await supabase

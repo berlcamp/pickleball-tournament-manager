@@ -65,7 +65,7 @@ Pure, framework-free, I/O-free modules — keep them that way (no Supabase impor
 - `seeding.ts` — manual/random seeding + `assignGroups`, the Challonge-style pair-alternating group distribution
 - `roundRobin.ts` — group match generation
 - `standings.ts` — standings computation + tie-breaker chain (match wins → head-to-head mini-league → set wins → point differential → total points → direct head-to-head, then order left as-is). Point differential sits **above** total points on purpose: games run to a fixed target, so points-scored mostly reflects how many sets were played, not how well.
-- `brackets.ts` — ranks qualifiers across groups and draws the single-elimination final stage (byes, third-place playoff, round labeling)
+- `brackets.ts` — draws the single-elimination final stage as a crossover (A1 vs the last group's 2nd …), third-place playoff, round labeling; a legacy seeded draw remains for old categories whose group count isn't a power of two
 - `scheduler.ts` — court scheduling (intervals, court assignment; `sequential` vs equally-distributed modes). Groups are pinned to a court and play back to back — there is no rest-period setting. `buildSchedule` also takes `reserved` court/time slots, so a run covering only some groups schedules around the ones it left alone.
 - `blindPairing.ts` — random partner draw for a list of individual players: one pot (anyone with anyone), or two groups paired across so a team is always one player from each
 - `registration.ts` — whether a category is accepting entries (open flag, deadline, team cap, stage) and how many players a format needs
@@ -205,41 +205,27 @@ to choose:
    top `ADVANCE_PER_GROUP` (`lib/constants.ts`, currently 2) qualify. That
    constant is the single source of truth for finals generation, standings
    highlighting and knockout slot reservation; don't re-declare it locally.
-2. **Final stage** — `rankQualifiers` puts every qualifier in one overall
-   order, then seeds it standard-style (1 vs N) into a single-elimination
-   bracket. Placement comes first: every group winner is seeded above every
-   runner-up. Within each tier, teams are ranked on **their own** results:
-   win *rate* (groups differ in size), point differential, points, then group
-   index as a deterministic last resort — never a random tiebreak, because a
-   redrawn bracket must be identical.
+   The number of groups is limited to `GROUP_COUNTS` (1, 2, 4, 8, 16 —
+   `lib/constants.ts`, enforced by `groupGenSchema` and the group picker) so
+   the finals never need byes.
+2. **Final stage** — a **crossover**: each group winner plays the runner-up
+   of the mirror group, A1 vs the last group's 2nd, B1 vs the second-to-last
+   (8 groups: A1–H2, B1–G2, C1–F2, D1–E2, E1–D2, F1–C2, G1–B2, H1–A2). The
+   matches sit in that order, so winners of the first half of the groups fill
+   the top half and every runner-up lands in the half opposite its winner —
+   group-mates can only meet again in the final. The draw goes by group
+   letter only, never by records, so it is known as soon as the groups are.
 
-   This deliberately departs from Challonge, where a runner-up inherited its
-   seed from how its group *winner* placed (a pairwise-swapped tier offset).
-   That kept a group's two qualifiers apart structurally but could seed a 1-2
-   runner-up above a 2-1 one, which is not how pickleball tournament directors
-   seed a pool-play knockout. Keeping same-group teams apart is now entirely
-   `avoidSameGroupFirstRound`'s job.
+   Categories drawn before `GROUP_COUNTS` existed may have another group
+   count; `generateFinalBracket` falls back to the old seeded draw for them
+   (`rankQualifiers` → 1-v-N seeding with byes for the top seeds →
+   `avoidSameGroupFirstRound`), so their finals can still be generated.
 
-`avoidSameGroupFirstRound` then repairs the draw: strict seeding pairs seed N
-with seed (size + 1 - N), which regularly lands two teams from the same group
-against each other, and they just played in the group stage. The repair swaps
-opponents between two round-one matches, picking the swap between the
-closest-ranked teams so the seeding moves as little as possible. Byes are
-never swapped — a bye belongs to the top seeds. If no legal swap exists (a
-tiny field), the clash is left rather than forced.
-
-Byes are resolved when the bracket is drawn: a match with a `"BYE"` source is
+Byes (legacy seeded draws only) are resolved when the bracket is drawn: a match with a `"BYE"` source is
 inserted already `completed` with `winner_id` set, and the survivor is already
 placed in the next round's match. Nobody has to score a walkover.
 
 Before the stage ends the Finals tab shows a **preview** of that bracket:
 `lib/tournament-data.ts → loadFinalsPreview` feeds `generateFinalBracket`
-qualifier slots with no participant, so every slot reads "A1", "B2" … . The
-groups are ordered by their leaders' current standings, so the preview tracks
-the live table. It writes nothing — only `generateFinals` persists a bracket.
-
-The Group Stage and Finals tabs (and the portal's Standings and Finals) carry a **Finals seeding** dialog
-(`components/tournament/finals-seeding-dialog.tsx`, fed by
-`loadSeedingSnapshot`): the overall seed list by tier and the round-one draw,
-built with `drawFirstRound` — the same engine path as `generateFinalBracket` —
-so it can mark the pairings the same-group repair swapped.
+qualifier slots with no participant, so every slot reads "A1", "B2" … . It
+writes nothing — only `generateFinals` persists a bracket.

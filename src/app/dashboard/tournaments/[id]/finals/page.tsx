@@ -4,13 +4,11 @@ import { getTournamentContext, resolveActiveCategory } from "@/lib/data";
 import {
   loadFinals,
   loadFinalsPreview,
-  loadSeedingSnapshot,
 } from "@/lib/tournament-data";
 import { roleAtLeast } from "@/lib/constants";
 import { PageHeader, EmptyState } from "@/components/page-header";
 import { BracketView } from "@/components/tournament/bracket-view";
 import { Podium } from "@/components/tournament/podium";
-import { FinalsSeedingDialog } from "@/components/tournament/finals-seeding-dialog";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Eye, Network } from "lucide-react";
@@ -30,10 +28,7 @@ export default async function FinalsPage({
   if (!active) notFound();
 
   const supabase = await createClient();
-  const [{ rounds, placements }, seeding] = await Promise.all([
-    loadFinals(supabase, active.id),
-    loadSeedingSnapshot(supabase, active.id),
-  ]);
+  const { rounds, placements } = await loadFinals(supabase, active.id);
 
   // Before the group stage ends there is no real bracket yet — show the draw
   // the groups will feed, with a placeholder in every slot.
@@ -44,14 +39,7 @@ export default async function FinalsPage({
       <PageHeader
         title="Finals"
         description="The knockout bracket. Winners move into the next round as soon as a score is saved."
-      >
-        {seeding && (
-          <FinalsSeedingDialog
-            snapshot={seeding}
-            locked={rounds.length > 0}
-          />
-        )}
-      </PageHeader>
+      />
 
       <Podium placements={placements} />
 

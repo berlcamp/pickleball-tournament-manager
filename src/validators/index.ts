@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MATCH_INTERVALS } from "@/lib/constants";
+import { GROUP_COUNTS, MATCH_INTERVALS } from "@/lib/constants";
 
 /**
  * The tournament itself is just a name and a venue. Dates belong to the
@@ -44,7 +44,12 @@ export const inviteSchema = z.object({
 });
 
 export const groupGenSchema = z.object({
-  num_groups: z.coerce.number().int().min(1).max(26),
+  num_groups: z.coerce
+    .number()
+    .int()
+    .refine((n) => (GROUP_COUNTS as readonly number[]).includes(n), {
+      message: "Choose 1, 2, 4, 8 or 16 groups — the finals cross over, which needs a power of two.",
+    }),
 });
 
 export const scoreSchema = z.object({

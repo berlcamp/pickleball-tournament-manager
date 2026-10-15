@@ -73,7 +73,7 @@ const FEATURES = [
   {
     icon: Network,
     title: "Finals Brackets",
-    desc: "The top teams from every group seed into an auto-drawn knockout bracket — no first-round rematches.",
+    desc: "Group winners cross over to meet runners-up in an auto-drawn knockout bracket — no byes, no early rematches.",
     iconBg: "bg-chart-5/15 text-chart-5",
     glow: "group-hover:shadow-[0_0_0_1px_var(--color-chart-5)]",
   },

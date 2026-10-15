@@ -1,17 +1,22 @@
 /**
  * Finals bracket construction.
  *
- * The tournament runs in two stages, Challonge-style: a round-robin group
- * stage, then a single-elimination final stage. The top `ADVANCE_PER_GROUP`
- * teams from every group qualify, are ranked into one overall order across
- * all groups, and are dropped into a standard-seeded knockout bracket — best
- * seed against weakest, so the two strongest qualifiers can only meet in the
- * final. There is no second bracket style to choose from.
+ * The tournament runs in two stages: a round-robin group stage, then a
+ * single-elimination final stage. The top two teams of every group qualify
+ * and **cross over** into the bracket: each group winner plays the runner-up
+ * of the mirror group — A1 vs the last group's 2nd, B1 vs the second-to-last
+ * group's 2nd, and so on (8 groups: A1–H2, B1–G2, C1–F2, D1–E2, E1–D2 …).
+ * Group letters decide the draw, not records, so the bracket is known the
+ * moment the groups are.
  *
- * Group winners are seeded first, then runners-up, each tier ranked on its own
- * results (see `rankQualifiers`). Two teams out of the same group never meet
- * again in round one — they already played each other in the group stage —
- * which `avoidSameGroupFirstRound` repairs after seeding.
+ * Winners A to the middle group fill the top half and the rest the bottom
+ * half, which puts a group's winner and runner-up in opposite halves: two
+ * teams that already met in the group stage can only meet again in the final.
+ *
+ * Crossover fills a bracket exactly when the number of groups is a power of
+ * two (`GROUP_COUNTS` in lib/constants.ts), so there are no byes. Categories
+ * drawn before that rule may have another count; they keep the old seeded
+ * draw (`seededDraw`) so their finals can still be generated.
  */
 
 /** A qualifier's group-stage record, used to rank it against other groups. */
@@ -108,6 +113,11 @@ function compareRecords(a: QualifierSlot, b: QualifierSlot): number {
     a.groupIndex - b.groupIndex
   );
 }
+
+/* ------------------------------------------------------------------------
+ * Legacy seeded draw — only for categories whose group count is not a power
+ * of two (drawn before `GROUP_COUNTS` existed). New categories cross over.
+ * --------------------------------------------------------------------- */
 
 /**
  * Rank every qualifier into one overall order across all groups.
@@ -214,10 +224,10 @@ interface Feed {
 
 /** Build a single-elimination bracket from slots already in bracket order. */
 function buildSingleElim(
-  orderedSlots: (RankedQualifier | null)[],
+  orderedSlots: (QualifierSlot | null)[],
 ): BracketMatch[] {
   const size = nextPow2(orderedSlots.length);
-  const slots: (RankedQualifier | null)[] = [...orderedSlots];
+  const slots: (QualifierSlot | null)[] = [...orderedSlots];
   while (slots.length < size) slots.push(null);
 
   const matches: BracketMatch[] = [];
@@ -293,27 +303,48 @@ function buildSingleElim(
   return matches;
 }
 
+function isPowerOfTwo(n: number): boolean {
+  return n >= 1 && (n & (n - 1)) === 0;
+}
+
 /**
- * Rank the qualifiers and draw the single-elimination final stage.
+ * The crossover draw in bracket order, or null when the field can't cross
+ * over (a group count that isn't a power of two, or more than two qualifiers
+ * per group). A qualifier that is missing leaves its slot empty — a bye.
+ */
+function crossoverDraw(
+  qualifiers: QualifierSlot[],
+): (QualifierSlot | null)[] | null {
+  const groups = [...new Set(qualifiers.map((q) => q.groupIndex))].sort(
+    (a, b) => a - b,
+  );
+  if (!isPowerOfTwo(groups.length) || qualifiers.some((q) => q.position > 2)) {
+    return null;
+  }
+  const at = (groupIndex: number, position: number) =>
+    qualifiers.find(
+      (q) => q.groupIndex === groupIndex && q.position === position,
+    ) ?? null;
+  // Match i is group i's winner against the mirror group's runner-up, laid
+  // out in group order — so the first half of the groups' winners fill the
+  // top half and every runner-up lands in the half opposite its winner.
+  return groups.flatMap((g, i) => [at(g, 1), at(groups[groups.length - 1 - i], 2)]);
+}
+
+/** Legacy: rank, seed 1 v N, then pull same-group teams apart. */
+function seededDraw(qualifiers: QualifierSlot[]): (RankedQualifier | null)[] {
+  return avoidSameGroupFirstRound(seedIntoBracket(rankQualifiers(qualifiers)));
+}
+
+/**
+ * Draw the single-elimination final stage from the group qualifiers.
  * Returns an empty bracket when fewer than two teams qualified.
  */
 export function generateFinalBracket(
   qualifiers: QualifierSlot[],
 ): BracketMatch[] {
   if (qualifiers.length < 2) return [];
-  return buildSingleElim(drawFirstRound(qualifiers).slots);
-}
-
-/**
- * The round-one draw on its own, for explaining it: the bracket-order slots
- * (`null` = bye) exactly as `generateFinalBracket` uses them, plus the slots
- * strict seeding would have produced, so a caller can point out which teams
- * `avoidSameGroupFirstRound` moved.
- */
-export function drawFirstRound(qualifiers: QualifierSlot[]): {
-  slots: (RankedQualifier | null)[];
-  strict: (RankedQualifier | null)[];
-} {
-  const strict = seedIntoBracket(rankQualifiers(qualifiers));
-  return { slots: avoidSameGroupFirstRound(strict), strict };
+  return buildSingleElim(
+    crossoverDraw(qualifiers) ?? seededDraw(qualifiers),
+  );
 }

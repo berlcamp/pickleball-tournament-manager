@@ -9,6 +9,14 @@ export const MATCH_INTERVALS = [5, 10, 15, 20, 30] as const;
  */
 export const ADVANCE_PER_GROUP = 2;
 
+/**
+ * The group counts a category can be drawn into. The finals cross over (each
+ * group winner plays the mirror group's runner-up, see services/brackets.ts),
+ * which fills a bracket with no byes only when the number of groups is a
+ * power of two.
+ */
+export const GROUP_COUNTS = [1, 2, 4, 8, 16] as const;
+
 export const ROLE_LABELS: Record<Role, string> = {
   owner: "Owner",
   admin: "Admin",

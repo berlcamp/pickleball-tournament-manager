@@ -5,10 +5,9 @@ import { toast } from "sonner";
 import { generateGroups } from "@/actions/groups";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Loader2, Minus, Plus } from "lucide-react";
-
-const MIN_GROUPS = 1;
-const MAX_GROUPS = 26;
+import { Loader2 } from "lucide-react";
+import { GROUP_COUNTS } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
 /** Number of groups and the Draw button, for the Groups box on Seeding & Groups. */
 export function GroupGenerator({
@@ -23,12 +22,12 @@ export function GroupGenerator({
   /** Groups already exist, so drawing again replaces them. */
   hasGroups?: boolean;
 }) {
-  const suggested = Math.max(1, Math.min(4, Math.floor(participantCount / 4)));
-  const [num, setNum] = useState(suggested || 1);
+  // About four teams a group, capped at 4 groups, rounded down to a count the
+  // crossover finals allow.
+  const target = Math.min(4, Math.floor(participantCount / 4));
+  const suggested = [...GROUP_COUNTS].reverse().find((n) => n <= target) ?? 1;
+  const [num, setNum] = useState<number>(suggested);
   const [pending, startTransition] = useTransition();
-
-  const clamp = (n: number) =>
-    Math.min(MAX_GROUPS, Math.max(MIN_GROUPS, Number.isFinite(n) ? n : 1));
   // Rough group size, so the organiser can judge the count before drawing.
   const low = Math.floor(participantCount / num);
   const high = Math.ceil(participantCount / num);
@@ -52,38 +51,26 @@ export function GroupGenerator({
     <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-3">
       <div className="flex flex-wrap items-end gap-3">
         <div className="space-y-1.5">
-          <Label htmlFor="num-groups">Number of groups</Label>
-          <div className="flex items-center gap-1">
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              aria-label="Fewer groups"
-              disabled={num <= MIN_GROUPS}
-              onClick={() => setNum((n) => clamp(n - 1))}
-            >
-              <Minus />
-            </Button>
-            <input
-              id="num-groups"
-              type="text"
-              inputMode="numeric"
-              value={num}
-              onChange={(e) =>
-                setNum(clamp(Number(e.target.value.replace(/\D/g, "")) || 1))
-              }
-              className="scoreboard h-11 w-14 rounded-lg border border-input bg-card text-center text-2xl font-bold outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-9 dark:bg-input/30"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              aria-label="More groups"
-              disabled={num >= MAX_GROUPS}
-              onClick={() => setNum((n) => clamp(n + 1))}
-            >
-              <Plus />
-            </Button>
+          <Label id="num-groups">Number of groups</Label>
+          <div
+            role="radiogroup"
+            aria-labelledby="num-groups"
+            className="flex items-center gap-1"
+          >
+            {GROUP_COUNTS.map((n) => (
+              <Button
+                key={n}
+                type="button"
+                role="radio"
+                aria-checked={num === n}
+                variant={num === n ? "default" : "outline"}
+                size="icon"
+                className={cn("scoreboard text-lg font-bold", n >= 10 && "w-11")}
+                onClick={() => setNum(n)}
+              >
+                {n}
+              </Button>
+            ))}
           </div>
         </div>
         <Button onClick={generate} disabled={pending || tooFew}>
@@ -99,7 +86,8 @@ export function GroupGenerator({
       ) : (
       <p className="text-xs text-muted-foreground">
         About <span className="scoreboard text-sm font-bold text-foreground">{perGroup}</span>{" "}
-        teams per group.
+        teams per group. Groups come in 1, 2, 4, 8 or 16 so the finals cross
+        over with no byes.
         {hasGroups &&
           " Redrawing replaces the current groups and any manual moves."}
       </p>

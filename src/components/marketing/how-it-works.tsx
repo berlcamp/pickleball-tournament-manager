@@ -8,7 +8,6 @@ import {
   Scale,
   Shuffle,
   Trophy,
-  X,
 } from "lucide-react";
 import { ScrollFade } from "@/components/tournament/scroll-fade";
 import { ADVANCE_PER_GROUP } from "@/lib/constants";
@@ -23,9 +22,9 @@ const STRONG = "bg-court text-court-foreground dark:bg-primary dark:text-primary
  *
  * Every graphic is one worked example carried from step to step: 16 teams,
  * 4 groups, top 2 advance. The numbers are not illustrative guesses — the
- * group split is what `assignGroups` produces for 16 seeds, and the seeds and
- * round-one draw are what `generateFinalBracket` produces for these records,
- * including the A1-vs-A2 rematch it repairs. If the engine's rules change,
+ * group split is what `assignGroups` produces for 16 seeds, and the round-one
+ * draw is the crossover `generateFinalBracket` produces for 4 groups. If the
+ * engine's rules change,
  * re-run the example through `src/services/` and update the data here.
  *
  * The graphics are real text, not images, so screen readers and search
@@ -63,45 +62,17 @@ const TIEBREAKS = [
   { title: "Most points scored", body: "The last numbers-based check." },
 ];
 
-// Step 4 — the qualifiers in seed order (rankQualifiers output).
-const WINNERS = [
-  { seed: 1, label: "B1", rec: "3-0", diff: "+25" },
-  { seed: 2, label: "A1", rec: "3-0", diff: "+20" },
-  { seed: 3, label: "D1", rec: "3-0", diff: "+15" },
-  { seed: 4, label: "C1", rec: "2-1", diff: "+8" },
-];
-const RUNNERS_UP = [
-  { seed: 5, label: "B2", rec: "2-1", diff: "+10" },
-  { seed: 6, label: "C2", rec: "2-1", diff: "+6" },
-  { seed: 7, label: "A2", rec: "2-1", diff: "+4" },
-  { seed: 8, label: "D2", rec: "1-2", diff: "-2" },
+// Step 4 — each winner crosses over to the mirror group's runner-up.
+const CROSSOVERS = [
+  { winner: "A1", runnerUp: "D2" },
+  { winner: "B1", runnerUp: "C2" },
+  { winner: "C1", runnerUp: "B2" },
+  { winner: "D1", runnerUp: "A2" },
 ];
 
-// Step 5 — round one after the rematch repair (generateFinalBracket output).
-const QUARTERS: [Team, Team][] = [
-  [
-    { seed: 1, label: "B1" },
-    { seed: 7, label: "A2", moved: true },
-  ],
-  [
-    { seed: 4, label: "C1" },
-    { seed: 5, label: "B2" },
-  ],
-  [
-    { seed: 2, label: "A1" },
-    { seed: 8, label: "D2", moved: true },
-  ],
-  [
-    { seed: 3, label: "D1" },
-    { seed: 6, label: "C2" },
-  ],
-];
-
-interface Team {
-  seed: number;
-  label: string;
-  moved?: boolean;
-}
+// Step 5 — round one in bracket order (generateFinalBracket output): the
+// first two crossovers fill the top half, the last two the bottom half.
+const QUARTERS = CROSSOVERS.map((c) => [c.winner, c.runnerUp] as const);
 
 export function HowItWorks() {
   return (
@@ -165,27 +136,26 @@ export function HowItWorks() {
         />
         <Step
           n={4}
-          title="Qualifiers are seeded for the finals"
+          title="Winners cross over"
           text={
             <>
-              Every group winner is seeded above every runner-up. Inside each
-              row, teams are ranked on their own results: win rate first (so
-              smaller groups aren&apos;t at a disadvantage), then point
-              differential, then points.
+              Each group winner plays the runner-up of the mirror group: A1
+              meets the last group&apos;s runner-up, B1 the second-to-last, and
+              so on. The pairings are set by the groups, so everyone knows who
+              they could face before the first serve.
             </>
           }
-          graphic={<SeedingGraphic />}
+          graphic={<CrossoverGraphic />}
         />
         <Step
           n={5}
           title="The bracket is drawn — no instant rematches"
           text={
             <>
-              The best seed plays the lowest seed (1 vs 8, 2 vs 7…), so the two
-              strongest teams can only meet in the final. Teams from the same
-              group never meet in round one — if the draw would pair them, we
-              swap opponents with the nearest match. Lose once and you&apos;re
-              out; the semifinal losers play for third.
+              A group&apos;s winner and runner-up start in opposite halves of
+              the bracket, so two teams that met in the group stage can only
+              meet again in the final. Lose once and you&apos;re out; the
+              semifinal losers play for third.
             </>
           }
           graphic={<BracketGraphic />}
@@ -413,88 +383,43 @@ function TiebreakGraphic() {
   );
 }
 
-function SeedRow({
-  title,
-  icon: Icon,
-  rows,
-  tone,
-}: {
-  title: string;
-  icon: React.ComponentType<{ className?: string }>;
-  rows: typeof WINNERS;
-  tone: "winner" | "runner";
-}) {
+function CrossoverGraphic() {
   return (
-    <div>
-      <p className="mb-2 flex items-center gap-2 font-heading text-base font-bold uppercase tracking-wide">
-        <Icon
-          className={cn(
-            "size-4",
-            tone === "winner" ? "text-primary" : "text-chart-2",
-          )}
-          aria-hidden
-        />
-        {title}
-      </p>
-      <ol className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {rows.map((r) => (
+    <Panel label="Winners vs. runners-up">
+      <ol className="space-y-2">
+        {CROSSOVERS.map((c) => (
           <li
-            key={r.label}
-            className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-2.5 shadow-card"
+            key={c.winner}
+            className="grid grid-cols-[1fr_auto_1fr] items-center gap-2"
           >
-            <span
-              className={cn(
-                "scoreboard grid size-9 shrink-0 place-items-center rounded-lg text-xl font-bold",
-                tone === "winner"
-                  ? STRONG
-                  : "bg-chart-2/12 text-chart-2",
-              )}
-            >
-              <span className="sr-only">Seed </span>
-              {r.seed}
-            </span>
-            <span className="min-w-0 leading-tight">
-              <span className="block font-heading text-lg font-bold">
-                {r.label}
+            <span className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-2.5 shadow-card">
+              <span
+                className={cn(
+                  "grid size-9 shrink-0 place-items-center rounded-lg font-heading text-lg font-bold",
+                  STRONG,
+                )}
+              >
+                {c.winner}
               </span>
-              <span className="scoreboard block text-sm text-muted-foreground">
-                {r.rec} · {r.diff}
+              <span className="text-sm font-semibold">
+                Group {c.winner[0]} winner
+              </span>
+            </span>
+            <Repeat2 className="size-5 text-primary" aria-label="plays" />
+            <span className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-2.5 shadow-card">
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-chart-2/12 font-heading text-lg font-bold text-chart-2">
+                {c.runnerUp}
+              </span>
+              <span className="text-sm font-semibold">
+                Group {c.runnerUp[0]} 2nd
               </span>
             </span>
           </li>
         ))}
       </ol>
-    </div>
-  );
-}
-
-function SeedingGraphic() {
-  return (
-    <Panel label="Finals seeds 1 – 8">
-      <div className="space-y-4">
-        <SeedRow
-          title="Group winners"
-          icon={Trophy}
-          rows={WINNERS}
-          tone="winner"
-        />
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span className="h-px flex-1 bg-border" />
-          <span className="flex items-center gap-1.5">
-            <ArrowDown className="size-4" aria-hidden /> always seeded below
-          </span>
-          <span className="h-px flex-1 bg-border" />
-        </div>
-        <SeedRow
-          title="Runners-up"
-          icon={Medal}
-          rows={RUNNERS_UP}
-          tone="runner"
-        />
-      </div>
-      <p className="mt-4 text-sm text-muted-foreground">
-        B2 (2-1, +10) is seeded above A2 (2-1, +4): same record, better point
-        differential.
+      <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+        <Trophy className="size-4 text-primary" aria-hidden />
+        A plays D, B plays C — first group against last, inward.
       </p>
     </Panel>
   );
@@ -505,8 +430,8 @@ function MatchCard({
   bottom,
   className,
 }: {
-  top: Team | string;
-  bottom: Team | string;
+  top: string;
+  bottom: string;
   className?: string;
 }) {
   return (
@@ -524,23 +449,10 @@ function MatchCard({
             i === 0 && "border-b border-border",
           )}
         >
-          {typeof t === "string" ? (
-            <span className="text-muted-foreground">{t}</span>
+          {/^[A-Z]\d$/.test(t) ? (
+            <span className="font-heading text-base font-bold">{t}</span>
           ) : (
-            <>
-              <span className="scoreboard w-4 text-right text-muted-foreground">
-                {t.seed}
-              </span>
-              <span className="font-heading text-base font-bold">
-                {t.label}
-              </span>
-              {t.moved && (
-                <Repeat2
-                  className="ml-auto size-4 text-chart-3"
-                  aria-label="moved to avoid a rematch"
-                />
-              )}
-            </>
+            <span className="text-muted-foreground">{t}</span>
           )}
         </div>
       ))}
@@ -551,32 +463,6 @@ function MatchCard({
 function BracketGraphic() {
   return (
     <Panel label="Round one, then knockout">
-      {/* The rematch the draw avoids, before the bracket itself. */}
-      <div className="mb-4 grid gap-2 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
-        <div className="flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/6 px-3 py-2 text-sm">
-          <X className="size-4 shrink-0 text-destructive" aria-hidden />
-          <span>
-            <span className="font-semibold">2 vs 7 = A1 vs A2</span>
-            <span className="block text-muted-foreground">
-              Same group — they already played
-            </span>
-          </span>
-        </div>
-        <ArrowRight
-          className="mx-auto hidden size-5 text-muted-foreground sm:block"
-          aria-hidden
-        />
-        <div className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/8 px-3 py-2 text-sm">
-          <Check className="size-4 shrink-0 text-primary" aria-hidden />
-          <span>
-            <span className="font-semibold">A2 and D2 swap places</span>
-            <span className="block text-muted-foreground">
-              A1 vs D2 · B1 vs A2
-            </span>
-          </span>
-        </div>
-      </div>
-
       <p className="mb-2 flex items-center gap-1.5 text-sm text-muted-foreground sm:hidden">
         Swipe to see the final <ArrowRight className="size-4" aria-hidden />
       </p>
@@ -630,8 +516,9 @@ function BracketGraphic() {
         </div>
       </ScrollFade>
       <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
-        <Repeat2 className="size-4 text-chart-3" aria-hidden />
-        Moved to avoid a same-group rematch
+        <Check className="size-4 text-primary" aria-hidden />
+        A1 is in the top half, A2 in the bottom — they can only meet in the
+        final.
       </p>
     </Panel>
   );
@@ -660,8 +547,8 @@ function Joint({ inset }: { inset: string }) {
 const FACTS = [
   {
     icon: Shuffle,
-    title: "Uneven numbers? Byes.",
-    body: "If the finals field isn't 4, 8 or 16, the top seeds skip round one — a reward for a great group stage.",
+    title: "No byes, ever",
+    body: "Categories play in 1, 2, 4, 8 or 16 groups, so every qualifier has an opponent in round one.",
   },
   {
     icon: Equal,

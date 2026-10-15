@@ -20,11 +20,8 @@ export interface PublicGroup {
  */
 export function PublicStandings({
   groups,
-  action,
 }: {
   groups: PublicGroup[];
-  /** Shown beside the heading (the finals seeding button). */
-  action?: React.ReactNode;
 }) {
   if (groups.length === 0) {
     return (
@@ -36,15 +33,12 @@ export function PublicStandings({
   }
   return (
     <section aria-labelledby="standings-heading" className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2
-          id="standings-heading"
-          className="text-2xl font-bold uppercase leading-none"
-        >
-          Group standings
-        </h2>
-        {action}
-      </div>
+      <h2
+        id="standings-heading"
+        className="text-2xl font-bold uppercase leading-none"
+      >
+        Group standings
+      </h2>
       <Tabs defaultValue={groups[0].id} className="gap-3">
         {groups.length > 1 && (
           <TabsList

@@ -441,8 +441,8 @@ async function scheduleCategory(
         (_, i) => ({
           label: `Q${i + 1}`,
           participantId: null,
-          groupIndex: i,
-          position: 1,
+          groupIndex: Math.floor(i / ADVANCE_PER_GROUP),
+          position: (i % ADVANCE_PER_GROUP) + 1,
           record: {
             matchesWon: 0,
             matchesPlayed: 0,

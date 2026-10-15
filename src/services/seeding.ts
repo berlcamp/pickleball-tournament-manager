@@ -37,8 +37,7 @@ export interface GroupAssignment {
  * Note this is deliberately NOT a plain serpentine. A serpentine balances
  * every group to the same seed total; this does not — the first pair of
  * groups draws the strongest teams and the last pair the weakest. That is
- * Challonge's behaviour and it is what this project matches on purpose; see
- * `rankQualifiers` in services/brackets.ts, which pairs groups the same way.
+ * Challonge's behaviour and it is what this project matches on purpose.
  *
  * `seeded` must be ordered by seed ascending (seed 1 = strongest).
  */
