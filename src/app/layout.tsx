@@ -67,7 +67,7 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
     // Images are deliberately left unset so the `opengraph-image.png` file
     // convention beside this layout supplies them — and Next copies them onto
-    // the twitter card too. The portal overrides both with the banner.
+    // the twitter card too. The portal overrides both with its court card.
   },
   twitter: { card: "summary_large_image", title: SITE_TITLE, description: SITE_DESCRIPTION },
 };

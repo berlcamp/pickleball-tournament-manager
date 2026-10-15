@@ -29,7 +29,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const supabase = await publicClient();
     const { data } = await supabase
       .from("tournaments")
-      .select("short_code, slug, created_at, show_public_schedule")
+      .select("short_code, slug, created_at")
       .order("created_at", { ascending: false })
       .limit(5000);
 
@@ -45,9 +45,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         changeFrequency: "daily",
         priority: 0.8,
       });
-      const tabs = ["standings", "finals"];
-      if (t.show_public_schedule) tabs.push("schedule");
-      for (const tab of tabs) {
+      for (const tab of ["standings", "schedule"]) {
         entries.push({
           url: `${base}/${tab}`,
           lastModified,

@@ -14,6 +14,7 @@ import {
 import { PublicStandings } from "@/components/public/public-standings";
 import { CategoryFilter } from "@/components/public/category-filter";
 import { Podium } from "@/components/tournament/podium";
+import { BracketView } from "@/components/tournament/bracket-view";
 import { FinalsSeedingDialog } from "@/components/tournament/finals-seeding-dialog";
 import { Layers } from "lucide-react";
 import { EmptyState } from "@/components/public/empty-state";
@@ -26,7 +27,7 @@ export async function generateMetadata({
   params: Promise<{ code: string }>;
 }): Promise<Metadata> {
   const { code } = await params;
-  return portalMetadata(code, { path: "standings", label: "Standings" });
+  return portalMetadata(code, { path: "standings", label: "Standings & finals" });
 }
 
 export const dynamic = "force-dynamic";
@@ -65,6 +66,27 @@ export default async function PublicStandingsPage({
     <div className="space-y-6">
       <CategoryFilter categories={categories} activeId={active.id} />
       <Podium placements={finals.placements} />
+      {/* Once the knockout is drawn it is what everyone is following, so it
+          leads; the group tables it came from follow below. */}
+      {finals.rounds.length > 0 && (
+        <section aria-labelledby="finals-heading" className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2
+              id="finals-heading"
+              className="text-2xl font-bold uppercase leading-none"
+            >
+              Finals
+            </h2>
+            {seeding && <FinalsSeedingDialog snapshot={seeding} locked />}
+          </div>
+          <BracketView
+            key={active.id}
+            tournamentId={tournament.id}
+            rounds={finals.rounds}
+            canScore={false}
+          />
+        </section>
+      )}
       <PublicStandings
         key={active.id}
         groups={groups.map((g) => ({
@@ -72,12 +94,11 @@ export default async function PublicStandingsPage({
           name: g.name,
           standings: g.standings,
         }))}
+        // With the bracket drawn the seeding button sits by "Finals" instead.
         action={
-          seeding && (
-            <FinalsSeedingDialog
-              snapshot={seeding}
-              locked={finals.rounds.length > 0}
-            />
+          seeding &&
+          finals.rounds.length === 0 && (
+            <FinalsSeedingDialog snapshot={seeding} locked={false} />
           )
         }
       />

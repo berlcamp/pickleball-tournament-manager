@@ -8,7 +8,6 @@ import {
   createTournamentSchema,
   categorySchema,
   profileSchema,
-  shortCodeSchema,
 } from "@/validators";
 import { generateShortCode } from "@/lib/short-code";
 import {
@@ -34,11 +33,7 @@ export async function createTournament(input: unknown) {
         .from("tournaments")
         .insert({
           name: parsed.name,
-          description: parsed.description || null,
           location: parsed.location || null,
-          start_date: parsed.start_date || null,
-          banner: parsed.banner || null,
-          show_public_schedule: parsed.show_public_schedule,
           slug,
           short_code: generateShortCode(),
           created_by: user.id,
@@ -86,57 +81,13 @@ export async function updateTournament(id: string, input: unknown) {
       .from("tournaments")
       .update({
         name: parsed.name,
-        description: parsed.description || null,
         location: parsed.location || null,
-        start_date: parsed.start_date || null,
-        banner: parsed.banner || null,
-        show_public_schedule: parsed.show_public_schedule,
       })
       .eq("id", id);
     if (error) throw new ActionError(error.message);
     await logAudit(id, "tournament.update", {});
     revalidatePath(`/dashboard/tournaments/${id}`, "layout");
     revalidatePath("/[code]", "layout");
-  });
-}
-
-/**
- * Change the tournament's public link. The code lives at the domain root, so
- * uniqueness and the reserved-word list are both enforced here — the DB check
- * constraint only guards the shape.
- */
-export async function updateShortCode(tournamentId: string, input: unknown) {
-  return run(async () => {
-    const parsed = shortCodeSchema.parse(input);
-    const { supabase } = await assertRole(tournamentId, "admin");
-
-    const { data: taken } = await supabase
-      .from("tournaments")
-      .select("id")
-      .eq("short_code", parsed.short_code)
-      .neq("id", tournamentId)
-      .maybeSingle();
-    if (taken) {
-      throw new ActionError("That link is already taken. Try another.");
-    }
-
-    const { error } = await supabase
-      .from("tournaments")
-      .update({ short_code: parsed.short_code })
-      .eq("id", tournamentId);
-    if (error) {
-      throw new ActionError(
-        (error as { code?: string }).code === "23505"
-          ? "That link is already taken. Try another."
-          : error.message,
-      );
-    }
-
-    await logAudit(tournamentId, "tournament.short_code", {
-      short_code: parsed.short_code,
-    });
-    revalidatePath(`/dashboard/tournaments/${tournamentId}`, "layout");
-    return parsed.short_code;
   });
 }
 

@@ -2,6 +2,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getUser } from "@/lib/auth";
+import { formatEventDates } from "@/lib/format";
 import type { Category, Role, Tournament, TournamentStatus } from "@/types";
 
 export interface MyTournament extends Tournament {
@@ -9,6 +10,8 @@ export interface MyTournament extends Tournament {
   /** Aggregate status derived from the tournament's categories. */
   status: TournamentStatus;
   categoryCount: number;
+  /** The span the categories' play dates cover, e.g. "Oct 4 – Oct 5, 2026". */
+  dates: string;
 }
 
 const STATUS_RANK: Record<TournamentStatus, number> = {
@@ -66,15 +69,19 @@ export async function getMyTournaments(): Promise<MyTournament[]> {
   // Pull category statuses for all of these tournaments in one query.
   const ids = tournaments.map((t) => t.tournament.id);
   const statusByTournament = new Map<string, TournamentStatus[]>();
+  const datesByTournament = new Map<string, (string | null)[]>();
   if (ids.length) {
     const { data: cats } = await supabase
       .from("categories")
-      .select("tournament_id, status")
+      .select("tournament_id, status, event_date")
       .in("tournament_id", ids);
     for (const c of cats ?? []) {
       if (!statusByTournament.has(c.tournament_id))
         statusByTournament.set(c.tournament_id, []);
       statusByTournament.get(c.tournament_id)!.push(c.status as TournamentStatus);
+      if (!datesByTournament.has(c.tournament_id))
+        datesByTournament.set(c.tournament_id, []);
+      datesByTournament.get(c.tournament_id)!.push(c.event_date);
     }
   }
 
@@ -86,6 +93,7 @@ export async function getMyTournaments(): Promise<MyTournament[]> {
         role,
         status: aggregateStatus(statuses),
         categoryCount: statuses.length,
+        dates: formatEventDates(datesByTournament.get(tournament.id)),
       };
     })
     .sort(
@@ -204,7 +212,6 @@ export interface ShowcaseTournament {
   id: string;
   name: string;
   short_code: string;
-  banner: string | null;
   /** Rolled up from its categories, same as the dashboard. */
   status: TournamentStatus;
 }
@@ -231,7 +238,7 @@ export const loadShowcaseTournaments = cache(
 
       const { data: rows, error } = await supabase
         .from("tournaments")
-        .select("id, name, short_code, banner")
+        .select("id, name, short_code")
         .eq("featured", true)
         .order("created_at", { ascending: false })
         .limit(SHOWCASE_SIZE);
@@ -241,7 +248,6 @@ export const loadShowcaseTournaments = cache(
         id: string;
         name: string;
         short_code: string;
-        banner: string | null;
       }[];
       if (featured.length === 0) return [];
 
@@ -268,7 +274,6 @@ export const loadShowcaseTournaments = cache(
         id: t.id,
         name: t.name,
         short_code: t.short_code,
-        banner: t.banner,
         status: aggregateStatus(statuses.get(t.id) ?? []),
       }));
     } catch {

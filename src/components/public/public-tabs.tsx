@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarClock, ClipboardPen, ListOrdered, Trophy } from "lucide-react";
+import { CalendarClock, ClipboardPen, ListOrdered } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
  * Portal tabs: a scoreboard-style segmented control that sticks under the
  * header, so a player deep in the standings is one thumb-tap from the
- * schedule. Four equal segments always fit a 375px screen — nothing to scroll
- * sideways.
+ * schedule. Three equal segments always fit a 375px screen — nothing to
+ * scroll sideways. The finals bracket is part of Standings.
  *
  * Registration is the landing tab and lives at the bare `/{code}`, so it
  * matches on an exact pathname rather than a prefix.
@@ -21,14 +21,13 @@ export function PublicTabs({ code }: { code: string }) {
     { href: base, label: "Register", icon: ClipboardPen, exact: true },
     { href: `${base}/standings`, label: "Standings", icon: ListOrdered },
     { href: `${base}/schedule`, label: "Schedule", icon: CalendarClock },
-    { href: `${base}/finals`, label: "Finals", icon: Trophy },
   ];
 
   return (
     <div className="sticky top-14 z-30 -mx-4 bg-background/95 px-4 py-2 supports-[backdrop-filter]:bg-background/85 supports-[backdrop-filter]:backdrop-blur-md sm:-mx-6 sm:px-6">
       <nav
         aria-label="Tournament sections"
-        className="grid grid-cols-4 gap-1 rounded-2xl border border-border bg-card p-1 shadow-card"
+        className="grid grid-cols-3 gap-1 rounded-2xl border border-border bg-card p-1 shadow-card"
       >
         {tabs.map((t) => {
           const active = t.exact

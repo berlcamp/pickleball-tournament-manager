@@ -16,6 +16,18 @@ export const ROLE_LABELS: Record<Role, string> = {
   viewer: "Viewer",
 };
 
+/** One-tap names offered when adding a category. */
+export const CATEGORY_PRESETS = [
+  "Men's Doubles",
+  "Women's Doubles",
+  "Mixed Doubles",
+  "Men's Singles",
+  "Women's Singles",
+  "Open Doubles",
+  "Novice Doubles",
+  "Seniors Doubles",
+];
+
 export const FORMAT_LABELS: Record<CategoryFormat, string> = {
   doubles: "Doubles",
   singles: "Singles",

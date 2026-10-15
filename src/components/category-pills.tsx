@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 /**
- * The category row shared by the dashboard switcher and the public filter: one
+ * The category row on the public portal's filter: one
  * pill per category, the active one filled. Scrolls sideways on a phone rather
  * than wrapping into a tall block.
  */

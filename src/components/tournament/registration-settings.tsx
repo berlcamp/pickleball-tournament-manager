@@ -7,14 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/format";
 import {
@@ -24,7 +16,20 @@ import {
 } from "@/services/registration";
 import { FORMAT_LABELS } from "@/lib/constants";
 import type { Category, CategoryFormat } from "@/types";
-import { Check, ChevronDown, ClipboardList, Loader2, Lock } from "lucide-react";
+import {
+  AlertCircle,
+  Check,
+  ChevronDown,
+  ClipboardList,
+  IdCard,
+  Loader2,
+  Lock,
+  Shirt,
+  Shuffle,
+  User,
+  Users,
+  Wallet,
+} from "lucide-react";
 
 /** ISO timestamp → the local "YYYY-MM-DDTHH:mm" a datetime-local input wants. */
 function toLocalInput(iso: string | null): string {
@@ -37,6 +42,69 @@ function toLocalInput(iso: string | null): string {
   )}:${pad(d.getMinutes())}`;
 }
 
+/** "Oct 3, 6:00 PM" for the row summary. */
+function shortDeadline(iso: string): string {
+  return new Date(iso).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+const FORMATS: {
+  value: CategoryFormat;
+  icon: React.ComponentType<{ className?: string }>;
+  hint: string;
+}[] = [
+  { value: "doubles", icon: Users, hint: "Pairs sign up together" },
+  { value: "singles", icon: User, hint: "One player per entry" },
+  { value: "blind_pairing", icon: Shuffle, hint: "Players sign up alone; partners are drawn" },
+];
+
+/** The settings a save sends, in the shape `updateCategoryRegistration` takes. */
+interface Draft {
+  format: CategoryFormat;
+  open: boolean;
+  deadline: string;
+  maxTeams: string;
+  fee: string;
+  upfront: boolean;
+  shirts: boolean;
+  shirtPrice: string;
+  needsId: boolean;
+}
+
+function draftOf(c: Category): Draft {
+  return {
+    format: c.format,
+    open: c.registration_open,
+    deadline: toLocalInput(c.registration_deadline),
+    maxTeams: c.max_teams === null ? "" : String(c.max_teams),
+    fee: String(Number(c.registration_fee)),
+    upfront: c.require_payment_upfront,
+    shirts: c.collect_shirt_sizes,
+    shirtPrice: String(Number(c.shirt_price)),
+    needsId: c.require_player_id,
+  };
+}
+
+function payload(d: Draft) {
+  return {
+    format: d.format,
+    registration_open: d.open,
+    // Convert here, in the manager's browser: `datetime-local` carries no
+    // zone, and the server runs in UTC.
+    registration_deadline: d.deadline ? new Date(d.deadline).toISOString() : "",
+    max_teams: d.maxTeams === "" ? "" : Number(d.maxTeams),
+    registration_fee: Number(d.fee || 0),
+    require_payment_upfront: Number(d.fee || 0) > 0 && d.upfront,
+    collect_shirt_sizes: d.shirts,
+    shirt_price: Number(d.shirtPrice || 0),
+    require_player_id: d.needsId,
+  };
+}
+
 export function RegistrationSettings({
   tournamentId,
   categories,
@@ -47,7 +115,7 @@ export function RegistrationSettings({
   approvedCounts: Record<string, number>;
 }) {
   return (
-    <section className="space-y-5 rounded-2xl border border-border bg-card p-5 shadow-card sm:p-6">
+    <section className="space-y-4 rounded-2xl border border-border bg-card p-5 shadow-card sm:p-6">
       <div className="flex items-start gap-3">
         <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
           <ClipboardList className="size-5" />
@@ -57,13 +125,13 @@ export function RegistrationSettings({
             Public registration
           </h2>
           <p className="text-sm text-muted-foreground">
-            Let teams sign up from your public page. Tap a category to open
-            it, set the fee, and choose what to collect.
+            Flip a switch to let players sign up from your public page. Open a
+            category to set its fee and what to collect.
           </p>
         </div>
       </div>
 
-      <ul className="space-y-2">
+      <ul className="space-y-3">
         {categories.map((category) => (
           <CategoryRegistrationRow
             key={category.id}
@@ -87,176 +155,294 @@ function CategoryRegistrationRow({
   approvedCount: number;
 }) {
   const [pending, startTransition] = useTransition();
+  const [toggling, startToggle] = useTransition();
   const [expanded, setExpanded] = useState(false);
-
-  const [format, setFormat] = useState<CategoryFormat>(category.format);
-  const [open, setOpen] = useState(category.registration_open);
-  const [deadline, setDeadline] = useState(
-    toLocalInput(category.registration_deadline),
-  );
-  const [maxTeams, setMaxTeams] = useState(
-    category.max_teams === null ? "" : String(category.max_teams),
-  );
-  const [fee, setFee] = useState(String(Number(category.registration_fee)));
-  const [upfront, setUpfront] = useState(category.require_payment_upfront);
-  const [shirts, setShirts] = useState(category.collect_shirt_sizes);
-  const [shirtPrice, setShirtPrice] = useState(
-    String(Number(category.shirt_price)),
-  );
-  const [needsId, setNeedsId] = useState(category.require_player_id);
+  const [draft, setDraft] = useState<Draft>(() => draftOf(category));
   const [saved, setSaved] = useState(false);
+
+  const stored = draftOf(category);
+  const dirty = (Object.keys(draft) as (keyof Draft)[]).some(
+    // The open switch saves on its own, so it never counts as unsaved.
+    (k) => k !== "open" && draft[k] !== stored[k],
+  );
 
   // Once the group stage starts the bracket is fixed, so entries are closed.
   const locked = category.status !== "draft";
   const availability = registrationAvailability(category, approvedCount);
+  const unit = feeUnit(draft.format);
+  const fee = Number(draft.fee || 0);
 
   // Caught here so the problem shows beside the field, not as a toast after
   // the round trip.
-  const feeProblem = Number(fee || 0) < 0 ? "The fee can't be negative." : null;
+  const feeProblem = fee < 0 ? "The fee can't be negative." : null;
   const maxProblem =
-    maxTeams !== "" && (!Number.isInteger(Number(maxTeams)) || Number(maxTeams) < 1)
+    draft.maxTeams !== "" &&
+    (!Number.isInteger(Number(draft.maxTeams)) || Number(draft.maxTeams) < 1)
       ? "Use a whole number of at least 1, or leave it empty."
       : null;
   const shirtProblem =
-    Number(shirtPrice || 0) < 0 ? "The price can't be negative." : null;
+    Number(draft.shirtPrice || 0) < 0 ? "The price can't be negative." : null;
   const invalid = Boolean(feeProblem || maxProblem || shirtProblem);
-  // Any edit after a save takes the "Saved" mark away again.
-  function edit<T>(setter: (v: T) => void) {
-    return (v: T) => {
-      setter(v);
-      setSaved(false);
-    };
+
+  function set<K extends keyof Draft>(key: K, value: Draft[K]) {
+    setDraft((d) => ({ ...d, [key]: value }));
+    setSaved(false);
   }
 
   function save() {
     startTransition(async () => {
-      const res = await updateCategoryRegistration(tournamentId, category.id, {
-        format,
-        registration_open: open,
-        // Convert here, in the manager's browser: `datetime-local` carries no
-        // zone, and the server runs in UTC.
-        registration_deadline: deadline
-          ? new Date(deadline).toISOString()
-          : "",
-        max_teams: maxTeams === "" ? "" : Number(maxTeams),
-        registration_fee: Number(fee || 0),
-        require_payment_upfront: upfront,
-        collect_shirt_sizes: shirts,
-        shirt_price: Number(shirtPrice || 0),
-        require_player_id: needsId,
-      });
+      const res = await updateCategoryRegistration(
+        tournamentId,
+        category.id,
+        payload({ ...draft, open: category.registration_open }),
+      );
       if (!res.ok) {
         toast.error(res.error);
         return;
       }
-      toast.success(`${category.name} registration updated`);
+      toast.success(`${category.name} registration saved`);
       setSaved(true);
     });
   }
 
+  // The switch saves straight away, from the stored settings — any unsaved
+  // edits below it stay as they are.
+  function toggleOpen(next: boolean) {
+    set("open", next);
+    startToggle(async () => {
+      const res = await updateCategoryRegistration(
+        tournamentId,
+        category.id,
+        payload({ ...stored, open: next }),
+      );
+      if (!res.ok) {
+        set("open", !next);
+        toast.error(res.error);
+        return;
+      }
+      toast.success(
+        next
+          ? `${category.name} is open for registration`
+          : `${category.name} registration closed`,
+      );
+    });
+  }
+
+  const statusPill = locked ? (
+    <Pill tone="muted">
+      <Lock className="size-3" /> Started
+    </Pill>
+  ) : draft.open && availability.open ? (
+    <Pill tone="ball">Open</Pill>
+  ) : draft.open ? (
+    <Pill tone="warning">Paused</Pill>
+  ) : (
+    <Pill tone="muted">Closed</Pill>
+  );
+
   return (
-    <li className="overflow-hidden rounded-xl border border-border">
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
-        aria-expanded={expanded}
-        className="flex min-h-14 w-full items-center gap-3 p-3 text-left outline-none transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50"
-      >
-        <ChevronDown
-          className={cn(
-            "size-4 shrink-0 text-muted-foreground transition-transform",
-            expanded && "rotate-180",
+    <li
+      className={cn(
+        "overflow-hidden rounded-xl border transition-colors",
+        expanded ? "border-primary/40" : "border-border",
+      )}
+    >
+      <div className="flex items-center gap-2 pr-3">
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          aria-controls={`reg-${category.id}`}
+          className="flex min-h-16 min-w-0 flex-1 items-center gap-3 p-3 text-left outline-none transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50"
+        >
+          <ChevronDown
+            className={cn(
+              "size-4 shrink-0 text-muted-foreground transition-transform duration-200",
+              expanded && "rotate-180",
+            )}
+          />
+          <span className="min-w-0 flex-1">
+            <span className="flex items-center gap-2">
+              <span className="truncate font-heading text-lg font-bold leading-tight">
+                {category.name}
+              </span>
+              {statusPill}
+            </span>
+            <span className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+              <span>{FORMAT_LABELS[category.format]}</span>
+              <span>
+                {Number(category.registration_fee) > 0
+                  ? `${formatCurrency(Number(category.registration_fee))} / ${feeUnit(category.format)}`
+                  : "Free"}
+              </span>
+              <span>
+                {approvedCount}
+                {category.max_teams !== null && `/${category.max_teams}`}{" "}
+                approved
+              </span>
+              {category.registration_deadline && (
+                <span>
+                  Closes {shortDeadline(category.registration_deadline)}
+                </span>
+              )}
+            </span>
+          </span>
+        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          {toggling && (
+            <Loader2 className="size-4 animate-spin text-muted-foreground" />
           )}
-        />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate font-heading text-lg font-bold leading-tight">
-            {category.name}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            {FORMAT_LABELS[category.format]}
-            {Number(category.registration_fee) > 0
-              ? ` · ₱${Number(category.registration_fee)} per ${feeUnit(category.format)}`
-              : " · Free"}
-            {category.max_teams !== null &&
-              ` · ${approvedCount}/${category.max_teams} approved`}
-          </span>
-        </span>
-        {locked ? (
-          <Badge className="shrink-0 border-0 bg-muted text-muted-foreground">
-            <Lock className="size-3" /> Locked
-          </Badge>
-        ) : availability.open ? (
-          <Badge className="shrink-0 border-0 bg-ball text-ball-foreground">
-            Open
-          </Badge>
-        ) : (
-          <Badge className="shrink-0 border-0 bg-muted text-muted-foreground">
-            Closed
-          </Badge>
-        )}
-      </button>
+          <Switch
+            checked={draft.open}
+            onCheckedChange={toggleOpen}
+            disabled={locked || toggling}
+            aria-label={`Accept registrations for ${category.name}`}
+          />
+        </div>
+      </div>
+
+      {!locked && draft.open && !availability.open && (
+        <p className="flex items-start gap-2 border-t border-warning/30 bg-warning/10 px-4 py-2.5 text-sm">
+          <AlertCircle className="mt-0.5 size-4 shrink-0 text-warning" />
+          {CLOSED_MESSAGES[availability.reason]}
+        </p>
+      )}
 
       {expanded && (
-        <div className="space-y-4 border-t border-border bg-muted/20 p-4">
+        <div
+          id={`reg-${category.id}`}
+          className="space-y-6 border-t border-border bg-muted/20 p-4 sm:p-5"
+        >
           {locked && (
             <p className="flex items-start gap-2 rounded-lg bg-muted p-3 text-sm text-muted-foreground">
               <Lock className="mt-0.5 size-4 shrink-0" />
-              This category&apos;s group stage has started, so it no longer
-              accepts new entries regardless of these settings.
-            </p>
-          )}
-          {!locked && !availability.open && (
-            <p className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-foreground">
-              {CLOSED_MESSAGES[availability.reason]}
+              This category has started, so it no longer takes new entries
+              whatever these settings say.
             </p>
           )}
 
-          <Toggle
-            id={`open-${category.id}`}
-            label="Accept registrations"
-            hint="Show this category on the public registration page."
-            checked={open}
-            onChange={edit(setOpen)}
-          />
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>Format</Label>
-              <Select
-                items={[
-                  { label: "Doubles (2 players)", value: "doubles" },
-                  { label: "Singles (1 player)", value: "singles" },
-                  { label: "Blind pairing (1 player)", value: "blind_pairing" },
-                ]}
-                value={format}
-                onValueChange={(v) => edit(setFormat)(v as CategoryFormat)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="doubles">Doubles (2 players)</SelectItem>
-                  <SelectItem value="singles">Singles (1 player)</SelectItem>
-                  <SelectItem value="blind_pairing">
-                    Blind pairing (1 player)
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+          {/* ---------- who signs up ---------- */}
+          <fieldset className="min-w-0 space-y-2.5">
+            <legend className="eyebrow mb-2.5 text-primary">Who signs up</legend>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {FORMATS.map((f) => {
+                const active = draft.format === f.value;
+                return (
+                  <label
+                    key={f.value}
+                    className={cn(
+                      "relative flex cursor-pointer items-start gap-3 rounded-xl border bg-card p-3 transition-colors duration-150 has-focus-visible:ring-3 has-focus-visible:ring-ring/50 sm:flex-col sm:gap-2",
+                      active
+                        ? "border-primary bg-primary/5 shadow-[inset_0_0_0_1px_var(--primary)]"
+                        : "border-border hover:border-primary/40",
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name={`format-${category.id}`}
+                      value={f.value}
+                      checked={active}
+                      onChange={() => set("format", f.value)}
+                      className="sr-only"
+                    />
+                    <span
+                      className={cn(
+                        "grid size-9 shrink-0 place-items-center rounded-lg",
+                        active
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      <f.icon className="size-4.5" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block font-semibold leading-tight">
+                        {FORMAT_LABELS[f.value]}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {f.hint}
+                      </span>
+                    </span>
+                    {active && (
+                      <Check className="absolute top-3 right-3 size-4 text-primary" />
+                    )}
+                  </label>
+                );
+              })}
             </div>
+          </fieldset>
 
+          {/* ---------- limits ---------- */}
+          <fieldset className="min-w-0 space-y-2.5">
+            <legend className="eyebrow mb-2.5 text-primary">Limits</legend>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor={`deadline-${category.id}`}>
+                  Sign-ups close{" "}
+                  <span className="text-muted-foreground">(optional)</span>
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id={`deadline-${category.id}`}
+                    type="datetime-local"
+                    value={draft.deadline}
+                    onChange={(e) => set("deadline", e.target.value)}
+                    className="bg-card"
+                  />
+                  {draft.deadline && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => set("deadline", "")}
+                      className="shrink-0"
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Sign-ups stop on their own at this time.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor={`max-${category.id}`}>
+                  Maximum {unit === "team" ? "teams" : "players"}{" "}
+                  <span className="text-muted-foreground">(optional)</span>
+                </Label>
+                <Input
+                  id={`max-${category.id}`}
+                  type="number"
+                  min={1}
+                  placeholder="No limit"
+                  inputMode="numeric"
+                  value={draft.maxTeams}
+                  onChange={(e) => set("maxTeams", e.target.value)}
+                  aria-invalid={Boolean(maxProblem)}
+                  className="bg-card"
+                />
+                <p
+                  className={cn(
+                    "text-xs",
+                    maxProblem ? "text-destructive" : "text-muted-foreground",
+                  )}
+                >
+                  {maxProblem ?? "Only approved entries count toward it."}
+                </p>
+              </div>
+            </div>
+          </fieldset>
+
+          {/* ---------- payment ---------- */}
+          <fieldset className="min-w-0 space-y-2.5">
+            <legend className="eyebrow mb-2.5 text-primary">Payment</legend>
             <div className="space-y-1.5">
-              <Label htmlFor={`fee-${category.id}`}>
-                Registration fee (₱ per {feeUnit(format)})
-              </Label>
-              <Input
+              <Label htmlFor={`fee-${category.id}`}>Registration fee</Label>
+              <MoneyInput
                 id={`fee-${category.id}`}
-                type="number"
-                min={0}
-                step="1"
-                inputMode="numeric"
-                value={fee}
-                onChange={(e) => edit(setFee)(e.target.value)}
-                aria-invalid={Boolean(feeProblem)}
+                value={draft.fee}
+                onChange={(v) => set("fee", v)}
+                suffix={`per ${unit}`}
+                invalid={Boolean(feeProblem)}
               />
               <p
                 className={cn(
@@ -264,120 +450,98 @@ function CategoryRegistrationRow({
                   feeProblem ? "text-destructive" : "text-muted-foreground",
                 )}
               >
-                {feeProblem ?? "Use 0 for a free category."}
+                {feeProblem ?? "Leave at 0 for a free category."}
               </p>
             </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor={`deadline-${category.id}`}>
-                Registration closes{" "}
-                <span className="text-muted-foreground">(optional)</span>
-              </Label>
-              <Input
-                id={`deadline-${category.id}`}
-                type="datetime-local"
-                value={deadline}
-                onChange={(e) => edit(setDeadline)(e.target.value)}
+            {fee > 0 && (
+              <ToggleRow
+                id={`upfront-${category.id}`}
+                icon={Wallet}
+                label="Require proof of payment to register"
+                hint="When off, players can pay later from their reference link."
+                checked={draft.upfront}
+                onChange={(v) => set("upfront", v)}
               />
-              <p className="text-xs text-muted-foreground">
-                Sign-ups stop on their own at this time.
-              </p>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor={`max-${category.id}`}>
-                Max teams{" "}
-                <span className="text-muted-foreground">(optional)</span>
-              </Label>
-              <Input
-                id={`max-${category.id}`}
-                type="number"
-                min={1}
-                placeholder="Unlimited"
-                inputMode="numeric"
-                value={maxTeams}
-                onChange={(e) => edit(setMaxTeams)(e.target.value)}
-                aria-invalid={Boolean(maxProblem)}
-              />
-              <p
-                className={cn(
-                  "text-xs",
-                  maxProblem ? "text-destructive" : "text-muted-foreground",
-                )}
-              >
-                {maxProblem ?? "Counts approved teams only."}
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-3 border-t border-border pt-4">
-            <Toggle
-              id={`upfront-${category.id}`}
-              label="Require proof of payment to register"
-              hint="Off: teams can pay later from their reference link."
-              checked={upfront}
-              onChange={edit(setUpfront)}
-              disabled={Number(fee || 0) <= 0}
-            />
-            <Toggle
-              id={`shirts-${category.id}`}
-              label="Offer t-shirts"
-              hint="Registrants can add a shirt for each player; sizes are asked only if they do."
-              checked={shirts}
-              onChange={edit(setShirts)}
-            />
-            {shirts && (
-              <div className="space-y-1.5 rounded-xl border border-border bg-card p-3">
-                <Label htmlFor={`shirt-price-${category.id}`}>
-                  T-shirt price (₱ per player)
-                </Label>
-                <Input
-                  id={`shirt-price-${category.id}`}
-                  type="number"
-                  min={0}
-                  step="1"
-                  inputMode="numeric"
-                  value={shirtPrice}
-                  onChange={(e) => edit(setShirtPrice)(e.target.value)}
-                  aria-invalid={Boolean(shirtProblem)}
-                />
-                <p
-                  className={cn(
-                    "text-xs",
-                    shirtProblem ? "text-destructive" : "text-muted-foreground",
-                  )}
-                >
-                  {shirtProblem
-                    ? shirtProblem
-                    : Number(shirtPrice || 0) > 0
-                    ? `Added to the registration for each player who takes a shirt — ${formatCurrency(Number(shirtPrice))} per player.`
-                    : "Shirts are included at no extra cost."}
-                </p>
-              </div>
             )}
-            <Toggle
-              id={`id-${category.id}`}
-              label="Require a valid ID photo"
-              hint="Each player uploads an ID; stored privately."
-              checked={needsId}
-              onChange={edit(setNeedsId)}
-            />
-          </div>
+          </fieldset>
 
-          <div className="flex flex-col-reverse items-stretch gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-end">
+          {/* ---------- extras ---------- */}
+          <fieldset className="min-w-0 space-y-2.5">
+            <legend className="eyebrow mb-2.5 text-primary">Extras</legend>
+            <ToggleRow
+              id={`shirts-${category.id}`}
+              icon={Shirt}
+              label="Offer t-shirts"
+              hint="Players can add a shirt; sizes are asked only if they do."
+              checked={draft.shirts}
+              onChange={(v) => set("shirts", v)}
+            >
+              {draft.shirts && (
+                <div className="space-y-1.5 border-t border-border pt-3">
+                  <Label htmlFor={`shirt-price-${category.id}`}>
+                    Shirt price
+                  </Label>
+                  <MoneyInput
+                    id={`shirt-price-${category.id}`}
+                    value={draft.shirtPrice}
+                    onChange={(v) => set("shirtPrice", v)}
+                    suffix="per player"
+                    invalid={Boolean(shirtProblem)}
+                  />
+                  <p
+                    className={cn(
+                      "text-xs",
+                      shirtProblem
+                        ? "text-destructive"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    {shirtProblem ??
+                      (Number(draft.shirtPrice || 0) > 0
+                        ? "Added to the total for each player who takes a shirt."
+                        : "Shirts are included at no extra cost.")}
+                  </p>
+                </div>
+              )}
+            </ToggleRow>
+            <ToggleRow
+              id={`id-${category.id}`}
+              icon={IdCard}
+              label="Require a valid ID photo"
+              hint="Each player uploads an ID. It's stored privately."
+              checked={draft.needsId}
+              onChange={(v) => set("needsId", v)}
+            />
+          </fieldset>
+
+          <div className="flex flex-col-reverse items-stretch gap-2 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-end">
             <span
               aria-live="polite"
-              className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground"
+              className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground sm:mr-auto"
             >
-              {saved && (
+              {dirty ? (
+                "Unsaved changes"
+              ) : saved ? (
                 <>
                   <Check className="size-4 text-primary" /> Saved
                 </>
-              )}
+              ) : null}
             </span>
-            <Button onClick={save} disabled={pending || invalid}>
+            {dirty && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() =>
+                  setDraft((d) => ({ ...draftOf(category), open: d.open }))
+                }
+                disabled={pending}
+              >
+                Discard
+              </Button>
+            )}
+            <Button onClick={save} disabled={pending || invalid || !dirty}>
               {pending && <Loader2 className="size-4 animate-spin" />}
-              {pending ? "Saving…" : `Save ${category.name}`}
+              {pending ? "Saving…" : "Save changes"}
             </Button>
           </div>
         </div>
@@ -386,38 +550,108 @@ function CategoryRegistrationRow({
   );
 }
 
-function Toggle({
+function Pill({
+  tone,
+  children,
+}: {
+  tone: "ball" | "muted" | "warning";
+  children: React.ReactNode;
+}) {
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 font-heading text-[11px] font-bold uppercase tracking-wider",
+        tone === "ball" && "bg-ball text-ball-foreground",
+        tone === "muted" && "bg-muted text-muted-foreground",
+        tone === "warning" && "bg-warning/15 text-warning",
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+/** A peso amount with its unit, e.g. "₱ [ 500 ] per team". */
+function MoneyInput({
   id,
+  value,
+  onChange,
+  suffix,
+  invalid,
+}: {
+  id: string;
+  value: string;
+  onChange: (v: string) => void;
+  suffix: string;
+  invalid?: boolean;
+}) {
+  return (
+    <div className="relative">
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm font-semibold text-muted-foreground"
+      >
+        ₱
+      </span>
+      <Input
+        id={id}
+        type="number"
+        min={0}
+        step="1"
+        inputMode="numeric"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={(e) => e.target.value === "0" && e.target.select()}
+        aria-invalid={invalid}
+        className="bg-card pr-24 pl-7"
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-muted-foreground"
+      >
+        {suffix}
+      </span>
+    </div>
+  );
+}
+
+function ToggleRow({
+  id,
+  icon: Icon,
   label,
   hint,
   checked,
   onChange,
-  disabled,
+  children,
 }: {
   id: string;
+  icon: React.ComponentType<{ className?: string }>;
   label: string;
   hint?: string;
   checked: boolean;
   onChange: (v: boolean) => void;
-  disabled?: boolean;
+  children?: React.ReactNode;
 }) {
   return (
-    <div
-      className={cn(
-        "flex min-h-14 items-center justify-between gap-4 rounded-xl border border-border bg-card p-3",
-        disabled && "opacity-60",
-      )}
-    >
-      <div className="min-w-0 space-y-0.5">
-        <Label htmlFor={id}>{label}</Label>
-        {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+    <div className="space-y-3 rounded-xl border border-border bg-card p-3">
+      <div className="flex min-h-10 items-center justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <span
+            className={cn(
+              "grid size-8 shrink-0 place-items-center rounded-lg transition-colors",
+              checked ? "bg-primary/12 text-primary" : "bg-muted text-muted-foreground",
+            )}
+          >
+            <Icon className="size-4" />
+          </span>
+          <div className="min-w-0 space-y-0.5">
+            <Label htmlFor={id}>{label}</Label>
+            {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+          </div>
+        </div>
+        <Switch id={id} checked={checked} onCheckedChange={onChange} />
       </div>
-      <Switch
-        id={id}
-        checked={checked}
-        onCheckedChange={onChange}
-        disabled={disabled}
-      />
+      {children}
     </div>
   );
 }

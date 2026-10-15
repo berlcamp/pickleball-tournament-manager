@@ -33,15 +33,12 @@ export function formatDate(date: string | null | undefined): string {
 }
 
 /**
- * The portal's date line. Each category carries its own play date, so when the
- * organiser hasn't set a tournament-wide start date the label is derived from
- * the categories: one day when they share it, a span when they don't.
+ * A tournament's date line. Dates are per category, so the label is derived
+ * from them: one day when they share it, a span when they don't.
  */
 export function formatEventDates(
-  startDate: string | null | undefined,
   categoryDates: (string | null | undefined)[] = [],
 ): string {
-  if (startDate) return formatDate(startDate);
   const sorted = categoryDates.filter((d): d is string => Boolean(d)).sort();
   if (sorted.length === 0) return formatDate(null);
   const first = sorted[0];

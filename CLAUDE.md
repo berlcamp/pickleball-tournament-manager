@@ -76,10 +76,10 @@ pages live in `src/lib/tournament-data.ts` and take a `SupabaseClient` so they
 work with either the authed or public client.
 
 ### Routing
-- `src/app/dashboard/**` — authed management UI (no side nav; `/dashboard` **is** the tournament list and `/dashboard/tournaments` redirects to it); tournament workspace is `tournaments/[id]/{registrations,participants,seeding,groups,group-stage,schedule,finals,results,settings}`.
-- `src/app/[code]/**` — public, no-login portal, served from the **domain root** so links stay short (`sortbrite.com/ab3kd`). The index IS the Registration tab; siblings are standings, schedule, finals, teams/[id]. `getTournamentByPublicRef` resolves `tournaments.short_code` first and falls back to the long `slug`, so older links keep working.
+- `src/app/dashboard/**` — authed management UI (no side nav; `/dashboard` **is** the tournament list and `/dashboard/tournaments` redirects to it); tournament workspace is `tournaments/[id]/{registrations,participants,seeding,groups,group-stage,schedule,finals,settings}`. Navigation is `components/tournament/workspace-nav.tsx` (category picker + page tabs); Settings is a header button, not a tab, and the bottom of Settings holds the share link and QR code. `results` only redirects to `finals`.
+- `src/app/[code]/**` — public, no-login portal, served from the **domain root** so links stay short (`sortbrite.com/ab3kd`). The index IS the Registration tab; siblings are standings (which leads with the finals bracket once one is drawn), schedule and teams/[id]. `finals` only redirects to `standings`. `getTournamentByPublicRef` resolves `tournaments.short_code` first and falls back to the long `slug`, so older links keep working.
 - `src/app/tournament/[slug]/[[...rest]]` — redirect stub only; forwards legacy portal URLs to the short form.
-- Because `/[code]` shares the top-level namespace with every real page, custom codes are checked against `RESERVED_CODES` in `src/lib/short-code.ts`. **Add any new top-level route to that set.**
+- Because `/[code]` shares the top-level namespace with every real page, generated codes must never collide with a route — see `RESERVED_CODES` in `src/lib/short-code.ts`. **Add any new top-level route to that set.**
 - `src/app/r/[code]` — a registrant's own status page, addressed by reference code (noindex).
 
 ### Link previews (Facebook / Messenger / Viber)
@@ -87,18 +87,19 @@ work with either the authed or public client.
 every page of the portal — the layout calls it bare, each tab calls it with its
 own label. Tabs cannot simply inherit: Next.js **replaces** `openGraph` when a
 page declares one instead of merging it with the layout's, so a page that sets
-only a title silently loses the banner. Anything that touches `openGraph` at
+only a title silently loses the image. Anything that touches `openGraph` at
 page level has to restate the whole object (the marketing page does the same,
-from the constants in `src/lib/seo.ts`). The tournament **banner** is the
-`og:image` (and only that — the portal header itself is a drawn court, not the poster), linked straight to its public Supabase storage URL — untouched,
-since it is the poster the organiser designed. Tournaments with no banner fall
-back to a generated 1200×630 card at `src/app/[code]/og/route.tsx` (`next/og`).
-That fallback is deliberately a plain route, **not** the `opengraph-image` file
-convention: the convention is collected at the page level and would override
-the banner set by the layout. `metadataBase` comes from the request host
+from the constants in `src/lib/seo.ts`). The `og:image` is always the
+generated 1200×630 court card at `src/app/[code]/og/route.tsx` (`next/og`):
+name, dates, venue and categories on a drawn pickleball court, in Barlow
+fetched from Google Fonts. Uploaded banners are no longer used anywhere (the
+`banner`, `description`, `start_date` and `show_public_schedule` columns
+remain but nothing writes or reads them). The card is deliberately a plain
+route, **not** the `opengraph-image` file convention, which is collected at
+the page level. `metadataBase` comes from the request host
 (`lib/site-url.ts → requestOrigin`), so previews resolve on the production
-domain, Vercel previews and localhost alike. After changing a banner, re-scrape
-the link in Facebook's Sharing Debugger — FB caches previews for days.
+domain, Vercel previews and localhost alike. Facebook caches previews for
+days — re-scrape a link in its Sharing Debugger to refresh it.
 
 Every other route (the marketing page, `/login`, the dashboard) falls back to
 `src/app/opengraph-image.png` — the promotional card chat apps crop previews to,
@@ -117,9 +118,9 @@ overrides. Changing the homepage thumbnail means replacing that PNG — keep it
 - Canonicals: the marketing page claims `/`, and each portal tab claims its own
   path. Without the per-tab canonical every tab would claim the index page and
   search engines would fold them into one result.
-- Anything private is `noindex`: the dashboard, `/login`, `/qr/*`, `/r/*`, and
-  the schedule tab while the organiser has it hidden. `robots.txt` blocks the
-  same paths.
+- Anything private is `noindex`: the dashboard, `/login`, `/qr/*` and `/r/*`.
+  `robots.txt` blocks the same paths. The schedule tab is always public — it
+  shows as soon as a schedule exists.
 - The marketing page emits JSON-LD (`Organization` / `WebSite` /
   `SoftwareApplication`); its `featureList` is generated from `FEATURES`, so the
   copy and the structured data cannot drift apart.
@@ -148,7 +149,7 @@ the status-page URL, where the team can upload payment later.
   not sit in a draw; that direction requires the category to still be `draft`.
 - ID photos and receipts live in the **private** `pickleball-registrations`
   bucket and are only ever served through short-lived signed URLs
-  (`lib/registration-data.ts`). Never move them to the public banner bucket.
+  (`lib/registration-data.ts`). Never move them to the public `pickleball-tournament` bucket.
 
 ### Raffle (offline-capable)
 A standalone module, not tied to tournaments: managed at `/dashboard/raffle`,
@@ -176,9 +177,8 @@ Public/live pages subscribe via the browser client (see `components/public/live-
 - Tournament status flow: `draft → group_stage → final_stage → completed` (`STATUS_FLOW` in `lib/constants.ts`).
 - Dates are **per category**: `categories.event_date` is the day that category
   is played. It is a column, not a `settings` key — the schedule generator and
-  the public portal both read it, and the portal's headline date falls back to
-  the span the categories cover (`lib/format.ts → formatEventDates`) when the
-  tournament has no `start_date`. A started category can still have its date
+  the public portal both read it, and every headline date is the span the
+  categories cover (`lib/format.ts → formatEventDates`). A started category can still have its date
   corrected; only its name locks.
 - `generateSchedule` takes an optional `group_ids`: groups within a category can
   be played on different days, so each day's groups are generated on their own

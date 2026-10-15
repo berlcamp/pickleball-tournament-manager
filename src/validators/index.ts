@@ -1,30 +1,17 @@
 import { z } from "zod";
 import { MATCH_INTERVALS } from "@/lib/constants";
-import { shortCodeProblem } from "@/lib/short-code";
 
+/**
+ * The tournament itself is just a name and a venue. Dates belong to the
+ * categories, the preview image is generated, and the public schedule shows
+ * whenever one exists — so the old description, start date, banner and
+ * schedule-visibility columns are no longer written.
+ */
 export const tournamentSchema = z.object({
-  name: z.string().min(2, "Name is too short").max(120),
-  description: z.string().max(2000).optional().or(z.literal("")),
+  name: z.string().trim().min(2, "Name is too short").max(120),
   location: z.string().max(200).optional().or(z.literal("")),
-  start_date: z.string().optional().or(z.literal("")),
-  banner: z.string().url().optional().or(z.literal("")),
-  show_public_schedule: z.boolean().default(true),
 });
 export type TournamentInput = z.infer<typeof tournamentSchema>;
-
-export const shortCodeSchema = z.object({
-  short_code: z
-    .string()
-    .trim()
-    .toLowerCase()
-    // superRefine so the specific reason (too short / bad characters /
-    // reserved word) reaches the organizer instead of a generic message.
-    .superRefine((value, ctx) => {
-      const problem = shortCodeProblem(value);
-      if (problem) ctx.addIssue({ code: "custom", message: problem });
-    }),
-});
-export type ShortCodeInput = z.infer<typeof shortCodeSchema>;
 
 export const categorySchema = z.object({
   name: z.string().min(1, "Category name is required").max(120),

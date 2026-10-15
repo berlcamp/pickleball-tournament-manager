@@ -1,4 +1,5 @@
 import { Trophy } from "lucide-react";
+import { CourtBackdrop } from "@/components/court-backdrop";
 import type { ShowcaseTournament } from "@/lib/data";
 import type { TournamentStatus } from "@/types";
 
@@ -95,22 +96,9 @@ function ShowcaseCard({
   return (
     <li className="shrink-0">
       <article className="glass flex h-full w-56 flex-col overflow-hidden rounded-2xl sm:w-60">
-        <div
-          className="bg-court-lines relative h-24 bg-court"
-          style={
-            t.banner
-              ? {
-                  backgroundImage: `url(${t.banner})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                }
-              : undefined
-          }
-        >
-          {/* Tournaments without a banner get the gradient and a watermark. */}
-          {!t.banner && (
-            <Trophy className="absolute -bottom-2 -right-1 size-16 text-ball/30" />
-          )}
+        <div className="relative isolate h-24 bg-court">
+          <CourtBackdrop className="inset-2 size-[calc(100%-1rem)] sm:inset-2 sm:size-[calc(100%-1rem)]" />
+          <Trophy className="absolute -right-1 -bottom-2 size-16 text-ball/30" aria-hidden />
         </div>
 
         <div className="flex flex-1 flex-col gap-3 p-4">

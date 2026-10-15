@@ -6,7 +6,7 @@ import { PageHeader, EmptyState } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { TournamentStatusBadge } from "@/components/status-badge";
 import { ROLE_LABELS } from "@/lib/constants";
-import { formatDate } from "@/lib/format";
+import { CourtBackdrop } from "@/components/court-backdrop";
 import { ArrowRight, Plus, Trophy, MapPin, Calendar, Ticket } from "lucide-react";
 
 /**
@@ -59,18 +59,8 @@ export default async function DashboardPage() {
                 href={`/dashboard/tournaments/${t.id}`}
                 className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-card outline-none transition-[box-shadow,border-color,transform] duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-raised focus-visible:ring-3 focus-visible:ring-ring/50"
               >
-                <div
-                  className="bg-court-lines relative h-28 bg-court"
-                  style={
-                    t.banner
-                      ? {
-                          backgroundImage: `url(${t.banner})`,
-                          backgroundSize: "cover",
-                          backgroundPosition: "center",
-                        }
-                      : undefined
-                  }
-                >
+                <div className="relative isolate h-28 bg-court">
+                  <CourtBackdrop className="inset-2 size-[calc(100%-1rem)] sm:inset-2 sm:size-[calc(100%-1rem)]" />
                   <div className="absolute top-3 left-3">
                     <TournamentStatusBadge status={t.status} />
                   </div>
@@ -82,7 +72,7 @@ export default async function DashboardPage() {
                   <div className="space-y-1.5 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
                       <Calendar className="size-4 shrink-0 text-primary" />
-                      {formatDate(t.start_date)}
+                      {t.dates}
                     </div>
                     {t.location && (
                       <div className="flex items-center gap-2">

@@ -10,10 +10,8 @@ import { PublicHeader } from "@/components/public/public-header";
 
 /**
  * Link previews for the portal. Facebook, Messenger and Viber all build their
- * thumbnail from the `og:` tags in the server-rendered HTML, so the tournament
- * banner is handed over as `og:image` — served straight from Supabase storage,
- * which is public. Tournaments with no banner fall back to the generated card
- * at `/{code}/og`.
+ * thumbnail from the `og:` tags in the server-rendered HTML; `og:image` is the
+ * court card generated at `/{code}/og`.
  *
  * The tabs repeat this call with their own label (see `portal-metadata.ts`),
  * because a page-level `openGraph` replaces the layout's rather than merging.
@@ -43,7 +41,7 @@ export default async function PublicTournamentLayout({
   const tournament = await getTournamentByPublicRef(code);
   if (!tournament) notFound();
 
-  // Each category carries its own play date; the banner announces them all.
+  // Each category carries its own play date; the header announces them all.
   const categories = await getPublicCategories(tournament.id);
 
   return (
@@ -52,7 +50,7 @@ export default async function PublicTournamentLayout({
       <PublicHeader />
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-4 pb-6 sm:px-6 sm:pt-6">
-        {/* The banner carries the tournament identity across every tab. */}
+        {/* The header carries the tournament identity across every tab. */}
         <TournamentBanner tournament={tournament} categories={categories} />
         {/* Tabs stick under the header; the page scrolls beneath them. */}
         <div className="mt-4">

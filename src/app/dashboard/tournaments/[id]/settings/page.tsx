@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
 import { getTournamentContext } from "@/lib/data";
 import { roleAtLeast } from "@/lib/constants";
 import {
@@ -10,8 +9,9 @@ import { PageHeader } from "@/components/page-header";
 import { TournamentForm } from "@/components/tournament/tournament-form";
 import { CategoryManager } from "@/components/tournament/category-manager";
 import { PaymentSettings } from "@/components/tournament/payment-settings";
-import { PublicLinkSettings } from "@/components/tournament/public-link-settings";
 import { RegistrationSettings } from "@/components/tournament/registration-settings";
+import { ShareCard } from "@/components/tournament/share-card";
+import { requestOrigin } from "@/lib/site-url";
 
 export default async function TournamentSettingsPage({
   params,
@@ -24,23 +24,19 @@ export default async function TournamentSettingsPage({
   const { tournament, role, categories } = ctx;
   if (!roleAtLeast(role, "admin")) notFound();
 
-  // Build the public origin from the incoming request so the settings card
-  // shows the real link players will type.
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
-  const proto = h.get("x-forwarded-proto") ?? "https";
-  const origin = host ? `${proto}://${host}` : "";
-
-  const approvedCounts = registrationsEnabled()
-    ? Object.fromEntries(await approvedCountsByCategory(id))
-    : {};
+  const [approvedCounts, origin] = await Promise.all([
+    registrationsEnabled()
+      ? approvedCountsByCategory(id).then((m) => Object.fromEntries(m))
+      : Promise.resolve({} as Record<string, number>),
+    requestOrigin(),
+  ]);
 
   const sections = [
     { id: "details", label: "Details" },
-    { id: "link", label: "Public link" },
     { id: "categories", label: "Categories" },
     { id: "payment", label: "Payment" },
     { id: "registration", label: "Registration" },
+    { id: "share", label: "QR code" },
   ];
 
   return (
@@ -69,19 +65,8 @@ export default async function TournamentSettingsPage({
           tournamentId={id}
           defaults={{
             name: tournament.name,
-            description: tournament.description ?? "",
             location: tournament.location ?? "",
-            start_date: tournament.start_date ?? "",
-            banner: tournament.banner ?? "",
-            show_public_schedule: tournament.show_public_schedule,
           }}
-        />
-      </div>
-      <div id="link" className="scroll-mt-4">
-        <PublicLinkSettings
-          tournamentId={id}
-          shortCode={tournament.short_code}
-          origin={origin}
         />
       </div>
       <div id="categories" className="scroll-mt-4">
@@ -95,6 +80,13 @@ export default async function TournamentSettingsPage({
           tournamentId={id}
           categories={categories}
           approvedCounts={approvedCounts}
+        />
+      </div>
+      <div id="share" className="scroll-mt-4">
+        <ShareCard
+          url={`${origin}/${tournament.short_code}`}
+          code={tournament.short_code}
+          name={tournament.name}
         />
       </div>
     </div>

@@ -2,14 +2,16 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getTournamentContext } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
-import { TabNav } from "@/components/tournament/tab-nav";
-import { CategorySwitcher } from "@/components/tournament/category-switcher";
+import { WorkspaceNav } from "@/components/tournament/workspace-nav";
 import { ScheduleGeneratorButton } from "@/components/tournament/schedule-generator-button";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ROLE_LABELS, roleAtLeast } from "@/lib/constants";
-import { ExternalLink, MapPin, Calendar, QrCode } from "lucide-react";
-import { formatDate } from "@/lib/format";
+import { ExternalLink, MapPin, Calendar } from "lucide-react";
+import { SettingsButton } from "@/components/tournament/settings-button";
+import { HEADER_BUTTON } from "@/components/tournament/header-button";
+import { formatEventDates } from "@/lib/format";
+import { CourtBackdrop } from "@/components/court-backdrop";
 
 export default async function TournamentLayout({
   children,
@@ -43,22 +45,8 @@ export default async function TournamentLayout({
     <div className="space-y-5">
       <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
         <div className="relative isolate bg-court text-court-foreground">
-          {t.banner ? (
-            <>
-              <div
-                className="absolute inset-0 -z-10 bg-cover bg-center opacity-35"
-                style={{ backgroundImage: `url(${t.banner})` }}
-                aria-hidden
-              />
-              <div
-                className="absolute inset-0 -z-10 bg-gradient-to-t from-court via-court/80 to-court/30"
-                aria-hidden
-              />
-            </>
-          ) : (
-            <div className="bg-court-lines absolute inset-0 -z-10" aria-hidden />
-          )}
-          <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-end sm:justify-between sm:p-6">
+          <CourtBackdrop />
+          <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-end sm:justify-between sm:px-9 sm:py-8">
             <div className="min-w-0">
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 <Link
@@ -76,7 +64,8 @@ export default async function TournamentLayout({
               </h1>
               <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-court-foreground/80">
                 <span className="flex items-center gap-1.5">
-                  <Calendar className="size-4" /> {formatDate(t.start_date)}
+                  <Calendar className="size-4" />{" "}
+                  {formatEventDates(categories.map((c) => c.event_date))}
                 </span>
                 {t.location && (
                   <span className="flex items-center gap-1.5">
@@ -93,37 +82,22 @@ export default async function TournamentLayout({
                   groupsByCategory={groupsByCategory}
                 />
               )}
+              {canManage && <SettingsButton id={id} />}
               <Button
                 asChild
                 variant="outline"
                 size="sm"
-                className="border-court-foreground/25 bg-court-foreground/10 text-court-foreground hover:bg-court-foreground/20 hover:text-court-foreground dark:border-court-foreground/25 dark:bg-court-foreground/10"
+                className={HEADER_BUTTON}
               >
                 <Link href={`/${t.short_code}`} target="_blank">
                   <ExternalLink className="size-4" /> Public page
                 </Link>
               </Button>
-              <Button
-                asChild
-                variant="outline"
-                size="sm"
-                className="border-court-foreground/25 bg-court-foreground/10 text-court-foreground hover:bg-court-foreground/20 hover:text-court-foreground dark:border-court-foreground/25 dark:bg-court-foreground/10"
-              >
-                <Link href={`/qr/${t.short_code}`} target="_blank">
-                  <QrCode className="size-4" /> QR code
-                </Link>
-              </Button>
             </div>
           </div>
         </div>
-        {categories.length > 0 && (
-          <div className="border-t border-border p-4 sm:px-6">
-            <CategorySwitcher categories={categories} />
-          </div>
-        )}
+        <WorkspaceNav id={id} categories={categories} />
       </section>
-
-      <TabNav id={id} canManage={canManage} />
 
       <div>{children}</div>
     </div>

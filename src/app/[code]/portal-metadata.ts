@@ -20,8 +20,8 @@ export type PortalTab = { path: string; label: string };
  *
  * Every tab builds its whole `openGraph` object here rather than inheriting
  * the layout's: Next.js *replaces* `openGraph` when a page declares it instead
- * of merging, so a tab that set only a title would silently drop the banner
- * from its link preview.
+ * of merging, so a tab that set only a title would silently drop the preview
+ * image.
  *
  * Passing a tab also gives that tab its own title and canonical. Without them
  * every tab would claim to be the index page and search engines would fold
@@ -35,20 +35,13 @@ export async function portalMetadata(
   if (!tournament) return {};
 
   const categories = await getPublicCategories(tournament.id);
-  const when = formatEventDates(
-    tournament.start_date,
-    categories.map((c) => c.event_date),
-  );
+  const when = formatEventDates(categories.map((c) => c.event_date));
   const where = [when, tournament.location].filter(Boolean).join(" · ");
-  // Chat previews show two or three lines, so lead with when and where and
-  // flatten the organiser's blurb (newlines and all) into what still fits.
-  const blurb = tournament.description?.replace(/\s+/g, " ").trim();
+  // Chat previews show two or three lines, so lead with when and where.
   const description = clamp(
     tab
       ? `${tab.label} for ${tournament.name}. ${where} — live on Sortbrite.`
-      : blurb
-        ? `${where} — ${blurb}`
-        : `${where} — live standings, schedule and registration on Sortbrite.`,
+      : `${where} — live standings, schedule and registration on Sortbrite.`,
     200,
   );
 
@@ -56,12 +49,13 @@ export async function portalMetadata(
   const url = tab ? `${base}/${tab.path}` : base;
   const title = tab ? `${tab.label} · ${tournament.name}` : tournament.name;
 
-  // The uploaded banner is used as-is: it is the poster the organiser designed,
-  // so nothing is drawn over it. Only the no-banner case is generated, and that
-  // one has known dimensions worth declaring.
-  const image = tournament.banner
-    ? { url: tournament.banner, alt: tournament.name }
-    : { url: `${base}/og`, width: 1200, height: 630, alt: tournament.name };
+  // Every tournament's preview is the generated court card (`og/route.tsx`).
+  const image = {
+    url: `${base}/og`,
+    width: 1200,
+    height: 630,
+    alt: tournament.name,
+  };
 
   return {
     // Pin the base to the host the link was actually shared from, so a preview
