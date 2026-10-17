@@ -7,9 +7,10 @@ import { requireUser } from "@/lib/auth";
  * This is deliberately NOT part of the tournament role ladder in
  * `lib/constants.ts` — those roles are granted per tournament by its owner,
  * while this one spans the whole install and nobody can hand it out from the
- * UI. It only ever unlocks read-only screens; every mutation still goes
- * through `assertRole`, so a super admin who isn't a member of a tournament
- * cannot change it.
+ * UI. It only ever unlocks read-only screens — including any tournament's
+ * workspace, entered as a viewer (`getTournamentContext`). Every mutation
+ * still goes through `assertRole`, so a super admin who isn't a member of a
+ * tournament cannot change it.
  */
 export const SUPER_ADMIN_EMAILS = ["berlcamp@gmail.com"];
 

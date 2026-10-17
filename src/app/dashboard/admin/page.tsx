@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ExternalLink, Search, ShieldCheck, Star } from "lucide-react";
+import { ExternalLink, Eye, Search, ShieldCheck, Star } from "lucide-react";
 import { requireSuperAdmin } from "@/lib/super-admin";
 import { getAllTournaments } from "@/lib/admin-data";
 import { PageHeader, EmptyState } from "@/components/page-header";
@@ -20,7 +20,7 @@ import { FeatureToggle } from "@/components/dashboard/feature-toggle";
  * System-wide view of every tournament on Sortbrite.
  *
  * Deliberately near read-only: the super admin can see what organisers have
- * created and reaches anything further through the public portal — editing a
+ * created and open any tournament's workspace as a viewer — editing a
  * tournament still requires being a member of it. The single exception is the
  * homepage feature flag, which is an install-wide editorial call that belongs
  * to nobody else.
@@ -59,7 +59,7 @@ export default async function SuperAdminPage({
     <div className="space-y-6">
       <PageHeader
         title="Super admin dashboard"
-        description="Every tournament on Sortbrite. Flip a switch to feature one on the homepage."
+        description="Every tournament on Sortbrite. Open one to look around as a viewer, or flip a switch to feature it on the homepage."
       >
         <span className="flex items-center gap-1.5 rounded-full bg-court px-3 py-1 text-xs font-semibold text-court-foreground">
           <ShieldCheck className="size-3.5" /> Super admin
@@ -150,13 +150,21 @@ export default async function SuperAdminPage({
                   />
                   On homepage
                 </label>
-                <Link
-                  href={`/${t.short_code}`}
-                  target="_blank"
-                  className="flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary"
-                >
-                  Public page <ExternalLink className="size-4" />
-                </Link>
+                <div className="flex items-center gap-4">
+                  <Link
+                    href={`/dashboard/tournaments/${t.id}`}
+                    className="flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary"
+                  >
+                    <Eye className="size-4" /> View
+                  </Link>
+                  <Link
+                    href={`/${t.short_code}`}
+                    target="_blank"
+                    className="flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary"
+                  >
+                    Public page <ExternalLink className="size-4" />
+                  </Link>
+                </div>
               </div>
             </li>
           ))}
@@ -176,14 +184,20 @@ export default async function SuperAdminPage({
                     <Star className="size-3.5" /> Homepage
                   </span>
                 </TableHead>
-                <TableHead className="w-10" />
+                <TableHead className="w-20" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {tournaments.map((t) => (
                 <TableRow key={t.id}>
                   <TableCell>
-                    <div className="font-semibold">{t.name}</div>
+                    <Link
+                      href={`/dashboard/tournaments/${t.id}`}
+                      className="font-semibold hover:underline"
+                      title={`View ${t.name} (read only)`}
+                    >
+                      {t.name}
+                    </Link>
                     <div className="text-xs text-muted-foreground">
                       /{t.short_code}
                       {t.location && ` · ${t.location}`}
@@ -215,14 +229,23 @@ export default async function SuperAdminPage({
                     />
                   </TableCell>
                   <TableCell>
-                    <Link
-                      href={`/${t.short_code}`}
-                      target="_blank"
-                      className="text-muted-foreground transition-colors hover:text-foreground"
-                      title={`Open ${t.name}'s public portal`}
-                    >
-                      <ExternalLink className="size-4" />
-                    </Link>
+                    <div className="flex items-center gap-3">
+                      <Link
+                        href={`/dashboard/tournaments/${t.id}`}
+                        className="text-muted-foreground transition-colors hover:text-foreground"
+                        title={`View ${t.name} (read only)`}
+                      >
+                        <Eye className="size-4" />
+                      </Link>
+                      <Link
+                        href={`/${t.short_code}`}
+                        target="_blank"
+                        className="text-muted-foreground transition-colors hover:text-foreground"
+                        title={`Open ${t.name}'s public portal`}
+                      >
+                        <ExternalLink className="size-4" />
+                      </Link>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

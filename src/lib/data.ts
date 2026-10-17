@@ -2,6 +2,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getUser } from "@/lib/auth";
+import { isSuperAdmin } from "@/lib/super-admin";
 import { formatEventDates } from "@/lib/format";
 import type { Category, Role, Tournament, TournamentStatus } from "@/types";
 
@@ -112,6 +113,12 @@ export async function publicClient() {
 /** Load a tournament, the current user's role, and its categories; null if not
  * a member.
  *
+ * The super admin is the one exception: on a tournament they don't belong to
+ * they get in as a `viewer`, flagged `superAdminView`. That only unlocks
+ * reading — every mutation still goes through `assertRole`, which checks the
+ * membership row and so turns them away. The tournament and its categories
+ * are publicly readable, so the RLS-bound reads below still return them.
+ *
  * Memoized per request (the workspace layout and its page both ask), and the
  * three reads go out together: RLS already hides a tournament from a
  * non-member, so nothing is gained by waiting on the membership row first. */
@@ -119,6 +126,8 @@ export const getTournamentContext = cache(async function (id: string): Promise<{
   tournament: Tournament;
   role: Role;
   categories: Category[];
+  /** A super admin looking in on a tournament they aren't a member of. */
+  superAdminView: boolean;
 } | null> {
   const user = await getUser();
   if (!user) return null;
@@ -139,12 +148,15 @@ export const getTournamentContext = cache(async function (id: string): Promise<{
         .eq("tournament_id", id)
         .order("position"),
     ]);
-  if (!member || !tournament) return null;
+  if (!tournament) return null;
+  const superAdminView = !member && isSuperAdmin(user.email);
+  if (!member && !superAdminView) return null;
 
   return {
     tournament: tournament as Tournament,
-    role: member.role as Role,
+    role: superAdminView ? "viewer" : (member!.role as Role),
     categories: (categories ?? []) as Category[],
+    superAdminView,
   };
 });
 

@@ -17,7 +17,7 @@ export default async function TournamentLayout({
   const { id } = await params;
   const ctx = await getTournamentContext(id);
   if (!ctx) notFound();
-  const { tournament: t, role, categories } = ctx;
+  const { tournament: t, role, categories, superAdminView } = ctx;
   const canManage = roleAtLeast(role, "admin");
 
   return (
@@ -26,7 +26,7 @@ export default async function TournamentLayout({
         id={id}
         name={t.name}
         shortCode={t.short_code}
-        roleLabel={ROLE_LABELS[role]}
+        roleLabel={superAdminView ? "Super admin · View only" : ROLE_LABELS[role]}
         canManage={canManage}
       />
 
