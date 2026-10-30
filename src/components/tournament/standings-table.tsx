@@ -119,6 +119,12 @@ export function StandingsTable({ rows }: { rows: StandingRow[] }) {
   const started = rows.some(
     (r) => r.matchesWon + r.matchesLost + r.matchesTied > 0,
   );
+  // H2H only counts among teams level on match wins; for anyone without such
+  // a tie it isn't a 0, it doesn't apply.
+  const winCounts = new Map<number, number>();
+  for (const r of rows) {
+    winCounts.set(r.matchesWon, (winCounts.get(r.matchesWon) ?? 0) + 1);
+  }
   return (
     <div className="glass overflow-hidden rounded-2xl">
       <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
@@ -225,7 +231,11 @@ export function StandingsTable({ rows }: { rows: StandingRow[] }) {
                     </span>
                   </td>
                   <td className={cn(cell, "scoreboard text-right text-lg")}>
-                    {r.tieBreak}
+                    {(winCounts.get(r.matchesWon) ?? 0) > 1 ? (
+                      r.tieBreak
+                    ) : (
+                      <span className="text-muted-foreground">–</span>
+                    )}
                   </td>
                   <td className={cn(cell, "scoreboard text-right text-lg")}>
                     {r.setWins}
